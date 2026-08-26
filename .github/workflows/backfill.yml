@@ -1,0 +1,50 @@
+name: Backfill from BarentsWatch
+
+# Run by hand only. Pulls the Norwegian Coastal Administration's AIS archive for the
+# ship and merges it into data/track.json. Norwegian economic zone, max 14 days back.
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days back (1-14)"
+        required: false
+        default: "14"
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pull historic AIS
+        env:
+          BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
+        run: python3 scripts/backfill_barentswatch.py "${{ inputs.days }}"
+
+      - name: Save the track
+        run: |
+          git config user.name "sorlandet-bot"
+          git config user.email "bot@users.noreply.github.com"
+          if [ -z "$(git status --porcelain data/)" ]; then
+            echo "Nothing new to add."
+            exit 0
+          fi
+          git add data/
+          git commit -m "Backfill from BarentsWatch"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push; then
+              echo "Saved."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Could not push - try running this again in a few minutes."
