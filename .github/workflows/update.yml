@@ -2,19 +2,27 @@ name: Update position
 
 on:
   schedule:
-    # Every 20 minutes. GitHub may delay cron by a few minutes.
-    - cron: "*/20 * * * *"
+    # Once an hour. Each run then listens for 55 minutes, so coverage is nearly
+    # continuous even when GitHub delays or drops a scheduled run.
+    - cron: "5 * * * *"
   workflow_dispatch:
+    inputs:
+      listen_minutes:
+        description: "Minutes to listen for AIS (default 55)"
+        required: false
+        default: "55"
 
 permissions:
   contents: write
 
 concurrency:
   group: position
+  cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
@@ -28,11 +36,18 @@ jobs:
       - name: Fetch position and weather
         env:
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
-          LISTEN_SECONDS: "150"
+          LISTEN_SECONDS: ${{ github.event_name == 'schedule' && '3300' || format('{0}', inputs.listen_minutes || '55') }}
           CONTACT_UA: "sorlandet-tracker (github actions)"
-        run: python3 scripts/update.py
+        run: |
+          # workflow_dispatch gives minutes, the schedule gives seconds already
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            export LISTEN_SECONDS=$(( ${LISTEN_SECONDS:-55} * 60 ))
+          fi
+          echo "Listening for $LISTEN_SECONDS seconds"
+          python3 scripts/update.py
 
       - name: Save new data
+        if: always()
         run: |
           git config user.name "sorlandet-bot"
           git config user.email "bot@users.noreply.github.com"
@@ -50,4 +65,4 @@ jobs:
             echo "Push failed, attempt $attempt - retrying in 5 seconds."
             sleep 5
           done
-          echo "Could not push, but the position will be fetched again in 20 minutes."
+          echo "Could not push, but the position will be fetched again next hour."
