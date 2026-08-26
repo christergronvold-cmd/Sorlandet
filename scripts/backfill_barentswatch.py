@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
 """
-Backfills the track from BarentsWatch's historic AIS - the Norwegian Coastal
-Administration's own archive. Dense coverage, up to 14 days back, free.
+Backfills the track from BarentsWatch historic AIS - the Norwegian Coastal
+Administration's archive. Dense, free, up to 14 days back, Norwegian waters only.
 
-Only covers the Norwegian economic zone, so it is useful while the ship is in
-home waters and useless once she is past the North Sea. Sørlandet is 64 m long,
-well above the 45 m threshold for sail and leisure vessels in that dataset.
+This version discovers the endpoints instead of assuming them: it reads the API's
+own OpenAPI description, finds the paths that return a vessel track, and tries them
+in turn, printing exactly what each one answered. If nothing works, the log tells us
+what the API actually offers, which is all that is needed to fix it.
 
-Setup, once:
-  1. Register at https://www.barentswatch.no  and sign in
-  2. My page -> API clients -> create a client. Note the client id and secret.
-  3. Then run, either locally or as a repository secret in Actions:
+Environment:
+    BW_CLIENT_ID       e.g. you@example.com:ClientName   (plain, not urlencoded)
+    BW_CLIENT_SECRET   the secret you chose
+    MMSI               optional, defaults to Sørlandet
 
-     export BW_CLIENT_ID=your-client-id
-     export BW_CLIENT_SECRET=your-secret
-     python3 scripts/backfill_barentswatch.py            # last 24 hours
-     python3 scripts/backfill_barentswatch.py 14         # last 14 days, day by day
-
-Existing points are kept; only timestamps we do not already have are added, and
-the merged track is written back to data/track.json in time order.
+Usage:
+    python3 scripts/backfill_barentswatch.py [days]     # 1-14, default 1
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.error
@@ -37,100 +34,188 @@ MMSI = os.environ.get("MMSI", "257165000")
 ROOT = Path(__file__).resolve().parent.parent
 TRACK = ROOT / "data" / "track.json"
 TOKEN_URL = "https://id.barentswatch.no/connect/token"
-API = "https://historic.ais.barentswatch.no/v1/historic"
+HOSTS = ["https://historic.ais.barentswatch.no", "https://live.ais.barentswatch.no"]
+SPECS = ["/swagger/v1/swagger.json", "/openapi.json", "/swagger/v1/openapi.json"]
 CTX = ssl.create_default_context()
+UA = {"User-Agent": "sorlandet-tracker/1.0 (family project)"}
 
 
-def token() -> str:
+def fetch(url: str, tok: str | None = None, timeout: int = 45):
+    headers = dict(UA, Accept="application/json")
+    if tok:
+        headers["Authorization"] = f"bearer {tok}"
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+            return r.status, json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", "replace")[:200]
+        except Exception:
+            pass
+        return exc.code, detail
+    except Exception as exc:
+        return None, str(exc)
+
+
+def get_token() -> str:
     cid = os.environ.get("BW_CLIENT_ID", "").strip()
     secret = os.environ.get("BW_CLIENT_SECRET", "").strip()
+    print(f"* credentials: client id {'set (' + str(len(cid)) + ' chars)' if cid else 'MISSING'}, "
+          f"secret {'set (' + str(len(secret)) + ' chars)' if secret else 'MISSING'}")
     if not cid or not secret:
-        sys.exit("Set BW_CLIENT_ID and BW_CLIENT_SECRET first - see the notes at the top of this file.")
+        sys.exit("! Set BW_CLIENT_ID and BW_CLIENT_SECRET as repository secrets first.")
+    if "%40" in cid or "%3A" in cid:
+        print("! the client id looks urlencoded - use the plain one, with @ and :", file=sys.stderr)
+
     body = urllib.parse.urlencode({
         "grant_type": "client_credentials",
         "client_id": cid,
         "client_secret": secret,
         "scope": "ais",
     }).encode()
-    req = urllib.request.Request(TOKEN_URL, data=body,
-                                headers={"Content-Type": "application/x-www-form-urlencoded"})
-    with urllib.request.urlopen(req, timeout=30, context=CTX) as r:
-        return json.loads(r.read())["access_token"]
-
-
-def get(path: str, tok: str):
-    req = urllib.request.Request(f"{API}/{path}", headers={
-        "Authorization": f"bearer {tok}", "Accept": "application/json"})
+    req = urllib.request.Request(TOKEN_URL, data=body, headers=dict(
+        UA, **{"Content-Type": "application/x-www-form-urlencoded"}))
     try:
-        with urllib.request.urlopen(req, timeout=60, context=CTX) as r:
-            return json.loads(r.read())
+        with urllib.request.urlopen(req, timeout=30, context=CTX) as r:
+            tok = json.loads(r.read())["access_token"]
+        print("* got an access token")
+        return tok
     except urllib.error.HTTPError as exc:
-        print(f"  ! {path}: HTTP {exc.code} {exc.reason}", file=sys.stderr)
+        sys.exit(f"! token request failed: HTTP {exc.code} {exc.reason} - "
+                 f"{exc.read().decode('utf-8', 'replace')[:300]}")
     except Exception as exc:
-        print(f"  ! {path}: {exc}", file=sys.stderr)
-    return None
+        sys.exit(f"! token request failed: {exc}")
 
 
-def rows_to_points(rows) -> list[dict]:
-    """BarentsWatch field names vary a little between endpoints, so be forgiving."""
+def discover(tok: str) -> list[str]:
+    """Reads the API's own description and returns candidate track paths."""
+    found: list[str] = []
+    for host in HOSTS:
+        for spec in SPECS:
+            status, data = fetch(host + spec, tok, timeout=30)
+            if status != 200 or not isinstance(data, dict):
+                continue
+            paths = list((data.get("paths") or {}).keys())
+            print(f"* {host}{spec}: {len(paths)} paths")
+            for p in paths:
+                if re.search(r"track|position|historic", p, re.I):
+                    print(f"    {p}")
+                    found.append(host + p)
+            if paths:
+                return found
+    print("* could not read any OpenAPI description - falling back to known paths")
+    return found
+
+
+def candidates(discovered: list[str], start: datetime, end: datetime) -> list[str]:
+    """Fills {mmsi}/{from}/{to} style placeholders and adds the documented paths."""
+    f_iso, t_iso = start.strftime("%Y-%m-%dT%H:%M:%SZ"), end.strftime("%Y-%m-%dT%H:%M:%SZ")
+    urls: list[str] = []
+    for u in discovered:
+        filled = re.sub(r"\{[^}]*mmsi[^}]*\}", MMSI, u, flags=re.I)
+        filled = re.sub(r"\{[^}]*from[^}]*\}", f_iso, filled, flags=re.I)
+        filled = re.sub(r"\{[^}]*to[^}]*\}", t_iso, filled, flags=re.I)
+        if "{" in filled:                     # unresolved placeholders - skip
+            continue
+        if "from" not in filled and "last24" not in filled.lower():
+            filled += ("&" if "?" in filled else "?") + urllib.parse.urlencode(
+                {"from": f_iso, "to": t_iso})
+        urls.append(filled)
+    base = HOSTS[0] + "/v1/historic"
+    urls += [
+        f"{base}/trackslast24hours/{MMSI}",
+        f"{base}/tracks/{MMSI}?" + urllib.parse.urlencode({"from": f_iso, "to": t_iso}),
+        f"{base}/track/{MMSI}?" + urllib.parse.urlencode({"from": f_iso, "to": t_iso}),
+    ]
+    seen, out = set(), []
+    for u in urls:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+def rows_to_points(payload) -> list[dict]:
+    rows = payload
+    if isinstance(payload, dict):
+        for key in ("features", "positions", "tracks", "items", "data", "value"):
+            if isinstance(payload.get(key), list):
+                rows = payload[key]
+                break
+    if not isinstance(rows, list):
+        return []
     out = []
-    for r in rows or []:
-        lat = r.get("latitude", r.get("Latitude"))
-        lon = r.get("longitude", r.get("Longitude"))
-        t = r.get("msgtime", r.get("msgTime", r.get("timestamp")))
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        props = r.get("properties") if isinstance(r.get("properties"), dict) else r
+        lat = props.get("latitude", props.get("lat", props.get("Latitude")))
+        lon = props.get("longitude", props.get("lon", props.get("Longitude")))
+        geom = r.get("geometry") if isinstance(r.get("geometry"), dict) else None
+        if (lat is None or lon is None) and geom and isinstance(geom.get("coordinates"), list):
+            coords = geom["coordinates"]
+            if len(coords) >= 2:
+                lon, lat = coords[0], coords[1]
+        t = (props.get("msgtime") or props.get("msgTime") or props.get("timestamp")
+             or props.get("dateTimeUtc") or props.get("time"))
         if lat is None or lon is None or not t:
             continue
-        t = t.replace("Z", "+00:00")
         try:
-            stamp = datetime.fromisoformat(t).astimezone(timezone.utc)
+            stamp = datetime.fromisoformat(str(t).replace("Z", "+00:00")).astimezone(timezone.utc)
         except ValueError:
             continue
         out.append({
             "t": stamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "lat": round(float(lat), 5),
             "lon": round(float(lon), 5),
-            "sog": r.get("speedOverGround", r.get("sog")),
-            "cog": r.get("courseOverGround", r.get("cog")),
+            "sog": props.get("speedOverGround", props.get("sog")),
+            "cog": props.get("courseOverGround", props.get("cog")),
         })
     return out
 
 
 def main() -> int:
-    days = int(sys.argv[1]) if len(sys.argv) > 1 else 1
-    days = max(1, min(14, days))
-    tok = token()
-    print(f"* signed in to BarentsWatch, asking for {days} day(s) of MMSI {MMSI}")
+    days = max(1, min(14, int(sys.argv[1]) if len(sys.argv) > 1 else 1))
+    tok = get_token()
+    discovered = discover(tok)
 
+    now = datetime.now(timezone.utc)
     found: list[dict] = []
-    if days == 1:
-        found += rows_to_points(get(f"trackslast24hours/{MMSI}", tok))
-    else:
-        now = datetime.now(timezone.utc)
-        for k in range(days):
-            end = now - timedelta(days=k)
-            start = end - timedelta(days=1)
-            q = urllib.parse.urlencode({"from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                        "to": end.strftime("%Y-%m-%dT%H:%M:%SZ")})
-            batch = rows_to_points(get(f"tracks/{MMSI}?{q}", tok))
-            print(f"  {start:%d %b} - {end:%d %b}: {len(batch)} positions")
-            found += batch
+    for k in range(days):
+        end = now - timedelta(days=k)
+        start = end - timedelta(days=1)
+        got = []
+        for url in candidates(discovered, start, end):
+            status, data = fetch(url, tok)
+            shown = url.replace(HOSTS[0], "").replace(HOSTS[1], "")[:110]
+            if status == 200:
+                got = rows_to_points(data)
+                print(f"  {start:%d %b}: {shown} -> {len(got)} positions")
+                if got:
+                    break
+            else:
+                print(f"  {start:%d %b}: {shown} -> HTTP {status} {str(data)[:90]}")
+        found += got
+        if k == 0 and not got:
+            print("* the first day returned nothing - stopping so the log stays readable")
+            break
 
     if not found:
-        print("* nothing came back. Either she has been outside Norwegian waters, or the "
-              "endpoint names have changed - check developer.barentswatch.no/docs/AIS/")
-        return 1
+        print("* nothing came back. The paths listed above are what the API offers - "
+              "send that list along and the script can be pointed at the right one.")
+        return 0                              # not a failure, just nothing to add
 
     track = json.loads(TRACK.read_text(encoding="utf-8")) if TRACK.exists() else {}
     points = track.get("points") or []
     have = {p["t"] for p in points}
     fresh = [p for p in found if p["t"] not in have]
     merged = sorted(points + fresh, key=lambda p: p["t"])
-
     TRACK.write_text(json.dumps({"mmsi": MMSI, "ship": track.get("ship", "Sørlandet"),
                                  "points": merged}, ensure_ascii=False, indent=1) + "\n",
                      encoding="utf-8")
     print(f"* added {len(fresh)} new positions, track now has {len(merged)}")
-    print("  commit data/track.json and the page picks it up straight away")
     return 0
 
 

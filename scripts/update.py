@@ -215,6 +215,127 @@ def fetch_position_from_aisstream(api_key: str) -> tuple[dict | None, list[dict]
     return newest, ordered
 
 
+# ------------------------------------------------- BarentsWatch live AIS (Norway)
+# The Norwegian Coastal Administration's own AIS feed. Far denser than a volunteer
+# network while the ship is in Norwegian waters, and silent once she leaves them -
+# so it runs alongside aisstream rather than replacing it.
+
+BW_TOKEN_URL = "https://id.barentswatch.no/connect/token"
+BW_SSE = "https://live.ais.barentswatch.no/live/v1/sse/combined"
+BW_LATEST = "https://live.ais.barentswatch.no/live/v1/latest/combined"
+
+
+def bw_token() -> str | None:
+    cid = os.environ.get("BW_CLIENT_ID", "").strip()
+    secret = os.environ.get("BW_CLIENT_SECRET", "").strip()
+    if not cid or not secret:
+        return None
+    body = urllib.parse.urlencode({
+        "grant_type": "client_credentials", "client_id": cid,
+        "client_secret": secret, "scope": "ais",
+    }).encode()
+    req = urllib.request.Request(BW_TOKEN_URL, data=body, headers={
+        "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=30, context=ssl.create_default_context()) as r:
+            return json.loads(r.read())["access_token"]
+    except Exception as exc:
+        print(f"  ! BarentsWatch token failed: {exc}", file=sys.stderr)
+        return None
+
+
+def _bw_point(msg: dict) -> dict | None:
+    lat = msg.get("latitude")
+    lon = msg.get("longitude")
+    t = msg.get("msgtime") or msg.get("msgTime")
+    if lat is None or lon is None or not t:
+        return None
+    try:
+        seen = iso(parse_iso(str(t)))
+    except Exception:
+        return None
+    return {
+        "lat": round(float(lat), 5),
+        "lon": round(float(lon), 5),
+        "sog_kn": msg.get("speedOverGround"),
+        "cog_deg": msg.get("courseOverGround"),
+        "heading_deg": None if msg.get("trueHeading") in (511, None) else msg.get("trueHeading"),
+        "nav_status": msg.get("navigationalStatus"),
+        "seen_utc": seen,
+        "source": "barentswatch",
+    }
+
+
+def collect_from_barentswatch(seconds: int, into: dict, lock) -> None:
+    """Listens to the BarentsWatch SSE stream, filtered to our MMSI."""
+    tok = bw_token()
+    if not tok:
+        print("* BarentsWatch: no credentials, skipping (aisstream alone)")
+        return
+
+    body = json.dumps({"mmsi": [int(MMSI)], "modelType": "Simple", "modelFormat": "Json"}).encode()
+    req = urllib.request.Request(BW_SSE, data=body, headers={
+        "Authorization": f"bearer {tok}", "Content-Type": "application/json",
+        "Accept": "text/event-stream", "User-Agent": USER_AGENT})
+
+    deadline = now_utc() + timedelta(seconds=seconds)
+    got = 0
+    print(f"* BarentsWatch: opening the live stream for MMSI {MMSI} ...")
+    try:
+        with urllib.request.urlopen(req, timeout=60, context=ssl.create_default_context()) as r:
+            for raw in r:
+                if now_utc() >= deadline:
+                    break
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                try:
+                    msg = json.loads(line[5:].strip())
+                except ValueError:
+                    continue
+                if str(msg.get("mmsi", "")) != MMSI:
+                    continue
+                pt = _bw_point(msg)
+                if pt:
+                    with lock:
+                        into[pt["seen_utc"]] = pt
+                    got += 1
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", "replace")[:160]
+        except Exception:
+            pass
+        print(f"  ! BarentsWatch stream: HTTP {exc.code} {exc.reason} {detail}", file=sys.stderr)
+    except Exception as exc:
+        print(f"  ! BarentsWatch stream: {exc}", file=sys.stderr)
+    print(f"* BarentsWatch: {got} positions from the Coastal Administration feed")
+
+
+def bw_latest_position() -> dict | None:
+    """One-shot fallback: the newest position BarentsWatch has, within 24 hours."""
+    tok = bw_token()
+    if not tok:
+        return None
+    body = json.dumps({"mmsi": [int(MMSI)], "modelType": "Simple", "modelFormat": "Json"}).encode()
+    req = urllib.request.Request(BW_LATEST, data=body, headers={
+        "Authorization": f"bearer {tok}", "Content-Type": "application/json",
+        "Accept": "application/json", "User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=45, context=ssl.create_default_context()) as r:
+            rows = json.loads(r.read().decode("utf-8"))
+    except Exception as exc:
+        print(f"  ! BarentsWatch latest: {exc}", file=sys.stderr)
+        return None
+    rows = rows if isinstance(rows, list) else [rows]
+    points = [pt for pt in (_bw_point(m) for m in rows if isinstance(m, dict)) if pt]
+    if points:
+        newest = sorted(points, key=lambda p: p["seen_utc"])[-1]
+        print(f"  -> BarentsWatch latest: {newest['lat']}, {newest['lon']} at {newest['seen_utc']}")
+        return newest
+    return None
+
+
 def demo_position() -> dict:
     """Sample position mid-Atlantic, so the page can be shown without a key."""
     return {
@@ -559,7 +680,36 @@ def main() -> int:
         position = demo_position()
         collected = [position]
     else:
-        position, collected = fetch_position_from_aisstream(api_key)
+        # Two sources for the same window: BarentsWatch in a background thread,
+        # aisstream on the main one. Whatever each hears goes into the same pot.
+        import threading
+
+        pot: dict[str, dict] = {}
+        lock = threading.Lock()
+        bw_thread = threading.Thread(
+            target=collect_from_barentswatch, args=(LISTEN_SECONDS, pot, lock), daemon=True)
+        bw_thread.start()
+
+        position, ais_points = fetch_position_from_aisstream(api_key)
+        bw_thread.join(timeout=30)
+
+        with lock:
+            for pt in ais_points:
+                pot.setdefault(pt["seen_utc"], pt)
+            merged = [pot[t] for t in sorted(pot)]
+
+        if not merged:
+            fallback = bw_latest_position()
+            if fallback:
+                merged = [fallback]
+        collected = merged
+        if collected:
+            position = collected[-1]
+            by_source: dict[str, int] = {}
+            for pt in collected:
+                by_source[pt["source"]] = by_source.get(pt["source"], 0) + 1
+            print("* combined sources: " + ", ".join(f"{k} {v}" for k, v in by_source.items())
+                  + f" -> {len(collected)} positions total")
 
     # No fresh AIS message: keep the last known position, but refresh the weather.
     fresh_fix = position is not None
