@@ -20,7 +20,8 @@ share-qr.svg                  QR code for the page address
 scripts/make_qr.py            regenerates share-qr.svg if the address changes
 scripts/update.py             fetches AIS position + weather
 scripts/seed_demo.py          writes sample data so you can preview the page
-.github/workflows/update.yml  runs update.py every 20 minutes
+scripts/backfill_barentswatch.py  pulls dense historic AIS for Norwegian waters
+.github/workflows/update.yml  listens for AIS 55 minutes of every hour
 vendor/leaflet/               the map library, kept local so the page is self-contained
 ```
 
@@ -87,6 +88,37 @@ From then on it runs by itself every 20 minutes, and the track grows a little ea
 
 > **Tip:** open the link on a phone and choose *Add to Home Screen*. It then behaves like
 > a small app with its own icon.
+
+## How often it updates
+
+The ship transmits a position every few minutes while she is within reach of a shore
+receiver. The limit was never her - it was us: the job used to listen for a couple of
+minutes every twenty, and threw the rest away.
+
+It now runs **once an hour and listens for 55 minutes**, keeping every distinct position.
+Coverage in home waters is therefore close to continuous, and one delayed or dropped
+scheduled run costs an hour rather than a whole afternoon. GitHub Actions is free for
+public repositories, so the long window costs nothing.
+
+Because the track gets dense, `update.py` thins it as it ages: everything from the last
+week at full detail, then one point per 30 minutes for the first month, one per 2 hours
+up to four months, one per 6 hours beyond that. A nine-month voyage stays a file a phone
+can download in a moment.
+
+### Denser history for Norwegian waters
+
+`scripts/backfill_barentswatch.py` pulls the Norwegian Coastal Administration's own AIS
+archive through [BarentsWatch](https://developer.barentswatch.no/docs/AIS/) - up to 14
+days back, free, and far denser than anything a sampling job can catch. It only covers
+the Norwegian economic zone, so it is worth running while she is still in home waters:
+
+```bash
+export BW_CLIENT_ID=...        # from My page -> API clients at barentswatch.no
+export BW_CLIENT_SECRET=...
+python3 scripts/backfill_barentswatch.py 14
+```
+
+It merges into `data/track.json`, keeping what is already there.
 
 ## What to know about AIS
 

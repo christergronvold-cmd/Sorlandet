@@ -1,35 +1,41 @@
-EVERYTHING IN THIS FOLDER GOES INTO THE REPOSITORY
-==================================================
+THE WHOLE PROJECT - UPLOAD IT ALL
+=================================
 
-Add file -> Upload files -> select ALL of this folder's contents -> Commit.
-Files that already exist are replaced, so this brings the repo fully up to date
-in a single commit.
+Add file -> Upload files -> select everything in this folder -> Commit.
+Existing files are replaced. Nothing in here can damage your data: the two files
+that hold the real positions (data/latest.json and data/track.json) are deliberately
+NOT in this package, so there is nothing to be careful about.
 
-Two things on purpose:
+Then two pastes, because GitHub will not accept a folder whose name starts with a dot.
+For each one: Add file -> Create new file -> type the name -> paste the contents.
 
-1. data/ holds ONLY ports.json here. Your repo's latest.json and track.json contain
-   the real positions and must not be overwritten - that is why they are absent.
+  .github/workflows/update.yml     <- from workflow/update.yml    (replaces the old one:
+                                      open the existing file, pencil icon, select all, paste)
+  .github/workflows/backfill.yml   <- from workflow/backfill.yml  (new file)
 
-2. "workflow-if-you-need-it" is not meant to be uploaded as a folder. Your repo
-   already has .github/workflows/update.yml. Only if it is missing or you want the
-   newest version: open that file, copy the text, and use Add file -> Create new
-   file with the name  .github/workflows/update.yml
+Secrets, Settings -> Secrets and variables -> Actions:
 
-What is new:
-  * Route follows sailing waypoints - no lines across Scotland or Jutland
-  * Wind arrows and wave chevrons on the map, 360 x 360 nm around the ship,
-    with a slider through the next 24 hours and a button for each layer
-  * On board: ship's local time as a live clock, hours from your clock,
-    sunrise, sunset, length of day, moon phase
-  * Voyage progress along the 14,700 nm route
-  * Ship's log that fills itself in: every 1,000 nm, the equator crossing,
-    best 24-hour run, fastest speed, ports reached
-  * Day by day: two small charts, distance per day and strongest wind per day
-  * Share: QR code, copy-link and a ready-made message for the parents' group
-  * A home-screen tip the first time the page is opened on a phone
+  AISSTREAM_API_KEY   already there
+  BW_CLIENT_ID        christer.gronvold@gmail.com:Sorlandet     <- plain, not urlencoded
+  BW_CLIENT_SECRET    the secret from My clients at barentswatch.no
 
-After uploading: Actions -> Update position -> Run workflow.
-That first run creates wind.json, waves.json and history.json by itself.
+Finally:
 
-If you ever rename the repo, the QR code needs regenerating:
-  pip install qrcode && python3 scripts/make_qr.py https://your-name.github.io/new-name/
+  Actions -> Update position -> Run workflow          (listens 55 minutes, dense track)
+  Actions -> Backfill from BarentsWatch -> days 14    (fills in the last two weeks)
+
+WHAT IS IN HERE
+---------------
+index.html            the page: map, wind and wave layers with a time slider, position,
+                      voyage plan, on-board clock and sun, progress, ship's log,
+                      day-by-day charts, share card with QR
+data/ports.json       the 2026-2027 voyage plan with sailing waypoints, so the route
+                      does not cut across land
+scripts/update.py     listens 55 minutes an hour, keeps every position, thins old track,
+                      fetches weather, wind and wave grids, sun and moon, daily history
+scripts/backfill_barentswatch.py   dense historic AIS for Norwegian waters, 14 days
+scripts/make_qr.py    regenerates share-qr.svg if the address ever changes
+scripts/seed_demo.py  sample data for previewing the page locally
+vendor/leaflet/       the map library, local so the page needs no CDN
+share-qr.svg          QR code for https://christergronvold-cmd.github.io/Sorlandet/
+README.md             the full documentation

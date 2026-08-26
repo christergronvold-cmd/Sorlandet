@@ -34,10 +34,14 @@ SHIP_NAME = os.environ.get("SHIP_NAME", "Sørlandet")
 # How long to listen to the AIS stream per run (seconds).
 LISTEN_SECONDS = int(os.environ.get("LISTEN_SECONDS", "240"))
 
+# Track thinning: full detail while it is fresh, coarser as it ages, so the
+# file the page downloads stays small over a nine-month voyage.
+THIN_RULES = [(7, 0), (30, 30), (120, 120), (10000, 360)]  # (days old, minutes between)
+
 # A new track point is stored only if the ship has moved at least this many nautical
 # miles, or at least this many minutes have passed since the previous point.
-MIN_MOVE_NM = float(os.environ.get("MIN_MOVE_NM", "0.5"))
-MIN_GAP_MIN = float(os.environ.get("MIN_GAP_MIN", "30"))
+MIN_MOVE_NM = float(os.environ.get("MIN_MOVE_NM", "0.15"))
+MIN_GAP_MIN = float(os.environ.get("MIN_GAP_MIN", "8"))
 
 USER_AGENT = os.environ.get(
     "CONTACT_UA", "sorlandet-tracker/1.0 (family project; contact: change-me@example.com)"
@@ -109,35 +113,37 @@ def write_json(path: Path, payload) -> None:
 # -------------------------------------------------------------- AIS position
 
 
-def fetch_position_from_aisstream(api_key: str) -> dict | None:
-    """Listens on aisstream.io until we see a position for our MMSI.
+def fetch_position_from_aisstream(api_key: str) -> tuple[dict | None, list[dict]]:
+    """Listens on aisstream and collects EVERY position for our MMSI in the window.
 
-    Any message from the vessel carries lat/lon in MetaData, so we accept the
-    first message of any type and enrich it if a PositionReport arrives.
+    The ship transmits every few minutes in coastal waters. Sampling for a couple of
+    minutes per run threw almost all of that away, so the window is now long and we
+    keep the lot: the newest becomes the current position, the rest fill the track.
+
+    Returns (newest position, all positions collected).
     """
     try:
         from websockets.sync.client import connect
     except ImportError:
         print("! missing the 'websockets' package (pip install websockets)", file=sys.stderr)
-        return None
+        return None, []
 
-    # No FilterMessageTypes: every message type from this MMSI is useful, and the
-    # MetaData block always carries a position.
     subscribe = {
         "APIKey": api_key,
         "BoundingBoxes": [[[-90, -180], [90, 180]]],
         "FiltersShipMMSI": [MMSI],
     }
 
-    position: dict | None = None
+    collected: dict[str, dict] = {}          # keyed by timestamp, so duplicates fold
     static: dict = {}
-    seen_total = 0
-    seen_ours = 0
+    seen_total = seen_ours = 0
     deadline = now_utc() + timedelta(seconds=LISTEN_SECONDS)
 
-    print(f"* listening on aisstream for up to {LISTEN_SECONDS}s for MMSI {MMSI} ...")
+    print(f"* listening on aisstream for up to {LISTEN_SECONDS}s ({LISTEN_SECONDS / 60:.0f} min) "
+          f"for MMSI {MMSI} ...")
     try:
-        with connect("wss://stream.aisstream.io/v0/stream", open_timeout=20) as ws:
+        with connect("wss://stream.aisstream.io/v0/stream",
+                     open_timeout=20, ping_interval=20, ping_timeout=20) as ws:
             ws.send(json.dumps(subscribe))
             print("  connected and subscribed")
             while now_utc() < deadline:
@@ -145,9 +151,9 @@ def fetch_position_from_aisstream(api_key: str) -> dict | None:
                 if remaining <= 0:
                     break
                 try:
-                    raw = ws.recv(timeout=remaining)
+                    raw = ws.recv(timeout=min(remaining, 120))
                 except TimeoutError:
-                    break
+                    continue                  # quiet stretch - keep waiting, do not give up
                 try:
                     msg = json.loads(raw)
                 except ValueError:
@@ -155,7 +161,7 @@ def fetch_position_from_aisstream(api_key: str) -> dict | None:
 
                 if isinstance(msg, dict) and msg.get("error"):
                     print(f"! aisstream returned an error: {msg['error']}", file=sys.stderr)
-                    return None
+                    break
 
                 seen_total += 1
                 meta = msg.get("MetaData") or {}
@@ -165,7 +171,6 @@ def fetch_position_from_aisstream(api_key: str) -> dict | None:
 
                 kind = msg.get("MessageType")
                 body = (msg.get("Message") or {}).get(kind) or {}
-
                 if kind == "ShipStaticData":
                     dest = (body.get("Destination") or "").strip()
                     if dest:
@@ -180,7 +185,7 @@ def fetch_position_from_aisstream(api_key: str) -> dict | None:
                 except Exception:
                     seen = iso(now_utc())
 
-                candidate = {
+                collected[seen] = {
                     "lat": round(float(lat), 5),
                     "lon": round(float(lon), 5),
                     "sog_kn": body.get("Sog"),
@@ -190,30 +195,24 @@ def fetch_position_from_aisstream(api_key: str) -> dict | None:
                     "seen_utc": seen,
                     "source": "aisstream.io",
                 }
-                # A PositionReport is the best kind - take it and stop. Anything else
-                # is kept as a fallback while we wait a little longer for one.
-                if kind == "PositionReport":
-                    position = candidate
-                    print(f"  -> position {candidate['lat']}, {candidate['lon']} at {seen} ({kind})")
-                    break
-                if position is None:
-                    position = candidate
-                    print(f"  -> position from {kind}: {candidate['lat']}, {candidate['lon']} at {seen}")
-    except Exception as exc:  # network, TLS, dropped connection ...
+    except Exception as exc:                  # network, TLS, dropped connection ...
         print(f"! error talking to aisstream: {exc}", file=sys.stderr)
-        return None
 
-    print(f"  messages seen: {seen_total} total, {seen_ours} for MMSI {MMSI}")
-    if position is None:
+    print(f"  messages seen: {seen_total} total, {seen_ours} for MMSI {MMSI}, "
+          f"{len(collected)} distinct positions")
+    if not collected:
         if seen_total == 0:
             print("  -> the stream sent nothing at all. Either the key was not accepted, "
                   "or no receiver reported any vessel in this window.")
         else:
             print("  -> no message for our MMSI in this window (normal outside coastal coverage)")
-        return None
+        return None, []
 
-    position.update({k: v for k, v in static.items() if v})
-    return position
+    ordered = [collected[t] for t in sorted(collected)]
+    newest = ordered[-1]
+    newest.update({k: v for k, v in static.items() if v})
+    print(f"  -> newest position {newest['lat']}, {newest['lon']} at {newest['seen_utc']}")
+    return newest, ordered
 
 
 def demo_position() -> dict:
@@ -516,6 +515,33 @@ def update_history(weather: dict, points: list) -> None:
     print(f"  -> history: {len(days)} days recorded")
 
 
+
+def thin_track(points: list) -> list:
+    """Keeps recent points as they are and spaces out the older ones."""
+    if not points:
+        return points
+    now = now_utc()
+    kept, last_t = [], {}
+    for pt in points:
+        try:
+            t = parse_iso(pt["t"])
+        except Exception:
+            kept.append(pt)
+            continue
+        age_days = (now - t).total_seconds() / 86400
+        spacing = next(m for d, m in THIN_RULES if age_days <= d)
+        if spacing == 0:
+            kept.append(pt)
+            continue
+        prev = last_t.get(spacing)
+        if prev is None or (t - prev).total_seconds() / 60 >= spacing:
+            kept.append(pt)
+            last_t[spacing] = t
+    if len(kept) != len(points):
+        print(f"  -> thinned track from {len(points)} to {len(kept)} points")
+    return kept
+
+
 # ----------------------------------------------------------------------- main
 
 
@@ -527,11 +553,13 @@ def main() -> int:
     points = track.get("points") or []
     previous = read_json(LATEST, {})
 
+    collected: list[dict] = []
     if demo:
         print("* no AISSTREAM_API_KEY - running in sample mode")
         position = demo_position()
+        collected = [position]
     else:
-        position = fetch_position_from_aisstream(api_key)
+        position, collected = fetch_position_from_aisstream(api_key)
 
     # No fresh AIS message: keep the last known position, but refresh the weather.
     fresh_fix = position is not None
@@ -552,31 +580,29 @@ def main() -> int:
             weather = {**earlier, "stale": True}
             print("  -> no weather data, keeping the previous reading")
 
-    if fresh_fix:
-        keep = True
-        if points:
-            last = points[-1]
-            moved = nm_between((last["lat"], last["lon"]), (lat, lon))
-            try:
-                gap = (parse_iso(position["seen_utc"]) - parse_iso(last["t"])).total_seconds() / 60
-            except Exception:
-                gap = MIN_GAP_MIN + 1
-            keep = moved >= MIN_MOVE_NM or gap >= MIN_GAP_MIN
-            if gap <= 0:
-                keep = False
-        if keep:
-            points.append(
-                {
-                    "t": position["seen_utc"],
-                    "lat": lat,
-                    "lon": lon,
-                    "sog": position.get("sog_kn"),
-                    "cog": position.get("cog_deg"),
-                }
-            )
-            print(f"  -> new track point (#{len(points)})")
-        else:
-            print("  -> the ship is nearly stationary, skipping track point")
+    if fresh_fix and collected:
+        added = 0
+        for fix in collected:
+            lat_i, lon_i = float(fix["lat"]), float(fix["lon"])
+            if points:
+                last = points[-1]
+                moved = nm_between((last["lat"], last["lon"]), (lat_i, lon_i))
+                try:
+                    gap = (parse_iso(fix["seen_utc"]) - parse_iso(last["t"])).total_seconds() / 60
+                except Exception:
+                    gap = MIN_GAP_MIN + 1
+                if gap <= 0 or (moved < MIN_MOVE_NM and gap < MIN_GAP_MIN):
+                    continue
+            points.append({
+                "t": fix["seen_utc"],
+                "lat": lat_i,
+                "lon": lon_i,
+                "sog": fix.get("sog_kn"),
+                "cog": fix.get("cog_deg"),
+            })
+            added += 1
+        print(f"  -> added {added} of {len(collected)} collected positions to the track")
+        points = thin_track(points)
 
     distance_nm = sum(
         nm_between((points[i - 1]["lat"], points[i - 1]["lon"]), (points[i]["lat"], points[i]["lon"]))
