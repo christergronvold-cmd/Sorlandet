@@ -767,9 +767,13 @@ def main() -> int:
         except Exception:
             pass
 
+    # Steps under 0.02 nm are receiver jitter while she lies still, not distance sailed.
     distance_nm = sum(
-        nm_between((points[i - 1]["lat"], points[i - 1]["lon"]), (points[i]["lat"], points[i]["lon"]))
-        for i in range(1, len(points))
+        step for step in (
+            nm_between((points[i - 1]["lat"], points[i - 1]["lon"]),
+                       (points[i]["lat"], points[i]["lon"]))
+            for i in range(1, len(points))
+        ) if step >= 0.02
     )
 
     sun = fetch_sun_moon(lat, lon)
