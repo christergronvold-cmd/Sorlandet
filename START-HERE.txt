@@ -1,0 +1,23 @@
+START HERE
+==========
+
+1. aisstream.io -> sign in with GitHub -> Account -> create API key.
+
+2. GitHub -> new repository, Public.
+
+3. Add file -> Upload files -> drag in the CONTENTS of this folder (all files and
+   the folders data, scripts, vendor). One commit.
+
+4. Two files are hidden by Finder/Explorer and must be typed in the browser:
+     Add file -> Create new file -> name it   .nojekyll                      -> leave empty
+     Add file -> Create new file -> name it   .github/workflows/update.yml   -> paste from
+                                                                                this folder
+5. Settings -> Secrets and variables -> Actions -> New repository secret
+     Name:  AISSTREAM_API_KEY
+     Value: the key from step 1
+
+6. Settings -> Pages -> Deploy from a branch -> main -> / (root) -> Save
+
+7. Actions -> Update position -> Run workflow
+
+Full details in README.md.

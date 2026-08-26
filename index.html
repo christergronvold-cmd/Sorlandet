@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Where is Sørlandet?</title>
+<meta name="theme-color" content="#0b6ea8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sørlandet">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#ffffff; --ink:#12222e; --muted:#5d7385;
+    --line:#e2e8ee; --accent:#0b6ea8; --warn:#a8580b; --warn-bg:#fff5e6;
+    --shadow:0 1px 2px rgba(18,34,46,.06), 0 8px 24px rgba(18,34,46,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d1520; --panel:#131f2c; --ink:#e8eef4; --muted:#93a6b6;
+      --line:#22323f; --accent:#5fb6e6; --warn:#f0b45c; --warn-bg:#2a2113;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:20px 16px 48px}
+  header{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; margin-bottom:14px}
+  h1{font-size:23px; letter-spacing:-.01em; margin:0; font-weight:650}
+  h1 small{display:block; font-size:13px; font-weight:400; color:var(--muted); letter-spacing:0}
+  .pill{
+    margin-left:auto; font-size:13px; font-weight:600; padding:5px 11px; border-radius:999px;
+    background:var(--panel); border:1px solid var(--line); color:var(--muted); white-space:nowrap;
+  }
+  .pill.live{color:#0a7a4f; border-color:#0a7a4f40; background:#0a7a4f12}
+  .pill.stale{color:var(--warn); border-color:#a8580b40; background:var(--warn-bg)}
+  .note{
+    background:var(--warn-bg); border:1px solid #a8580b33; color:var(--warn);
+    padding:10px 13px; border-radius:10px; font-size:14px; margin-bottom:14px;
+  }
+  #map{
+    height:min(56vh,480px); border-radius:14px; border:1px solid var(--line);
+    box-shadow:var(--shadow); background:var(--panel); z-index:0;
+  }
+  .grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); margin-top:14px}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+    margin:0 0 10px; font-weight:650;
+  }
+  .row{display:flex; justify-content:space-between; gap:12px; padding:4px 0; font-variant-numeric:tabular-nums}
+  .row span:first-child{color:var(--muted)}
+  .row span:last-child{font-weight:600; text-align:right}
+  .big{font-size:27px; font-weight:650; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .big small{font-size:14px; font-weight:500; color:var(--muted)}
+  .arrow{display:inline-block; color:var(--accent)}
+  .card.wide{grid-column:1/-1}
+  .fc{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch}
+  .fc>div{
+    flex:0 0 96px; text-align:center; border:1px solid var(--line); border-radius:11px;
+    padding:9px 4px; font-size:13px; background:var(--bg);
+  }
+  .fc b{display:block; font-size:12px; color:var(--muted); font-weight:600; text-transform:capitalize}
+  .fc .ic{font-size:21px; line-height:1.5}
+  footer{margin-top:22px; font-size:12.5px; color:var(--muted); line-height:1.7}
+  footer a{color:var(--accent)}
+  .ship-marker{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Where is Sørlandet?<small id="sub">loading position …</small></h1>
+    <span class="pill" id="pill">…</span>
+  </header>
+
+  <div class="note" id="note" hidden></div>
+  <div id="map"></div>
+
+  <div class="grid" id="cards"></div>
+
+  <footer>
+    Position from AIS via <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a> ·
+    weather and sea state from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
+    map by OpenStreetMap · voyage plan from the A+ World Academy 2026–2027 plan, which is tentative and
+    subject to change.
+    <br>AIS is picked up by shore-based receivers. Far from land there can be days between positions, and
+    the page then shows the last known one. This is a private family project, not an official source from
+    the ship or the school.
+    <span id="stamp"></span>
+  </footer>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script>
+const N = (v, d = 1) => (v === null || v === undefined || Number.isNaN(v)) ? "–" : Number(v).toFixed(d);
+
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass = deg => (deg === null || deg === undefined) ? "–" : COMPASS[Math.round(deg / 22.5) % 16];
+
+const beaufort = ms => {
+  if (ms === null || ms === undefined) return "";
+  const lim = [0.3,1.6,3.4,5.5,8,10.8,13.9,17.2,20.8,24.5,28.5,32.7];
+  let b = 12; for (let i = 0; i < lim.length; i++) if (ms < lim[i]) { b = i; break; }
+  const names = ["calm","light air","light breeze","gentle breeze","moderate breeze","fresh breeze",
+                 "strong breeze","near gale","gale","strong gale","storm","violent storm","hurricane"];
+  return `Force ${b} · ${names[b]}`;
+};
+
+const WMO = {0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",56:"🌧️",57:"🌧️",
+  61:"🌦️",63:"🌧️",65:"🌧️",66:"🌧️",67:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",77:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",
+  85:"🌨️",86:"❄️",95:"⛈️",96:"⛈️",99:"⛈️"};
+
+const dms = (v, axis) => {
+  if (v === null || v === undefined) return "–";
+  const hemi = axis === "lat" ? (v >= 0 ? "N" : "S") : (v >= 0 ? "E" : "W");
+  const a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60;
+  return `${d}° ${m.toFixed(1)}′ ${hemi}`;
+};
+
+function ago(iso) {
+  if (!iso) return "unknown";
+  const min = (Date.now() - new Date(iso).getTime()) / 6e4;
+  if (min < 2) return "just now";
+  if (min < 90) return `${Math.round(min)} min ago`;
+  if (min < 36 * 60) return `${Math.round(min / 60)} hours ago`;
+  const d = Math.round(min / 1440);
+  return `${d} ${d === 1 ? "day" : "days"} ago`;
+}
+
+const fmtTime = iso => iso
+  ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+  : "–";
+
+const dayName = iso => new Date(iso + "T12:00:00Z")
+  .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+const wideCard = (title, html) => `<div class="card wide"><h2>${title}</h2>${html}</div>`;
+const card = (title, html) => `<div class="card"><h2>${title}</h2>${html}</div>`;
+const row = (k, v) => `<div class="row"><span>${k}</span><span>${v}</span></div>`;
+
+// Great-circle distance in nautical miles - same formula as in update.py.
+function nm(a, b) {
+  const R = 6371.0088, r = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h)) / 1.852;
+}
+
+// ------------------------------------------------------------------------- map
+const map = L.map("map", { zoomControl: true, worldCopyJump: true }).setView([45, -25], 3);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 18, attribution: "© OpenStreetMap"
+}).addTo(map);
+
+const shipIcon = heading => L.divIcon({
+  className: "ship-marker",
+  html: `<svg width="34" height="34" viewBox="0 0 34 34" style="transform:rotate(${heading ?? 0}deg)">
+      <circle cx="17" cy="17" r="8.5" fill="#0b6ea8" stroke="#fff" stroke-width="2.5"/>
+      <path d="M17 1.5 L22 11 L12 11 Z" fill="#0b6ea8" stroke="#fff" stroke-width="1.6"/>
+    </svg>`,
+  iconSize: [34, 34], iconAnchor: [17, 17]
+});
+
+let layers = [];
+async function load() {
+  const bust = "?v=" + Date.now();
+  const [latest, track, plan] = await Promise.all([
+    fetch("data/latest.json" + bust).then(r => r.json()),
+    fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
+    fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] }))
+  ]);
+  render(latest, track, plan);
+}
+
+function render(d, track, plan = { ports: [] }) {
+  const p = d.position || {}, w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
+  const pts = (track.points || []).map(q => [q.lat, q.lon]);
+  const ports = plan.ports || [];
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  // No real AIS position yet? Say so, rather than presenting sample data as real.
+  const waiting = !d.demo && (p.lat === undefined || p.source === "demo");
+  const hours = p.seen_utc ? (Date.now() - new Date(p.seen_utc).getTime()) / 36e5 : 999;
+
+  document.getElementById("sub").textContent = waiting
+    ? `${d.ship || "Sørlandet"} · MMSI ${d.mmsi || ""} · waiting for first position`
+    : `${d.ship || "Sørlandet"} · MMSI ${d.mmsi || ""} · last seen ${ago(p.seen_utc)}`;
+
+  const pill = document.getElementById("pill");
+  pill.textContent = waiting ? "waiting for AIS" : hours < 6 ? "AIS contact" : "out of AIS range";
+  pill.className = "pill " + (waiting ? "" : hours < 6 ? "live" : "stale");
+
+  const note = document.getElementById("note");
+  if (waiting) {
+    note.hidden = false;
+    note.innerHTML = "<b>Waiting for the first AIS message.</b> Everything is set up, but no shore-based " +
+      "receiver has heard Sørlandet yet. The page fills in by itself once the ship is within range.";
+  } else if (d.demo) {
+    note.hidden = false;
+    note.innerHTML = "<b>Sample data.</b> This is a preview with made-up positions. Add a free aisstream.io " +
+      "API key to get real ones — see the README.";
+  } else if (hours >= 6) {
+    note.hidden = false;
+    note.innerHTML = `<b>No recent AIS message.</b> The last position was heard ${ago(p.seen_utc)}. ` +
+      "Out at sea that is entirely normal — the weather below is for that last known position.";
+  } else {
+    note.hidden = true;
+  }
+
+  // ---- map layers
+  layers.forEach(l => map.removeLayer(l));
+  layers = [];
+
+  if (pts.length > 1) {
+    // Split the track where AIS coverage was lost for more than 12 hours and draw the
+    // gap dashed, so you can see where the ship was out of range.
+    const raw = track.points || [];
+    let seg = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const gapH = (new Date(raw[i].t) - new Date(raw[i - 1].t)) / 36e5;
+      if (gapH > 12) {
+        if (seg.length > 1) layers.push(L.polyline(seg, { color: "#0b6ea8", weight: 3, opacity: .8 }).addTo(map));
+        layers.push(L.polyline([pts[i - 1], pts[i]], {
+          color: "#0b6ea8", weight: 2, opacity: .45, dashArray: "5,7"
+        }).bindTooltip(`No AIS coverage for ${Math.round(gapH)} hours`).addTo(map));
+        seg = [pts[i]];
+      } else {
+        seg.push(pts[i]);
+      }
+    }
+    if (seg.length > 1) layers.push(L.polyline(seg, { color: "#0b6ea8", weight: 3, opacity: .8 }).addTo(map));
+    layers.push(L.circleMarker(pts[0], { radius: 5, color: "#0b6ea8", fillColor: "#fff", fillOpacity: 1 })
+      .bindTooltip("Start of track").addTo(map));
+  }
+
+  if (ports.length) {
+    layers.push(L.polyline(ports.map(q => [q.lat, q.lon]), {
+      color: "#7c8ea0", weight: 1.5, opacity: .5, dashArray: "2,6"
+    }).addTo(map));
+    ports.forEach(q => {
+      const passed = q.depart < todayISO;
+      layers.push(L.circleMarker([q.lat, q.lon], {
+        radius: passed ? 4 : 5.5,
+        color: passed ? "#7c8ea0" : "#0b6ea8",
+        weight: 2,
+        fillColor: passed ? "#7c8ea0" : "#fff",
+        fillOpacity: 1
+      }).bindTooltip(
+        `<b>${q.name}</b><br>${q.country}<br>${dayName(q.arrive)}–${dayName(q.depart)}` +
+        (q.events ? "<br>" + q.events.join("<br>") : ""),
+        { direction: "top" }
+      ).addTo(map));
+    });
+  }
+
+  const nextPort = ports.find(q => q.arrive > todayISO);
+  if (p.lat !== undefined && !waiting) {
+    layers.push(L.marker([p.lat, p.lon], { icon: shipIcon(p.heading_deg ?? p.cog_deg) })
+      .bindPopup(`<b>${d.ship}</b><br>${dms(p.lat, "lat")} ${dms(p.lon, "lon")}<br>${fmtTime(p.seen_utc)} UTC`)
+      .addTo(map));
+    const all = (pts.length > 1 ? pts.slice() : []).concat([[p.lat, p.lon]]);
+    if (nextPort) all.push([nextPort.lat, nextPort.lon]);
+    map.fitBounds(L.latLngBounds(all).pad(.18), { maxZoom: 8 });
+  } else if (ports.length) {
+    map.fitBounds(L.latLngBounds(ports.map(q => [q.lat, q.lon])).pad(.1), { maxZoom: 5 });
+  }
+
+  // ---- voyage plan card
+  let planCard = "";
+  if (ports.length) {
+    const inPort = ports.find(q => q.arrive <= todayISO && todayISO <= q.depart);
+    const from = [...ports].reverse().find(q => q.depart <= todayISO);
+    const done = ports.filter(q => q.depart < todayISO).length;
+
+    let rows = "";
+    if (inPort) {
+      rows += row("In port now", `<b>${inPort.name}</b>, ${inPort.country}`);
+      rows += row("Departs", dayName(inPort.depart));
+    } else if (from && nextPort) {
+      rows += row("Leg", `${from.name} → <b>${nextPort.name}</b>`);
+    }
+    if (nextPort) {
+      const days = Math.max(0, Math.round((new Date(nextPort.arrive + "T12:00:00Z") - Date.now()) / 864e5));
+      rows += row("Scheduled arrival", `${dayName(nextPort.arrive)} (in ${days} days)`);
+      if (p.lat !== undefined && !waiting) {
+        const dist = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
+        const speed = Math.max(p.sog_kn || 0, 4.5);   // 4.5 kn as a cautious average
+        const eta = new Date(Date.now() + (dist / speed) * 36e5);
+        rows += row("Distance", `${N(dist, 0)} nm`);
+        rows += row("At current speed", eta.toLocaleDateString("en-GB", { day: "numeric", month: "short" }));
+      }
+      if (nextPort.events) rows += row("Programme", nextPort.events.join("<br>"));
+    } else {
+      rows += row("Status", "Voyage complete");
+    }
+    rows += row("Ports done", `${done} of ${ports.length}`);
+    planCard = card("Voyage plan", rows);
+  }
+
+  // ---- full route strip
+  const routeStrip = ports.map(q => {
+    const passed = q.depart < todayISO;
+    const here = q.arrive <= todayISO && todayISO <= q.depart;
+    const isNext = !here && q === nextPort;
+    return `<div style="${passed ? "opacity:.45" : ""}${
+      here || isNext ? "border-color:var(--accent);border-width:2px" : ""}">
+      <b>${q.name}</b><div class="ic">${here ? "⚓" : isNext ? "🧭" : passed ? "✓" : "·"}</div>
+      ${dayName(q.arrive)}<br><span style="color:var(--muted)">${q.country}</span></div>`;
+  }).join("");
+
+  const seaFc = (w.sea_forecast || []).slice(0, 6).map(f =>
+    `<div><b>${new Date(f.time_utc + "Z").toLocaleString("en-GB", { weekday: "short", hour: "2-digit" })}</b>
+      <div class="ic">🌊</div>${N(f.wave_height_m)} m</div>`).join("");
+
+  const airFc = (w.air_forecast || []).slice(0, 4).map(f =>
+    `<div><b>${new Date(f.date).toLocaleDateString("en-GB", { weekday: "short" })}</b>
+      <div class="ic">${WMO[f.weather_code] || "🌡️"}</div>
+      ${N(f.temp_max_c, 0)}° / ${N(f.temp_min_c, 0)}°<br>
+      <span style="color:var(--muted)">${N(f.wind_max_ms, 0)} m/s</span></div>`).join("");
+
+  document.getElementById("cards").innerHTML = [
+    card("Position", waiting ? row("Status", "no AIS message yet") : `
+      <div class="big">${dms(p.lat, "lat")}<br>${dms(p.lon, "lon")}</div>
+      ${row("Last seen", fmtTime(p.seen_utc))}
+      ${row("Speed", `${N(p.sog_kn)} knots`)}
+      ${row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`)}
+      ${p.destination ? row("Reported destination", p.destination) : ""}`),
+
+    planCard,
+
+    card("Wind", waiting ? row("Status", "waiting for position") : `
+      <div class="big">${N(air.wind_ms)} <small>m/s</small></div>
+      <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">${beaufort(air.wind_ms)}</div>
+      ${row("From", `${compass(air.wind_direction_deg)} (${N(air.wind_direction_deg, 0)}°)`)}
+      ${row("Gusts", `${N(air.gust_ms)} m/s`)}
+      ${row("Pressure", `${N(air.pressure_hpa, 0)} hPa`)}`),
+
+    card("Sea", waiting ? row("Status", "waiting for position") : `
+      <div class="big">${N(sea.wave_height_m)} <small>m waves</small></div>
+      ${row("Swell", `${N(sea.swell_height_m)} m / ${N(sea.swell_period_s, 0)} s`)}
+      ${row("Wave direction", compass(sea.wave_direction_deg))}
+      ${row("Sea temperature", `${N(sea.sea_temp_c)} °C`)}`),
+
+    card("Air", waiting ? row("Status", "waiting for position") : `
+      <div class="big">${N(air.temp_c)} <small>°C</small></div>
+      ${row("Feels like", `${N(air.feels_c)} °C`)}
+      ${row("Cloud cover", `${N(air.cloud_pct, 0)} %`)}
+      ${row("Precipitation", `${N(air.precip_mm)} mm`)}`),
+
+    card("Voyage so far", `
+      ${row("Distance sailed", `${N(d.stats?.distance_nm, 0)} nm`)}
+      ${row("Positions logged", d.stats?.points ?? "–")}
+      ${row("Track started", fmtTime(d.stats?.first_point_utc))}
+      ${row("Updated", ago(d.updated_utc))}`),
+
+    routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
+    seaFc ? wideCard("Waves next 36 hours", `<div class="fc">${seaFc}</div>`) : "",
+    airFc ? wideCard("Weather ahead", `<div class="fc">${airFc}</div>`) : ""
+  ].join("");
+
+  document.getElementById("stamp").textContent = " The page refreshes itself every 5 minutes.";
+}
+
+load().catch(e => {
+  document.getElementById("note").hidden = false;
+  document.getElementById("note").innerHTML =
+    "<b>No data yet.</b> Run <code>python3 scripts/update.py</code> to create data/latest.json.";
+  console.error(e);
+});
+setInterval(() => load().catch(console.error), 5 * 60 * 1000);
+</script>
+</body>
+</html>
