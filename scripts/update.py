@@ -754,6 +754,19 @@ def main() -> int:
         print(f"  -> added {added} of {len(collected)} collected positions to the track")
         points = thin_track(points)
 
+    # A backfill can leave the track newer than the position we just derived; keep the
+    # two in step so the marker never sits behind the end of its own line.
+    if points:
+        try:
+            newest_t = parse_iso(points[-1]["t"])
+            if not position.get("seen_utc") or newest_t > parse_iso(position["seen_utc"]):
+                position = dict(position, lat=points[-1]["lat"], lon=points[-1]["lon"],
+                                sog_kn=points[-1].get("sog"), cog_deg=points[-1].get("cog"),
+                                heading_deg=None, seen_utc=points[-1]["t"])
+                print("  -> position taken from the newest track point")
+        except Exception:
+            pass
+
     distance_nm = sum(
         nm_between((points[i - 1]["lat"], points[i - 1]["lon"]), (points[i]["lat"], points[i]["lon"]))
         for i in range(1, len(points))
