@@ -243,8 +243,15 @@ function render(d, track, plan = { ports: [] }) {
       .bindTooltip("Start of track").addTo(map));
   }
 
+  // The planned route follows sailing waypoints where a straight line would cross land.
+  const routeLine = [];
+  ports.forEach(q => {
+    (q.waypoints || []).forEach(wp => routeLine.push(wp));
+    routeLine.push([q.lat, q.lon]);
+  });
+
   if (ports.length) {
-    layers.push(L.polyline(ports.map(q => [q.lat, q.lon]), {
+    layers.push(L.polyline(routeLine, {
       color: "#7c8ea0", weight: 1.5, opacity: .5, dashArray: "2,6"
     }).addTo(map));
     ports.forEach(q => {
@@ -293,7 +300,10 @@ function render(d, track, plan = { ports: [] }) {
       const days = Math.max(0, Math.round((new Date(nextPort.arrive + "T12:00:00Z") - Date.now()) / 864e5));
       rows += row("Scheduled arrival", `${dayName(nextPort.arrive)} (in ${days} days)`);
       if (p.lat !== undefined && !waiting) {
-        const dist = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
+        // Distance along the route via the leg's waypoints, not as the crow flies.
+        const legPts = [[p.lat, p.lon], ...(nextPort.waypoints || []), [nextPort.lat, nextPort.lon]];
+        let dist = 0;
+        for (let i = 1; i < legPts.length; i++) dist += nm(legPts[i - 1], legPts[i]);
         const speed = Math.max(p.sog_kn || 0, 4.5);   // 4.5 kn as a cautious average
         const eta = new Date(Date.now() + (dist / speed) * 36e5);
         rows += row("Distance", `${N(dist, 0)} nm`);
