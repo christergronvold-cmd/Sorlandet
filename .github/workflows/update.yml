@@ -1,0 +1,53 @@
+name: Update position
+
+on:
+  schedule:
+    # Every 20 minutes. GitHub may delay cron by a few minutes.
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: position
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install websockets
+
+      - name: Fetch position and weather
+        env:
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          LISTEN_SECONDS: "150"
+          CONTACT_UA: "sorlandet-tracker (github actions)"
+        run: python3 scripts/update.py
+
+      - name: Save new data
+        run: |
+          git config user.name "sorlandet-bot"
+          git config user.email "bot@users.noreply.github.com"
+          if [ -z "$(git status --porcelain data/)" ]; then
+            echo "No changes in data/."
+            exit 0
+          fi
+          git add data/
+          git commit -m "Position $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push; then
+              echo "Saved."
+              exit 0
+            fi
+            echo "Push failed, attempt $attempt - retrying in 5 seconds."
+            sleep 5
+          done
+          echo "Could not push, but the position will be fetched again in 20 minutes."
