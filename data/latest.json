@@ -2,8 +2,8 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-08-26T16:18:27Z",
- "fresh_fix": true,
+ "updated_utc": "2026-08-26T19:35:16Z",
+ "fresh_fix": false,
  "demo": false,
  "position": {
   "lat": 57.60469,
@@ -16,16 +16,16 @@
   "source": "aisstream.io"
  },
  "weather": {
-  "fetched_utc": "2026-08-26T16:18:26Z",
+  "fetched_utc": "2026-08-26T19:35:12Z",
   "sea": {
    "wave_height_m": 0.52,
-   "wave_direction_deg": 51,
-   "wave_period_s": 3.95,
-   "swell_height_m": 0.22,
-   "swell_period_s": 7.65,
-   "wind_wave_height_m": 0.44,
-   "sea_temp_c": 16.8,
-   "time_utc": "2026-08-26T16:15"
+   "wave_direction_deg": 63,
+   "wave_period_s": 3.8,
+   "swell_height_m": 0.3,
+   "swell_period_s": 5.1,
+   "wind_wave_height_m": 0.38,
+   "sea_temp_c": 16.7,
+   "time_utc": "2026-08-26T19:30"
   },
   "sea_forecast": [
    {
@@ -78,21 +78,21 @@
    }
   ],
   "air": {
-   "temp_c": 17.3,
-   "feels_c": 15.6,
-   "wind_ms": 6.6,
-   "gust_ms": 8.4,
-   "wind_direction_deg": 60,
-   "pressure_hpa": 1024.2,
-   "cloud_pct": 2,
+   "temp_c": 17.6,
+   "feels_c": 16.9,
+   "wind_ms": 4.7,
+   "gust_ms": 6.9,
+   "wind_direction_deg": 81,
+   "pressure_hpa": 1024.1,
+   "cloud_pct": 84,
    "precip_mm": 0.0,
-   "weather_code": 0,
-   "time_utc": "2026-08-26T16:15"
+   "weather_code": 3,
+   "time_utc": "2026-08-26T19:30"
   },
   "air_forecast": [
    {
     "date": "2026-08-26",
-    "weather_code": 2,
+    "weather_code": 3,
     "temp_max_c": 18.0,
     "temp_min_c": 17.0,
     "wind_max_ms": 6.7
@@ -102,23 +102,36 @@
     "weather_code": 3,
     "temp_max_c": 17.7,
     "temp_min_c": 16.6,
-    "wind_max_ms": 11.6
+    "wind_max_ms": 11.4
    },
    {
     "date": "2026-08-28",
     "weather_code": 65,
     "temp_max_c": 17.1,
     "temp_min_c": 16.5,
-    "wind_max_ms": 15.9
+    "wind_max_ms": 16.2
    },
    {
     "date": "2026-08-29",
     "weather_code": 80,
-    "temp_max_c": 16.7,
-    "temp_min_c": 16.1,
-    "wind_max_ms": 12.39
+    "temp_max_c": 16.9,
+    "temp_min_c": 16.2,
+    "wind_max_ms": 12.49
    }
   ]
+ },
+ "sun": {
+  "moon": {
+   "age_days": 13.5,
+   "illumination": 0.98,
+   "phase": "full moon"
+  },
+  "timezone": "Etc/GMT-1",
+  "timezone_abbreviation": "GMT+1",
+  "utc_offset_seconds": 3600,
+  "sunrise_local": "2026-08-26T05:16",
+  "sunset_local": "2026-08-26T19:42",
+  "daylight_hours": 14.4
  },
  "stats": {
   "points": 1,
