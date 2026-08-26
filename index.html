@@ -599,7 +599,21 @@ async function load() {
 }
 
 function render(d, track, plan = { ports: [] }, history = { days: [] }) {
-  const p = d.position || {}, w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
+  let p = d.position || {};
+  const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
+
+  // The track can be newer than latest.json - a backfill writes only the track, and the
+  // ship would then sit behind the end of her own line. Trust whichever is newer.
+  const lastPt = (track.points || []).slice(-1)[0];
+  if (lastPt && (!p.seen_utc || new Date(lastPt.t) > new Date(p.seen_utc))) {
+    p = {
+      ...p,
+      lat: lastPt.lat, lon: lastPt.lon,
+      sog_kn: lastPt.sog ?? null, cog_deg: lastPt.cog ?? null, heading_deg: null,
+      seen_utc: lastPt.t,
+      source: p.source || "track",
+    };
+  }
   const pts = (track.points || []).map(q => [q.lat, q.lon]);
   const ports = plan.ports || [];
   const todayISO = new Date().toISOString().slice(0, 10);
