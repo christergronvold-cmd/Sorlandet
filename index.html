@@ -144,6 +144,8 @@
     <label for="windtime">Forecast</label>
     <input type="range" id="windtime" min="0" max="0" value="0" step="1">
     <span class="when" id="windwhen">now</span>
+    <span id="windlive" hidden title="The grid is being fetched for what you see"
+          style="color:var(--accent);font-size:11.5px;font-weight:650">live grid</span>
   </div>
 
   <div class="grid" id="cards"></div>
@@ -428,9 +430,8 @@ function setupGrids(wind, waves) {
   const bar = document.getElementById("windbar");
   const slider = document.getElementById("windtime");
   const times = (wind || waves)?.times || [];
-  document.getElementById("wavetoggle").hidden = !waves;
-  if (!times.length) { bar.hidden = true; return; }
-  bar.hidden = false;
+  bar.hidden = false;                        // the grid can always be fetched for the map
+  if (!times.length) return;
   slider.max = times.length - 1;
   gridIndex = Math.min(gridIndex, times.length - 1);
   slider.value = gridIndex;
@@ -449,7 +450,136 @@ document.getElementById("windtime").addEventListener("input", e => {
     e.target.classList.toggle("on", show[key]);
     e.target.textContent = show[key] ? `${label} ✓` : label;
     drawGrids();
+    if (show[key]) refreshViewportGrids();
   });
+});
+
+
+// ---------------------------------------------------- grid that follows the map
+// The files written by the job cover a fixed 360 x 360 nm box around the ship, which
+// looks dense when zoomed out and sparse when zoomed in. So when the map moves, the
+// page asks Open-Meteo for a grid matching what is actually on screen. The file grid
+// stays the fallback: it works offline and shows instantly.
+const VIEWPORT_CELLS = 6;
+const viewportCache = new Map();
+let viewportTimer = null, viewportLive = false;
+
+function gridFromBounds(b, n) {
+  const pad = 0.08;
+  const s = b.getSouth(), w = b.getWest(), nn = b.getNorth(), e = b.getEast();
+  const dLat = (nn - s), dLon = (e - w);
+  const lats = [], lons = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const la = s + dLat * (pad + (1 - 2 * pad) * i / (n - 1));
+      const lo = w + dLon * (pad + (1 - 2 * pad) * j / (n - 1));
+      lats.push(Math.max(-89, Math.min(89, la)).toFixed(3));
+      lons.push((((lo + 180) % 360 + 360) % 360 - 180).toFixed(3));
+    }
+  }
+  return { lats, lons };
+}
+
+function pickTimes(all) {
+  const nowHour = new Date().toISOString().slice(0, 13) + ":00";
+  let first = all.findIndex(t => t >= nowHour);
+  if (first < 0) first = 0;
+  const idx = [];
+  for (let k = first; k < Math.min(all.length, first + 25); k += 3) idx.push(k);
+  return { idx, times: idx.map(k => all[k]) };
+}
+
+async function fetchViewportGrid(kind, bounds) {
+  const n = VIEWPORT_CELLS;
+  const { lats, lons } = gridFromBounds(bounds, n);
+  const base = kind === "wind"
+    ? "https://api.open-meteo.com/v1/forecast?"
+    : "https://marine-api.open-meteo.com/v1/marine?";
+  const params = new URLSearchParams({
+    latitude: lats.join(","), longitude: lons.join(","),
+    hourly: kind === "wind" ? "wind_speed_10m,wind_direction_10m"
+                            : "wave_height,wave_direction,wave_period",
+    forecast_days: "2", timezone: "UTC"
+  });
+  if (kind === "wind") params.set("wind_speed_unit", "ms");
+
+  const res = await fetch(base + params.toString());
+  if (!res.ok) throw new Error(`${kind} grid: HTTP ${res.status}`);
+  const data = await res.json();
+  const blocks = Array.isArray(data) ? data : [data];
+  const allTimes = blocks[0]?.hourly?.time || [];
+  if (!allTimes.length) throw new Error(`${kind} grid: no hourly times`);
+  const { idx, times } = pickTimes(allTimes);
+
+  const cells = [];
+  blocks.forEach(b => {
+    const h = b.hourly || {};
+    if (kind === "wind") {
+      if (!h.wind_speed_10m) return;
+      cells.push({
+        lat: +(+b.latitude).toFixed(3), lon: +(+b.longitude).toFixed(3),
+        ws: idx.map(k => h.wind_speed_10m[k] ?? null),
+        wd: idx.map(k => h.wind_direction_10m?.[k] ?? null)
+      });
+    } else {
+      if (!h.wave_height || h.wave_height.every(v => v === null)) return;   // land cell
+      cells.push({
+        lat: +(+b.latitude).toFixed(3), lon: +(+b.longitude).toFixed(3),
+        hs: idx.map(k => h.wave_height[k] ?? null),
+        wd: idx.map(k => h.wave_direction?.[k] ?? null),
+        tp: idx.map(k => h.wave_period?.[k] ?? null)
+      });
+    }
+  });
+  if (!cells.length) throw new Error(`${kind} grid: no usable cells`);
+  return { times, step_hours: 3, cells, viewport: true };
+}
+
+function boundsKey(b) {
+  return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]
+    .map(v => v.toFixed(1)).join(",");
+}
+
+async function refreshViewportGrids() {
+  if (!show.wind && !show.waves) return;
+  const b = map.getBounds();
+  const key = boundsKey(b);
+  const wanted = [["wind", show.wind], ["waves", show.waves]].filter(([, on]) => on);
+
+  for (const [kind] of wanted) {
+    const cacheKey = kind + "|" + key;
+    try {
+      let grid = viewportCache.get(cacheKey);
+      if (!grid) {
+        grid = await fetchViewportGrid(kind, b);
+        viewportCache.set(cacheKey, grid);
+        if (viewportCache.size > 24) viewportCache.delete(viewportCache.keys().next().value);
+      }
+      gridData[kind] = grid;
+      viewportLive = true;
+    } catch (err) {
+      console.warn(err);                      // keep whatever we already had
+    }
+  }
+  syncSlider();
+  drawGrids();
+}
+
+function syncSlider() {
+  const times = (gridData.wind || gridData.waves)?.times || [];
+  const slider = document.getElementById("windtime");
+  if (!times.length) return;
+  slider.max = times.length - 1;
+  gridIndex = Math.min(gridIndex, times.length - 1);
+  slider.value = gridIndex;
+  const live = document.getElementById("windlive");
+  if (live) live.hidden = !viewportLive;
+  document.getElementById("windwhen").textContent = gridLabel(gridIndex);
+}
+
+map.on("moveend zoomend", () => {
+  clearTimeout(viewportTimer);
+  viewportTimer = setTimeout(refreshViewportGrids, 700);
 });
 
 let layers = [];
@@ -465,6 +595,7 @@ async function load() {
   ]);
   render(latest, track, plan, history);
   setupGrids(wind, waves);
+  setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
 }
 
 function render(d, track, plan = { ports: [] }, history = { days: [] }) {
