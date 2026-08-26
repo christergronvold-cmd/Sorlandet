@@ -618,6 +618,20 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }) {
   const ports = plan.ports || [];
   const todayISO = new Date().toISOString().slice(0, 10);
 
+  // Work the totals out from the track itself. latest.json only knows what the job saw
+  // on its last run, so a backfill would leave it saying "0 nm over 1 position".
+  // Segments under 0.02 nm (about 37 m) are dropped: that is receiver jitter while she
+  // lies still, not distance sailed.
+  const tp = track.points || [];
+  let sailed = 0;
+  for (let i = 1; i < tp.length; i++) {
+    const step = nm([tp[i - 1].lat, tp[i - 1].lon], [tp[i].lat, tp[i].lon]);
+    if (step >= 0.02) sailed += step;
+  }
+  const stats = tp.length
+    ? { points: tp.length, distance_nm: sailed, first_point_utc: tp[0].t }
+    : (d.stats || { points: 0, distance_nm: 0, first_point_utc: null });
+
   // No real AIS position yet? Say so, rather than presenting sample data as real.
   const waiting = !d.demo && (p.lat === undefined || p.source === "demo");
   const hours = p.seen_utc ? (Date.now() - new Date(p.seen_utc).getTime()) / 36e5 : 999;
@@ -819,7 +833,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }) {
       <div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>
       ${row("Along the route", `${Math.round(done).toLocaleString("en-GB")} of ${Math.round(total).toLocaleString("en-GB")} nm · ${pct < 1 ? pct.toFixed(2) : pct.toFixed(0)}%`)}
       ${row("Day of the voyage", `${dayNo} of ${daysTotal}`)}
-      ${row("Actually sailed and logged", `${N(d.stats?.distance_nm, 0)} nm over ${d.stats?.points ?? 0} positions`)}`);
+      ${row("Logged in the track", `${N(stats.distance_nm, 0)} nm over ${stats.points.toLocaleString("en-GB")} positions`)}`);
   }
 
   // ---- ship's log
@@ -893,10 +907,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }) {
       ${row("Precipitation", `${N(air.precip_mm)} mm`)}`),
 
     card("Voyage so far", `
-      ${row("Distance sailed", `${N(d.stats?.distance_nm, 0)} nm`)}
-      ${row("Positions logged", d.stats?.points ?? "–")}
-      ${row("Track started", fmtTime(d.stats?.first_point_utc))}
-      ${row("Updated", ago(d.updated_utc))}`),
+      <div class="big">${N(stats.distance_nm, 0)} <small>nm sailed</small></div>
+      ${row("Positions logged", stats.points.toLocaleString("en-GB"))}
+      ${row("Track starts", fmtTime(stats.first_point_utc))}
+      ${row("Data updated", ago(d.updated_utc))}`),
 
     progressCard,
     logCard,
