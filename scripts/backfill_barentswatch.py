@@ -31,6 +31,26 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 MMSI = os.environ.get("MMSI", "257165000")
+
+# Everything printed is also written to data/bw-debug.txt and committed, so the run can
+# be diagnosed without digging through the Actions log.
+LOG: list[str] = []
+
+
+def say(line: str = "") -> None:
+    print(line)
+    LOG.append(line)
+
+
+def dump_log() -> None:
+    try:
+        path = ROOT / "data" / "bw-debug.txt"
+        path.write_text(
+            f"BarentsWatch backfill diagnostics\n"
+            f"written {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S} UTC\n"
+            + "-" * 60 + "\n" + "\n".join(LOG) + "\n", encoding="utf-8")
+    except Exception:
+        pass
 ROOT = Path(__file__).resolve().parent.parent
 TRACK = ROOT / "data" / "track.json"
 TOKEN_URL = "https://id.barentswatch.no/connect/token"
@@ -62,10 +82,12 @@ def fetch(url: str, tok: str | None = None, timeout: int = 45):
 def get_token() -> str:
     cid = os.environ.get("BW_CLIENT_ID", "").strip()
     secret = os.environ.get("BW_CLIENT_SECRET", "").strip()
-    print(f"* credentials: client id {'set (' + str(len(cid)) + ' chars)' if cid else 'MISSING'}, "
+    say(f"* credentials: client id {'set (' + str(len(cid)) + ' chars)' if cid else 'MISSING'}, "
           f"secret {'set (' + str(len(secret)) + ' chars)' if secret else 'MISSING'}")
     if not cid or not secret:
-        sys.exit("! Set BW_CLIENT_ID and BW_CLIENT_SECRET as repository secrets first.")
+        say("! BW_CLIENT_ID / BW_CLIENT_SECRET are missing")
+        dump_log()
+        sys.exit(1)
     if "%40" in cid or "%3A" in cid:
         print("! the client id looks urlencoded - use the plain one, with @ and :", file=sys.stderr)
 
@@ -80,13 +102,17 @@ def get_token() -> str:
     try:
         with urllib.request.urlopen(req, timeout=30, context=CTX) as r:
             tok = json.loads(r.read())["access_token"]
-        print("* got an access token")
+        say("* got an access token")
         return tok
     except urllib.error.HTTPError as exc:
-        sys.exit(f"! token request failed: HTTP {exc.code} {exc.reason} - "
-                 f"{exc.read().decode('utf-8', 'replace')[:300]}")
+        say(f"! token request failed: HTTP {exc.code} {exc.reason} - "
+            f"{exc.read().decode('utf-8', 'replace')[:300]}")
+        dump_log()
+        sys.exit(1)
     except Exception as exc:
-        sys.exit(f"! token request failed: {exc}")
+        say(f"! token request failed: {exc}")
+        dump_log()
+        sys.exit(1)
 
 
 def discover(tok: str) -> list[str]:
@@ -98,14 +124,14 @@ def discover(tok: str) -> list[str]:
             if status != 200 or not isinstance(data, dict):
                 continue
             paths = list((data.get("paths") or {}).keys())
-            print(f"* {host}{spec}: {len(paths)} paths")
+            say(f"* {host}{spec}: {len(paths)} paths")
             for p in paths:
                 if re.search(r"track|position|historic", p, re.I):
-                    print(f"    {p}")
+                    say(f"    {p}")
                     found.append(host + p)
             if paths:
                 return found
-    print("* could not read any OpenAPI description - falling back to known paths")
+    say("* could not read any OpenAPI description - falling back to known paths")
     return found
 
 
@@ -123,12 +149,17 @@ def candidates(discovered: list[str], start: datetime, end: datetime) -> list[st
             filled += ("&" if "?" in filled else "?") + urllib.parse.urlencode(
                 {"from": f_iso, "to": t_iso})
         urls.append(filled)
-    base = HOSTS[0] + "/v1/historic"
-    urls += [
-        f"{base}/trackslast24hours/{MMSI}",
-        f"{base}/tracks/{MMSI}?" + urllib.parse.urlencode({"from": f_iso, "to": t_iso}),
-        f"{base}/track/{MMSI}?" + urllib.parse.urlencode({"from": f_iso, "to": t_iso}),
-    ]
+    q = urllib.parse.urlencode({"from": f_iso, "to": t_iso})
+    for base in (HOSTS[0] + "/v1/historic", HOSTS[0] + "/historic/v1", HOSTS[0] + "/v1"):
+        urls += [
+            f"{base}/trackslast24hours/{MMSI}",
+            f"{base}/tracks/{MMSI}?{q}",
+            f"{base}/track/{MMSI}?{q}",
+            f"{base}/aispositions/{MMSI}?{q}",
+        ]
+    # the live API can also answer for the last 24 hours
+    urls.append("https://live.ais.barentswatch.no/live/v1/latest/combined?"
+                + urllib.parse.urlencode({"mmsi": MMSI}))
     seen, out = set(), []
     for u in urls:
         if u not in seen:
@@ -192,19 +223,19 @@ def main() -> int:
             shown = url.replace(HOSTS[0], "").replace(HOSTS[1], "")[:110]
             if status == 200:
                 got = rows_to_points(data)
-                print(f"  {start:%d %b}: {shown} -> {len(got)} positions")
+                say(f"  {start:%d %b}: {shown} -> {len(got)} positions")
                 if got:
                     break
             else:
-                print(f"  {start:%d %b}: {shown} -> HTTP {status} {str(data)[:90]}")
+                say(f"  {start:%d %b}: {shown} -> HTTP {status} {str(data)[:200]}")
         found += got
         if k == 0 and not got:
-            print("* the first day returned nothing - stopping so the log stays readable")
+            say("* the first day returned nothing - stopping so the log stays readable")
             break
 
     if not found:
-        print("* nothing came back. The paths listed above are what the API offers - "
-              "send that list along and the script can be pointed at the right one.")
+        say("* nothing came back. The paths listed above are what the API offers.")
+        dump_log()
         return 0                              # not a failure, just nothing to add
 
     track = json.loads(TRACK.read_text(encoding="utf-8")) if TRACK.exists() else {}
@@ -215,7 +246,7 @@ def main() -> int:
     TRACK.write_text(json.dumps({"mmsi": MMSI, "ship": track.get("ship", "Sørlandet"),
                                  "points": merged}, ensure_ascii=False, indent=1) + "\n",
                      encoding="utf-8")
-    print(f"* added {len(fresh)} new positions, track now has {len(merged)}")
+    say(f"* added {len(fresh)} new positions, track now has {len(merged)}")
     return 0
 
 
