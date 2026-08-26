@@ -13,6 +13,11 @@ index.html                    the page (map + position + weather)
 data/latest.json              last position and weather   <- written by the script
 data/track.json               every position so far (the track itself)
 data/ports.json               the 2026-2027 voyage plan (ports, dates, coordinates)
+data/wind.json                wind forecast grid around the ship  <- written by the script
+data/waves.json               wave forecast grid around the ship  <- written by the script
+data/history.json             one row per day: strongest wind, highest wave  <- written by the script
+share-qr.svg                  QR code for the page address
+scripts/make_qr.py            regenerates share-qr.svg if the address changes
 scripts/update.py             fetches AIS position + weather
 scripts/seed_demo.py          writes sample data so you can preview the page
 .github/workflows/update.yml  runs update.py every 20 minutes
@@ -148,6 +153,49 @@ arrival, and draws the whole route on the map.
 The plan is tentative. If dates change, edit `data/ports.json` and the page follows.
 Coordinates are approximate port positions — good enough for distance and estimates.
 
+## Wind and waves on the map
+
+Each run also fetches two forecast grids around the ship's position: wind speed and
+direction, and wave height, direction and period. Each grid is 5 x 5 points covering a
+box of 360 x 360 nautical miles, for the next 24 hours in 3-hour steps, and each is a
+single API call. They are stored in `data/wind.json` and `data/waves.json`.
+
+The box is measured in nautical miles rather than degrees, so the longitude span widens
+with latitude - 11.2 degrees wide in the Skagerrak, 6.0 at the equator - and the spacing
+between arrows stays 90 nautical miles wherever the ship is.
+
+On the map, **wind** is a single arrow, coloured pale blue through green and amber to dark
+red as it strengthens. **Waves** are a double chevron with the height in metres beside it,
+on a blue-to-purple scale. Both point the way they are travelling, and the two sit on
+either side of their grid point so they stay readable together. The slider under the map
+steps through the forecast; the two buttons turn each layer on and off. Waves start off.
+
+These are forecasts for the surrounding sea, not measurements from on board - the
+anemometer on deck will read differently, especially in gusts. Grid size and horizon can
+be changed with the environment variables `GRID_CELLS`, `GRID_SPAN_NM`, `GRID_HOURS` and
+`GRID_STEP`.
+
+## What else is on the page
+
+**On board** shows the ship's own local time as a running clock, how many hours that is
+from your clock, sunrise, sunset, length of the day, and the moon phase for the night
+watches. The time zone comes from Open-Meteo; the moon is computed locally from the
+synodic month, no API needed.
+
+**Voyage progress** measures how far along the planned route she has come, in nautical
+miles and percent, next to the distance actually logged. The whole route is about 14,700
+nautical miles.
+
+**Ship's log** fills itself in from the track: every 1,000 nautical miles, the equator
+crossing, the best 24-hour run, the fastest speed logged, and each port reached.
+
+**Day by day** draws two small charts - distance per day from the track, and the
+strongest wind each day from `history.json`. They are deliberately two charts rather than
+one with two scales.
+
+**Share** shows a QR code for the page, a copy-link button and a ready-made message for a
+parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url>`.
+
 ## Data sources
 
 | What | Where | Key |
@@ -155,6 +203,8 @@ Coordinates are approximate port positions — good enough for distance and esti
 | Position, speed, course | [aisstream.io](https://aisstream.io) (WebSocket) | free key |
 | Waves, swell, sea temperature | [Open-Meteo Marine](https://open-meteo.com/en/docs/marine-weather-api) | none |
 | Wind, temperature, pressure, forecast | [Open-Meteo Forecast](https://open-meteo.com) | none |
+| Wind grid for the map | [Open-Meteo Forecast](https://open-meteo.com), multi-location | none |
+| Wave grid for the map | [Open-Meteo Marine](https://open-meteo.com/en/docs/marine-weather-api), multi-location | none |
 | Map tiles | OpenStreetMap | none |
 
 Open-Meteo is free for non-commercial use. Norwegian waters can additionally be read from

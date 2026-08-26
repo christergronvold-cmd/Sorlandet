@@ -32,7 +32,7 @@ MMSI = os.environ.get("MMSI", "257165000")          # Sørlandet
 SHIP_NAME = os.environ.get("SHIP_NAME", "Sørlandet")
 
 # How long to listen to the AIS stream per run (seconds).
-LISTEN_SECONDS = int(os.environ.get("LISTEN_SECONDS", "110"))
+LISTEN_SECONDS = int(os.environ.get("LISTEN_SECONDS", "240"))
 
 # A new track point is stored only if the ship has moved at least this many nautical
 # miles, or at least this many minutes have passed since the previous point.
@@ -47,6 +47,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 LATEST = DATA / "latest.json"
 TRACK = DATA / "track.json"
+WIND = DATA / "wind.json"
+WAVES = DATA / "waves.json"
+HISTORY = DATA / "history.json"
 
 # -------------------------------------------------------------------- helpers
 
@@ -107,30 +110,36 @@ def write_json(path: Path, payload) -> None:
 
 
 def fetch_position_from_aisstream(api_key: str) -> dict | None:
-    """Listens on aisstream.io until we see a position report for our MMSI."""
+    """Listens on aisstream.io until we see a position for our MMSI.
+
+    Any message from the vessel carries lat/lon in MetaData, so we accept the
+    first message of any type and enrich it if a PositionReport arrives.
+    """
     try:
         from websockets.sync.client import connect
     except ImportError:
         print("! missing the 'websockets' package (pip install websockets)", file=sys.stderr)
         return None
 
+    # No FilterMessageTypes: every message type from this MMSI is useful, and the
+    # MetaData block always carries a position.
     subscribe = {
         "APIKey": api_key,
-        # aisstream requires a bounding box - we ask for the whole globe and let the
-        # MMSI filter do the work.
         "BoundingBoxes": [[[-90, -180], [90, 180]]],
         "FiltersShipMMSI": [MMSI],
-        "FilterMessageTypes": ["PositionReport", "ShipStaticData"],
     }
 
     position: dict | None = None
     static: dict = {}
+    seen_total = 0
+    seen_ours = 0
     deadline = now_utc() + timedelta(seconds=LISTEN_SECONDS)
 
     print(f"* listening on aisstream for up to {LISTEN_SECONDS}s for MMSI {MMSI} ...")
     try:
         with connect("wss://stream.aisstream.io/v0/stream", open_timeout=20) as ws:
             ws.send(json.dumps(subscribe))
+            print("  connected and subscribed")
             while now_utc() < deadline:
                 remaining = (deadline - now_utc()).total_seconds()
                 if remaining <= 0:
@@ -144,47 +153,63 @@ def fetch_position_from_aisstream(api_key: str) -> dict | None:
                 except ValueError:
                     continue
 
-                if "error" in msg:
+                if isinstance(msg, dict) and msg.get("error"):
                     print(f"! aisstream returned an error: {msg['error']}", file=sys.stderr)
                     return None
 
+                seen_total += 1
                 meta = msg.get("MetaData") or {}
                 if str(meta.get("MMSI", "")) != MMSI:
                     continue
+                seen_ours += 1
 
                 kind = msg.get("MessageType")
                 body = (msg.get("Message") or {}).get(kind) or {}
 
                 if kind == "ShipStaticData":
-                    static["destination"] = (body.get("Destination") or "").strip() or None
+                    dest = (body.get("Destination") or "").strip()
+                    if dest:
+                        static["destination"] = dest
 
-                elif kind == "PositionReport":
-                    lat = body.get("Latitude", meta.get("latitude"))
-                    lon = body.get("Longitude", meta.get("longitude"))
-                    if lat is None or lon is None:
-                        continue
-                    try:
-                        seen = iso(parse_iso(str(meta.get("time_utc") or "")))
-                    except Exception:
-                        seen = iso(now_utc())
-                    position = {
-                        "lat": round(float(lat), 5),
-                        "lon": round(float(lon), 5),
-                        "sog_kn": body.get("Sog"),
-                        "cog_deg": body.get("Cog"),
-                        "heading_deg": None if body.get("TrueHeading") in (511, None) else body.get("TrueHeading"),
-                        "nav_status": body.get("NavigationalStatus"),
-                        "seen_utc": seen,
-                        "source": "aisstream.io",
-                    }
-                    print(f"  -> position {position['lat']}, {position['lon']} at {seen}")
+                lat = body.get("Latitude", meta.get("latitude"))
+                lon = body.get("Longitude", meta.get("longitude"))
+                if lat is None or lon is None:
+                    continue
+                try:
+                    seen = iso(parse_iso(str(meta.get("time_utc") or "")))
+                except Exception:
+                    seen = iso(now_utc())
+
+                candidate = {
+                    "lat": round(float(lat), 5),
+                    "lon": round(float(lon), 5),
+                    "sog_kn": body.get("Sog"),
+                    "cog_deg": body.get("Cog"),
+                    "heading_deg": None if body.get("TrueHeading") in (511, None) else body.get("TrueHeading"),
+                    "nav_status": body.get("NavigationalStatus"),
+                    "seen_utc": seen,
+                    "source": "aisstream.io",
+                }
+                # A PositionReport is the best kind - take it and stop. Anything else
+                # is kept as a fallback while we wait a little longer for one.
+                if kind == "PositionReport":
+                    position = candidate
+                    print(f"  -> position {candidate['lat']}, {candidate['lon']} at {seen} ({kind})")
                     break
+                if position is None:
+                    position = candidate
+                    print(f"  -> position from {kind}: {candidate['lat']}, {candidate['lon']} at {seen}")
     except Exception as exc:  # network, TLS, dropped connection ...
         print(f"! error talking to aisstream: {exc}", file=sys.stderr)
         return None
 
+    print(f"  messages seen: {seen_total} total, {seen_ours} for MMSI {MMSI}")
     if position is None:
-        print("  -> no AIS message in this window (normal outside coastal coverage)")
+        if seen_total == 0:
+            print("  -> the stream sent nothing at all. Either the key was not accepted, "
+                  "or no receiver reported any vessel in this window.")
+        else:
+            print("  -> no message for our MMSI in this window (normal outside coastal coverage)")
         return None
 
     position.update({k: v for k, v in static.items() if v})
@@ -298,6 +323,199 @@ def fetch_weather(lat: float, lon: float) -> dict:
     return weather
 
 
+
+# --------------------------------------------------------- wind and wave grids
+
+
+GRID_CELLS = int(os.environ.get("GRID_CELLS", "5"))        # 5 x 5 points
+GRID_SPAN_NM = float(os.environ.get("GRID_SPAN_NM", "360"))  # box side in nautical miles
+GRID_HOURS = int(os.environ.get("GRID_HOURS", "24"))       # how far ahead
+GRID_STEP = int(os.environ.get("GRID_STEP", "3"))          # hours between steps
+
+
+def grid_around(lat: float, lon: float) -> tuple[list[str], list[str]]:
+    """A grid that is the same size in nautical miles wherever the ship is.
+
+    One degree of latitude is always 60 nm, but a degree of longitude shrinks by
+    cos(latitude), so the longitude span is widened to match.
+    """
+    n = max(2, GRID_CELLS)
+    half_lat = (GRID_SPAN_NM / 2) / 60
+    cos_lat = max(0.15, math.cos(math.radians(lat)))       # guard near the poles
+    half_lon = min(60.0, (GRID_SPAN_NM / 2) / (60 * cos_lat))
+
+    lats, lons = [], []
+    for i in range(n):
+        for j in range(n):
+            gl = max(-89.0, min(89.0, lat - half_lat + 2 * half_lat * i / (n - 1)))
+            go = (lon - half_lon + 2 * half_lon * j / (n - 1) + 180) % 360 - 180
+            lats.append(f"{gl:.3f}")
+            lons.append(f"{go:.3f}")
+    print(f"  grid: {n}x{n} over {GRID_SPAN_NM:.0f} x {GRID_SPAN_NM:.0f} nm "
+          f"({2*half_lat:.1f}° lat x {2*half_lon:.1f}° lon at {lat:.1f}°)")
+    return lats, lons
+
+
+def _time_index(all_times: list[str]) -> tuple[list[int], list[str]]:
+    now_hour = now_utc().strftime("%Y-%m-%dT%H:00")
+    try:
+        first = next(k for k, t in enumerate(all_times) if t >= now_hour)
+    except StopIteration:
+        first = 0
+    idx = list(range(first, min(len(all_times), first + GRID_HOURS + 1), GRID_STEP))
+    return idx, [all_times[k] for k in idx]
+
+
+def _series(values: list, idx: list[int], nd: int | None) -> list:
+    out = []
+    for k in idx:
+        v = values[k] if k < len(values) and values[k] is not None else None
+        out.append(v if v is None else (int(v) if nd is None else round(v, nd)))
+    return out
+
+
+def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
+    """Wind ('wind') or wave ('waves') forecast for the grid, in one API call."""
+    lats, lons = grid_around(lat, lon)
+    base, fields = (
+        ("https://api.open-meteo.com/v1/forecast?", "wind_speed_10m,wind_direction_10m")
+        if kind == "wind" else
+        ("https://marine-api.open-meteo.com/v1/marine?", "wave_height,wave_direction,wave_period")
+    )
+    params = {
+        "latitude": ",".join(lats),
+        "longitude": ",".join(lons),
+        "hourly": fields,
+        "forecast_days": "3",
+        "timezone": "UTC",
+    }
+    if kind == "wind":
+        params["wind_speed_unit"] = "ms"
+
+    data = get_json(base + urllib.parse.urlencode(params), timeout=45)
+    if not data:
+        return None
+
+    blocks = data if isinstance(data, list) else [data]
+    first = (blocks[0].get("hourly") or {}) if blocks else {}
+    all_times = first.get("time") or []
+    if not all_times:
+        return None
+    idx, times = _time_index(all_times)
+
+    cells = []
+    for b in blocks:
+        h = b.get("hourly") or {}
+        if kind == "wind":
+            speed, direction = h.get("wind_speed_10m") or [], h.get("wind_direction_10m") or []
+            if not speed:
+                continue
+            cell = {"ws": _series(speed, idx, 1), "wd": _series(direction, idx, None)}
+        else:
+            height, direction = h.get("wave_height") or [], h.get("wave_direction") or []
+            period = h.get("wave_period") or []
+            if not height or all(v is None for v in height):
+                continue                                   # land cell - no sea state
+            cell = {"hs": _series(height, idx, 1), "wd": _series(direction, idx, None),
+                    "tp": _series(period, idx, 0)}
+        cell["lat"] = round(float(b.get("latitude", 0)), 3)
+        cell["lon"] = round(float(b.get("longitude", 0)), 3)
+        cells.append(cell)
+
+    if not cells:
+        return None
+    print(f"  -> {kind} grid: {len(cells)} points x {len(times)} time steps")
+    return {"generated_utc": iso(now_utc()), "times": times,
+            "step_hours": GRID_STEP, "cells": cells}
+
+
+# --------------------------------------------------------- sun, moon, history
+
+
+def fetch_sun_moon(lat: float, lon: float) -> dict | None:
+    """Local time zone, sunrise and sunset where the ship is, plus the moon phase.
+
+    Asking Open-Meteo with timezone=auto gives us the ship's own local time zone,
+    which is what tells you when it is reasonable to call home.
+    """
+    data = get_json(
+        "https://api.open-meteo.com/v1/forecast?"
+        + urllib.parse.urlencode(
+            {
+                "latitude": f"{lat:.4f}",
+                "longitude": f"{lon:.4f}",
+                "daily": "sunrise,sunset,daylight_duration",
+                "timezone": "auto",
+                "forecast_days": "2",
+            }
+        )
+    )
+    out: dict = {"moon": moon_phase()}
+    if data:
+        daily = data.get("daily") or {}
+        sunrise = (daily.get("sunrise") or [None])[0]
+        sunset = (daily.get("sunset") or [None])[0]
+        seconds = (daily.get("daylight_duration") or [None])[0]
+        out.update({
+            "timezone": data.get("timezone"),
+            "timezone_abbreviation": data.get("timezone_abbreviation"),
+            "utc_offset_seconds": data.get("utc_offset_seconds"),
+            "sunrise_local": sunrise,
+            "sunset_local": sunset,
+            "daylight_hours": None if seconds is None else round(seconds / 3600, 1),
+        })
+        print(f"  -> ship local time zone {out.get('timezone')} "
+              f"(UTC{out.get('utc_offset_seconds', 0) // 3600:+d}), "
+              f"sunrise {sunrise}, sunset {sunset}")
+    return out
+
+
+def moon_phase(when: datetime | None = None) -> dict:
+    """Moon age and illumination, computed locally - no API needed.
+
+    Counts synodic months from a known new moon (6 Jan 2000, 18:14 UTC).
+    Good to a few hours, which is plenty for a night watch.
+    """
+    when = when or now_utc()
+    known_new = datetime(2000, 1, 6, 18, 14, tzinfo=timezone.utc)
+    synodic = 29.530588853
+    age = ((when - known_new).total_seconds() / 86400) % synodic
+    illum = (1 - math.cos(2 * math.pi * age / synodic)) / 2
+    names = [
+        (1.85, "new moon"), (5.54, "waxing crescent"), (9.23, "first quarter"),
+        (12.91, "waxing gibbous"), (16.61, "full moon"), (20.30, "waning gibbous"),
+        (23.99, "last quarter"), (27.68, "waning crescent"), (30.0, "new moon"),
+    ]
+    name = next(n for limit, n in names if age < limit)
+    return {"age_days": round(age, 1), "illumination": round(illum, 2), "phase": name}
+
+
+def update_history(weather: dict, points: list) -> None:
+    """Keeps one row per day: strongest wind and highest wave we have observed.
+
+    The daily distance is not stored - the page works that out from the track, so
+    there is only one source of truth for it.
+    """
+    today = now_utc().strftime("%Y-%m-%d")
+    rows = read_json(HISTORY, {"days": []}).get("days") or []
+    by_date = {r["date"]: r for r in rows}
+    row = by_date.setdefault(today, {"date": today})
+
+    wind = (weather.get("air") or {}).get("wind_ms")
+    gust = (weather.get("air") or {}).get("gust_ms")
+    wave = (weather.get("sea") or {}).get("wave_height_m")
+    for key, value in (("max_wind_ms", wind), ("max_gust_ms", gust), ("max_wave_m", wave)):
+        if value is not None:
+            row[key] = max(value, row.get(key) or 0)
+
+    if points:
+        row["last_position_utc"] = points[-1]["t"]
+
+    days = sorted(by_date.values(), key=lambda r: r["date"])[-400:]
+    write_json(HISTORY, {"days": days})
+    print(f"  -> history: {len(days)} days recorded")
+
+
 # ----------------------------------------------------------------------- main
 
 
@@ -365,6 +583,15 @@ def main() -> int:
         for i in range(1, len(points))
     )
 
+    sun = fetch_sun_moon(lat, lon)
+
+    for kind, path in (("wind", WIND), ("waves", WAVES)):
+        grid = fetch_grid(lat, lon, kind)
+        if grid:
+            write_json(path, grid)
+        else:
+            print(f"  -> no {kind} grid this run, keeping the previous one")
+
     write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME, "points": points})
     write_json(
         LATEST,
@@ -377,6 +604,7 @@ def main() -> int:
             "demo": demo,
             "position": position,
             "weather": weather,
+            "sun": sun or {},
             "stats": {
                 "points": len(points),
                 "distance_nm": round(distance_nm, 1),
@@ -384,6 +612,7 @@ def main() -> int:
             },
         },
     )
+    update_history(weather, points)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
 

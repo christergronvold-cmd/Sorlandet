@@ -15,12 +15,14 @@
     --bg:#f4f6f8; --panel:#ffffff; --ink:#12222e; --muted:#5d7385;
     --line:#e2e8ee; --accent:#0b6ea8; --warn:#a8580b; --warn-bg:#fff5e6;
     --shadow:0 1px 2px rgba(18,34,46,.06), 0 8px 24px rgba(18,34,46,.06);
+    --chart-a:#0b6ea8; --chart-b:#b58a1b;
   }
   @media (prefers-color-scheme: dark){
     :root{
       --bg:#0d1520; --panel:#131f2c; --ink:#e8eef4; --muted:#93a6b6;
       --line:#22323f; --accent:#5fb6e6; --warn:#f0b45c; --warn-bg:#2a2113;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      --chart-a:#2f8fc4; --chart-b:#b6862c;
     }
   }
   *{box-sizing:border-box}
@@ -73,6 +75,52 @@
   footer{margin-top:22px; font-size:12.5px; color:var(--muted); line-height:1.7}
   footer a{color:var(--accent)}
   .ship-marker{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .windbar{
+    display:flex; align-items:center; gap:12px; margin-top:10px; padding:11px 14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); font-size:13.5px;
+  }
+  .windbar label{color:var(--muted); font-weight:600; white-space:nowrap}
+  .windbar input[type=range]{flex:1; min-width:90px; accent-color:var(--accent)}
+  .windbar .when{font-weight:650; font-variant-numeric:tabular-nums; white-space:nowrap; min-width:112px; text-align:right}
+  .windbar button{
+    background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px;
+    padding:4px 9px; font:inherit; font-size:12.5px; cursor:pointer;
+  }
+  .windbar button.on{color:var(--accent); border-color:var(--accent)}
+  .wind-arrow{pointer-events:none}
+  .bar{height:9px; border-radius:99px; background:var(--bg); border:1px solid var(--line); overflow:hidden; margin:2px 0 9px}
+  .bar>i{display:block; height:100%; background:var(--accent); border-radius:99px}
+  .log{list-style:none; margin:0; padding:0; font-size:14px}
+  .log li{display:flex; gap:10px; padding:5px 0; border-bottom:1px solid var(--line)}
+  .log li:last-child{border-bottom:0}
+  .log time{color:var(--muted); flex:0 0 74px; font-variant-numeric:tabular-nums}
+  .log .ic{flex:0 0 20px; text-align:center}
+  .charts{display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .chart h3{font-size:13px; margin:0 0 2px; font-weight:600}
+  .chart p{font-size:12px; color:var(--muted); margin:0 0 8px}
+  .chart svg{width:100%; height:auto; display:block; overflow:visible}
+  .chart .axis{stroke:var(--line); stroke-width:1}
+  .chart .tick{fill:var(--muted); font-size:9px}
+  .chart .val{fill:var(--ink); font-size:10px; font-weight:650}
+  .share{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap}
+  .share svg{width:118px; height:118px; color:var(--ink); flex:0 0 auto}
+  .share .txt{flex:1; min-width:200px; font-size:13.5px; color:var(--muted); line-height:1.55}
+  .share code{
+    display:block; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:7px 9px; margin:7px 0; font-size:12px; color:var(--ink); word-break:break-all;
+  }
+  .share button{
+    background:none; border:1px solid var(--line); color:var(--accent); border-radius:8px;
+    padding:5px 11px; font:inherit; font-size:13px; cursor:pointer;
+  }
+  .hint{
+    position:fixed; left:12px; right:12px; bottom:12px; z-index:900; display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 6px 28px rgba(0,0,0,.22); padding:11px 13px; font-size:13.5px;
+  }
+  .hint b{color:var(--accent)}
+  .hint button{background:none;border:0;color:var(--muted);font:inherit;cursor:pointer;float:right;padding:0 2px}
 </style>
 </head>
 <body>
@@ -83,7 +131,20 @@
   </header>
 
   <div class="note" id="note" hidden></div>
+  <div class="hint" id="hint">
+    <button id="hintclose" aria-label="Dismiss">✕</button>
+    <b>Tip:</b> add this page to your home screen and it behaves like an app —
+    share icon, then “Add to Home Screen”.
+  </div>
   <div id="map"></div>
+
+  <div class="windbar" id="windbar" hidden>
+    <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
+    <button id="wavetoggle" title="Show or hide the wave forecast">Waves</button>
+    <label for="windtime">Forecast</label>
+    <input type="range" id="windtime" min="0" max="0" value="0" step="1">
+    <span class="when" id="windwhen">now</span>
+  </div>
 
   <div class="grid" id="cards"></div>
 
@@ -92,6 +153,9 @@
     weather and sea state from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
     map by OpenStreetMap · voyage plan from the A+ World Academy 2026–2027 plan, which is tentative and
     subject to change.
+    <br>The wind arrows and wave chevrons are a forecast for a 360 x 360 nautical mile box around the
+    ship, not measurements from on board. Both point the way they are travelling, and the slider steps
+    forward in 3-hour intervals.
     <br>AIS is picked up by shore-based receivers. Far from land there can be days between positions, and
     the page then shows the last known one. This is a private family project, not an official source from
     the ship or the school.
@@ -156,6 +220,101 @@ function nm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h)) / 1.852;
 }
 
+
+// ------------------------------------------------------- voyage maths and log
+// Cumulative distance along the planned route, port by port, following waypoints.
+function routeDistances(ports) {
+  const cum = [0];
+  for (let i = 1; i < ports.length; i++) {
+    const legPts = [[ports[i - 1].lat, ports[i - 1].lon],
+                    ...(ports[i].waypoints || []),
+                    [ports[i].lat, ports[i].lon]];
+    let d = 0;
+    for (let k = 1; k < legPts.length; k++) d += nm(legPts[k - 1], legPts[k]);
+    cum.push(cum[i - 1] + d);
+  }
+  return cum;
+}
+
+function dailyDistance(points) {
+  const byDay = new Map();
+  for (let i = 1; i < points.length; i++) {
+    const day = points[i].t.slice(0, 10);
+    const d = nm([points[i - 1].lat, points[i - 1].lon], [points[i].lat, points[i].lon]);
+    byDay.set(day, (byDay.get(day) || 0) + d);
+  }
+  return byDay;
+}
+
+// Milestones worth telling the family about, worked out from the track itself.
+function milestones(points, ports, todayISO) {
+  const out = [];
+  if (points.length) {
+    out.push({ t: points[0].t, ic: "⚓", text: "Tracking started" });
+  }
+  let cum = 0, nextMark = 1000, best = { nm: 0, t: null }, top = { kn: 0, t: null };
+  for (let i = 1; i < points.length; i++) {
+    const step = nm([points[i - 1].lat, points[i - 1].lon], [points[i].lat, points[i].lon]);
+    cum += step;
+    if (cum >= nextMark) {
+      out.push({ t: points[i].t, ic: "📏", text: `${nextMark.toLocaleString("en-GB")} nautical miles sailed` });
+      nextMark += 1000;
+    }
+    if ((points[i - 1].lat > 0) !== (points[i].lat > 0)) {
+      out.push({ t: points[i].t, ic: "🌍", text: "Crossed the equator" });
+    }
+    if (points[i].sog && points[i].sog > top.kn) top = { kn: points[i].sog, t: points[i].t };
+    // best run in any rolling 24 hours
+    let j = i, run = 0;
+    while (j > 0 && (new Date(points[i].t) - new Date(points[j - 1].t)) <= 864e5) {
+      run += nm([points[j - 1].lat, points[j - 1].lon], [points[j].lat, points[j].lon]);
+      j--;
+    }
+    if (run > best.nm) best = { nm: run, t: points[i].t };
+  }
+  if (best.t && best.nm > 40) {
+    out.push({ t: best.t, ic: "💨", text: `Best day so far: ${Math.round(best.nm)} nm in 24 hours` });
+  }
+  if (top.t && top.kn >= 8) {
+    out.push({ t: top.t, ic: "🚀", text: `Fastest logged: ${top.kn.toFixed(1)} knots` });
+  }
+  ports.forEach(q => {
+    if (q.arrive <= todayISO) {
+      out.push({ t: q.arrive + "T12:00:00Z", ic: "🏙️", text: `${q.name}, ${q.country}`, soft: true });
+    }
+  });
+  return out.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 9);
+}
+
+// ------------------------------------------------------------------- charts
+// Two separate charts on purpose: distance and wind are different scales, and a
+// single pair of axes would misrepresent both.
+function barChart(rows, unit, decimals, colorVar) {
+  if (!rows.length) return "";
+  const W = 300, H = 96, padB = 14, padT = 12;
+  const max = Math.max(...rows.map(r => r.v)) || 1;
+  const bw = Math.max(3, (W / rows.length) - 2);          // 2px surface gap
+  const bars = rows.map((r, i) => {
+    const h = Math.max(1.5, (r.v / max) * (H - padB - padT));
+    const x = i * (W / rows.length), y = H - padB - h;
+    const isMax = r.v === max;
+    return `<g><title>${r.label}: ${r.v.toFixed(decimals)} ${unit}</title>
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}"
+            rx="3" fill="var(${colorVar})" opacity="${isMax ? 1 : .8}"/></g>`;
+  }).join("");
+  const maxRow = rows.find(r => r.v === max);
+  const maxX = rows.indexOf(maxRow) * (W / rows.length) + bw / 2;
+  const label = `<text class="val" x="${Math.min(W - 18, Math.max(14, maxX)).toFixed(1)}"
+      y="${(H - padB - (max / max) * (H - padB - padT) - 3).toFixed(1)}" text-anchor="middle"
+      >${max.toFixed(decimals)}</text>`;
+  const ticks = rows.map((r, i) => (i === 0 || i === rows.length - 1 || i === Math.floor(rows.length / 2))
+    ? `<text class="tick" x="${(i * (W / rows.length) + bw / 2).toFixed(1)}" y="${H - 3}"
+        text-anchor="middle">${r.short}</text>` : "").join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">
+      <line class="axis" x1="0" y1="${H - padB}" x2="${W}" y2="${H - padB}"/>
+      ${bars}${label}${ticks}</svg>`;
+}
+
 // ------------------------------------------------------------------------- map
 const map = L.map("map", { zoomControl: true, worldCopyJump: true }).setView([45, -25], 3);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -171,18 +330,144 @@ const shipIcon = heading => L.divIcon({
   iconSize: [34, 34], iconAnchor: [17, 17]
 });
 
+// -------------------------------------------------------- wind and wave layers
+// Meteorological convention: direction is where it comes FROM, so arrows are drawn
+// pointing the opposite way - the way the wind or the waves are travelling.
+const WIND_COLORS = [
+  [0,   "#7fb3c8"], [5.5, "#3f8fb5"], [8,   "#2e7d32"],
+  [10.8,"#b58a1b"], [13.9,"#c2611f"], [17.2,"#a6291f"], [20.8,"#7a1670"]
+];
+const WAVE_COLORS = [
+  [0,   "#8fd0d8"], [1,   "#4aa3bd"], [2,   "#2f6f9e"],
+  [3,   "#3b4f96"], [4.5, "#5b3a86"], [6,   "#7a1670"]
+];
+const scaleColor = (v, table) => {
+  let c = table[0][1];
+  for (const [lim, col] of table) if (v >= lim) c = col;
+  return c;
+};
+
+let windLayer = null, waveLayer = null;
+let gridData = { wind: null, waves: null };
+let gridIndex = 0, show = { wind: true, waves: false };
+
+function windIcon(ws, wd) {
+  const len = Math.min(30, 12 + ws * 1.15);
+  const col = scaleColor(ws, WIND_COLORS);
+  return L.divIcon({
+    className: "wind-arrow",
+    html: `<svg width="46" height="46" viewBox="0 0 46 46" style="transform:rotate(${(wd + 180) % 360}deg)">
+        <line x1="23" y1="${23 + len / 2}" x2="23" y2="${23 - len / 2}"
+              stroke="${col}" stroke-width="2.4" stroke-linecap="round" opacity=".95"/>
+        <path d="M23 ${23 - len / 2 - 1} l-4.2 6 h8.4 z" fill="${col}" opacity=".95"/>
+      </svg>`,
+    // Nudged up-left so the wave chevrons can sit beside it, not under it.
+    iconSize: [46, 46], iconAnchor: [31, 31]
+  });
+}
+
+// Waves get a different shape on purpose: a chevron pair, so the two layers stay
+// tellable apart when both are on.
+function waveIcon(hs, wd) {
+  const col = scaleColor(hs, WAVE_COLORS);
+  const w = Math.min(9, 4.5 + hs * 1.1);
+  return L.divIcon({
+    className: "wind-arrow",
+    html: `<svg width="42" height="42" viewBox="0 0 42 42" style="transform:rotate(${(wd + 180) % 360}deg)">
+        <path d="M${21 - w} 25 L21 17 L${21 + w} 25" fill="none" stroke="${col}"
+              stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
+        <path d="M${21 - w} 31 L21 23 L${21 + w} 31" fill="none" stroke="${col}"
+              stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+        <text x="21" y="14" text-anchor="middle" font-size="9.5" font-weight="700"
+              fill="${col}" transform="rotate(${-((wd + 180) % 360)} 21 21)">${hs.toFixed(1)}</text>
+      </svg>`,
+    // Nudged down-right, opposite the wind arrow.
+    iconSize: [42, 42], iconAnchor: [13, 13]
+  });
+}
+
+function drawGrids() {
+  [["wind", windLayer], ["waves", waveLayer]].forEach(([k, l]) => { if (l) map.removeLayer(l); });
+  windLayer = waveLayer = null;
+
+  if (gridData.wind && show.wind) {
+    const marks = [];
+    gridData.wind.cells.forEach(c => {
+      const ws = c.ws?.[gridIndex], wd = c.wd?.[gridIndex];
+      if (ws == null || wd == null) return;
+      marks.push(L.marker([c.lat, c.lon], { icon: windIcon(ws, wd), keyboard: false })
+        .bindTooltip(`Wind ${ws.toFixed(1)} m/s from ${compass(wd)}`, { direction: "top" }));
+    });
+    windLayer = L.layerGroup(marks).addTo(map);
+  }
+
+  if (gridData.waves && show.waves) {
+    const marks = [];
+    gridData.waves.cells.forEach(c => {
+      const hs = c.hs?.[gridIndex], wd = c.wd?.[gridIndex], tp = c.tp?.[gridIndex];
+      if (hs == null || wd == null) return;
+      marks.push(L.marker([c.lat, c.lon], { icon: waveIcon(hs, wd), keyboard: false })
+        .bindTooltip(`Waves ${hs.toFixed(1)} m from ${compass(wd)}${tp ? `, ${tp} s` : ""}`,
+                     { direction: "top" }));
+    });
+    waveLayer = L.layerGroup(marks).addTo(map);
+  }
+}
+
+function gridLabel(i) {
+  const t = (gridData.wind || gridData.waves)?.times?.[i];
+  if (!t) return "now";
+  const d = new Date(t + "Z");
+  const hoursOut = Math.round((d - Date.now()) / 36e5);
+  const clock = d.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  return hoursOut <= 0 ? `now · ${clock}` : `+${hoursOut} h · ${clock}`;
+}
+
+function setupGrids(wind, waves) {
+  gridData = { wind, waves };
+  const bar = document.getElementById("windbar");
+  const slider = document.getElementById("windtime");
+  const times = (wind || waves)?.times || [];
+  document.getElementById("wavetoggle").hidden = !waves;
+  if (!times.length) { bar.hidden = true; return; }
+  bar.hidden = false;
+  slider.max = times.length - 1;
+  gridIndex = Math.min(gridIndex, times.length - 1);
+  slider.value = gridIndex;
+  document.getElementById("windwhen").textContent = gridLabel(gridIndex);
+  drawGrids();
+}
+
+document.getElementById("windtime").addEventListener("input", e => {
+  gridIndex = +e.target.value;
+  document.getElementById("windwhen").textContent = gridLabel(gridIndex);
+  drawGrids();
+});
+[["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"]].forEach(([id, key, label]) => {
+  document.getElementById(id).addEventListener("click", e => {
+    show[key] = !show[key];
+    e.target.classList.toggle("on", show[key]);
+    e.target.textContent = show[key] ? `${label} ✓` : label;
+    drawGrids();
+  });
+});
+
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan] = await Promise.all([
+  const [latest, track, plan, wind, waves, history] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
-    fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] }))
+    fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
+    fetch("data/wind.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/waves.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] }))
   ]);
-  render(latest, track, plan);
+  render(latest, track, plan, history);
+  setupGrids(wind, waves);
 }
 
-function render(d, track, plan = { ports: [] }) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }) {
   const p = d.position || {}, w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
   const pts = (track.points || []).map(q => [q.lat, q.lon]);
   const ports = plan.ports || [];
@@ -338,6 +623,100 @@ function render(d, track, plan = { ports: [] }) {
       ${N(f.temp_max_c, 0)}° / ${N(f.temp_min_c, 0)}°<br>
       <span style="color:var(--muted)">${N(f.wind_max_ms, 0)} m/s</span></div>`).join("");
 
+  // ---- on board: local time, sun, moon
+  const sun = d.sun || {}, moon = sun.moon || {};
+  let boardCard = "";
+  if (sun.utc_offset_seconds !== undefined && sun.utc_offset_seconds !== null) {
+    const shipMin = sun.utc_offset_seconds / 60;
+    const youMin = -new Date().getTimezoneOffset();
+    const diff = Math.round((shipMin - youMin) / 60);
+    const vsYou = diff === 0 ? "same as your clock"
+      : `${Math.abs(diff)} ${Math.abs(diff) === 1 ? "hour" : "hours"} ${diff < 0 ? "behind" : "ahead of"} you`;
+    const hhmm = t => (t || "").slice(11, 16) || "–";
+    boardCard = card("On board", `
+      <div class="big" id="shipclock">--:--</div>
+      <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">
+        ${sun.timezone_abbreviation || sun.timezone || "ship time"} · ${vsYou}</div>
+      ${row("Sunrise", hhmm(sun.sunrise_local))}
+      ${row("Sunset", hhmm(sun.sunset_local))}
+      ${row("Daylight", sun.daylight_hours ? `${sun.daylight_hours} h` : "–")}
+      ${row("Moon", moon.phase ? `${moon.phase} · ${Math.round(moon.illumination * 100)}% lit` : "–")}`);
+    clearInterval(window.__clock);
+    const tick = () => {
+      const el = document.getElementById("shipclock");
+      if (!el) return;
+      const t = new Date(Date.now() + (shipMin + new Date().getTimezoneOffset()) * 6e4);
+      el.textContent = t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    };
+    window.__clock = setInterval(tick, 1000);
+    setTimeout(tick, 0);
+  }
+
+  // ---- progress along the planned route
+  let progressCard = "";
+  if (ports.length > 1) {
+    const cum = routeDistances(ports);
+    const total = cum[cum.length - 1];
+    const k = nextPort ? ports.indexOf(nextPort) : ports.length - 1;
+    let done = cum[Math.max(0, k - 1)];
+    if (nextPort && p.lat !== undefined && !waiting) {
+      const legPts = [[p.lat, p.lon], ...(nextPort.waypoints || []), [nextPort.lat, nextPort.lon]];
+      let left = 0;
+      for (let i = 1; i < legPts.length; i++) left += nm(legPts[i - 1], legPts[i]);
+      done = Math.max(done, cum[k] - left);
+    }
+    const pct = Math.max(0, Math.min(100, (done / total) * 100));
+    const firstDay = new Date(ports[0].depart + "T12:00:00Z");
+    const lastDay = new Date(ports[ports.length - 1].arrive + "T12:00:00Z");
+    const dayNo = Math.max(0, Math.round((Date.now() - firstDay) / 864e5));
+    const daysTotal = Math.round((lastDay - firstDay) / 864e5);
+    progressCard = wideCard("Voyage progress", `
+      <div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>
+      ${row("Along the route", `${Math.round(done).toLocaleString("en-GB")} of ${Math.round(total).toLocaleString("en-GB")} nm · ${pct < 1 ? pct.toFixed(2) : pct.toFixed(0)}%`)}
+      ${row("Day of the voyage", `${dayNo} of ${daysTotal}`)}
+      ${row("Actually sailed and logged", `${N(d.stats?.distance_nm, 0)} nm over ${d.stats?.points ?? 0} positions`)}`);
+  }
+
+  // ---- ship's log
+  const marks = milestones(track.points || [], ports, todayISO);
+  const logCard = marks.length ? wideCard("Ship's log", `<ul class="log">${
+    marks.map(m => `<li><time>${new Date(m.t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</time>
+      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${m.text}</span></li>`).join("")
+  }</ul>`) : "";
+
+  // ---- charts
+  const byDay = dailyDistance(track.points || []);
+  const days = [...byDay.keys()].sort().slice(-14);
+  const distRows = days.map(dd => ({
+    v: byDay.get(dd), label: new Date(dd).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    short: new Date(dd).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  }));
+  const windDays = (history.days || []).filter(r => r.max_wind_ms != null).slice(-14);
+  const windRows = windDays.map(r => ({
+    v: r.max_wind_ms, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  }));
+  const chartsCard = (distRows.length > 1 || windRows.length > 1) ? wideCard("Day by day", `
+    <div class="charts">
+      <div class="chart"><h3>Distance sailed</h3><p>nautical miles per day, last ${distRows.length} days</p>
+        ${barChart(distRows, "nm", 0, "--chart-a") || '<p style="margin:0">Not enough data yet.</p>'}</div>
+      <div class="chart"><h3>Strongest wind</h3><p>highest reading each day, m/s</p>
+        ${barChart(windRows, "m/s", 1, "--chart-b") || '<p style="margin:0">Builds up from today.</p>'}</div>
+    </div>`) : "";
+
+  // ---- share
+  const shareCard = wideCard("Share with other parents", `
+    <div class="share">
+      <div id="qrslot"></div>
+      <div class="txt">
+        Anyone with this link can follow along — no account, nothing to install.
+        <code id="sharelink"></code>
+        <button id="copylink">Copy link</button>
+        <button id="copytext">Copy a message</button>
+        <span id="copied" style="color:var(--accent);display:none"> copied</span>
+      </div>
+    </div>`);
+
   document.getElementById("cards").innerHTML = [
     card("Position", waiting ? row("Status", "no AIS message yet") : `
       <div class="big">${dms(p.lat, "lat")}<br>${dms(p.lon, "lon")}</div>
@@ -347,6 +726,7 @@ function render(d, track, plan = { ports: [] }) {
       ${p.destination ? row("Reported destination", p.destination) : ""}`),
 
     planCard,
+    boardCard,
 
     card("Wind", waiting ? row("Status", "waiting for position") : `
       <div class="big">${N(air.wind_ms)} <small>m/s</small></div>
@@ -373,13 +753,53 @@ function render(d, track, plan = { ports: [] }) {
       ${row("Track started", fmtTime(d.stats?.first_point_utc))}
       ${row("Updated", ago(d.updated_utc))}`),
 
+    progressCard,
+    logCard,
+    chartsCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
     seaFc ? wideCard("Waves next 36 hours", `<div class="fc">${seaFc}</div>`) : "",
-    airFc ? wideCard("Weather ahead", `<div class="fc">${airFc}</div>`) : ""
+    airFc ? wideCard("Weather ahead", `<div class="fc">${airFc}</div>`) : "",
+    shareCard
   ].join("");
+
+  wireSharing();
 
   document.getElementById("stamp").textContent = " The page refreshes itself every 5 minutes.";
 }
+
+function wireSharing() {
+  const url = location.href.split("#")[0].split("?")[0];
+  const link = document.getElementById("sharelink");
+  if (link) link.textContent = url;
+
+  const slot = document.getElementById("qrslot");
+  if (slot && !slot.dataset.done) {
+    slot.dataset.done = "1";
+    fetch("share-qr.svg").then(r => r.ok ? r.text() : "").then(svg => { if (svg) slot.innerHTML = svg; })
+      .catch(() => {});
+  }
+
+  const flash = () => {
+    const c = document.getElementById("copied");
+    if (!c) return;
+    c.style.display = "inline";
+    setTimeout(() => { c.style.display = "none"; }, 1600);
+  };
+  const copy = text => navigator.clipboard?.writeText(text).then(flash).catch(() => {});
+  document.getElementById("copylink")?.addEventListener("click", () => copy(url));
+  document.getElementById("copytext")?.addEventListener("click", () => copy(
+    `Following Sørlandet: ${url} — live position from AIS, plus wind and waves where she is. ` +
+    `Out at sea there can be days between positions, which is normal.`));
+}
+
+// A gentle nudge on phones, dismissed for this visit only - nothing is stored.
+(function homeScreenHint() {
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (standalone || window.innerWidth > 620) return;
+  const hint = document.getElementById("hint");
+  setTimeout(() => { hint.style.display = "block"; }, 2500);
+  document.getElementById("hintclose").addEventListener("click", () => { hint.style.display = "none"; });
+})();
 
 load().catch(e => {
   document.getElementById("note").hidden = false;

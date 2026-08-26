@@ -1,0 +1,35 @@
+EVERYTHING IN THIS FOLDER GOES INTO THE REPOSITORY
+==================================================
+
+Add file -> Upload files -> select ALL of this folder's contents -> Commit.
+Files that already exist are replaced, so this brings the repo fully up to date
+in a single commit.
+
+Two things on purpose:
+
+1. data/ holds ONLY ports.json here. Your repo's latest.json and track.json contain
+   the real positions and must not be overwritten - that is why they are absent.
+
+2. "workflow-if-you-need-it" is not meant to be uploaded as a folder. Your repo
+   already has .github/workflows/update.yml. Only if it is missing or you want the
+   newest version: open that file, copy the text, and use Add file -> Create new
+   file with the name  .github/workflows/update.yml
+
+What is new:
+  * Route follows sailing waypoints - no lines across Scotland or Jutland
+  * Wind arrows and wave chevrons on the map, 360 x 360 nm around the ship,
+    with a slider through the next 24 hours and a button for each layer
+  * On board: ship's local time as a live clock, hours from your clock,
+    sunrise, sunset, length of day, moon phase
+  * Voyage progress along the 14,700 nm route
+  * Ship's log that fills itself in: every 1,000 nm, the equator crossing,
+    best 24-hour run, fastest speed, ports reached
+  * Day by day: two small charts, distance per day and strongest wind per day
+  * Share: QR code, copy-link and a ready-made message for the parents' group
+  * A home-screen tip the first time the page is opened on a phone
+
+After uploading: Actions -> Update position -> Run workflow.
+That first run creates wind.json, waves.json and history.json by itself.
+
+If you ever rename the repo, the QR code needs regenerating:
+  pip install qrcode && python3 scripts/make_qr.py https://your-name.github.io/new-name/
