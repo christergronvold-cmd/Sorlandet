@@ -413,7 +413,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "fec0a24f64";
+const BUILD = "1461688fa1";
 
 async function checkForNewBuild() {
   try {
@@ -1475,30 +1475,48 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
            ? " · beyond five days it is an outlook, not a forecast" : ""}
      </div><div class="fc">${aheadStrip}</div>`) : "";
 
-  // ---- on board: local time, sun, moon
+  // ---- the clock ashore, sun and moon
+  // A city clock, not a ship's zone clock: the time in the port she is lying in, or the
+  // one she is heading for. That is the number that answers "can I call him now".
   const sun = d.sun || {}, moon = sun.moon || {};
   let boardCard = "";
-  if (sun.utc_offset_seconds !== undefined && sun.utc_offset_seconds !== null) {
-    const shipMin = sun.utc_offset_seconds / 60;
-    const youMin = -new Date().getTimezoneOffset();
-    const diff = Math.round((shipMin - youMin) / 60);
+  if (sun.civil_timezone) {
+    const TZ = sun.civil_timezone;
+    const inTZ = (date, opts) =>
+      new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour12: false, ...opts }).format(date);
+    const offsetH = date => {
+      // the zone's offset on that date, taken from the browser's own zone data
+      const asUTC = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
+      const asTZ = new Date(date.toLocaleString("en-US", { timeZone: TZ }));
+      return Math.round((asTZ - asUTC) / 36e5);
+    };
+    const off = offsetH(new Date());
+    const youOff = -new Date().getTimezoneOffset() / 60;
+    const diff = Math.round(off - youOff);
     const vsYou = diff === 0 ? "same as your clock"
       : `${Math.abs(diff)} ${Math.abs(diff) === 1 ? "hour" : "hours"} ${diff < 0 ? "behind" : "ahead of"} you`;
-    const hhmm = t => (t || "").slice(11, 16) || "–";
-    boardCard = card("On board", `
+    const fromUTC = stamp => {
+      if (!stamp) return "–";
+      const dt = new Date(stamp.endsWith("Z") ? stamp : stamp + "Z");
+      return isNaN(dt) ? "–" : inTZ(dt, { hour: "2-digit", minute: "2-digit" });
+    };
+
+    boardCard = card(`Clock in ${sun.civil_place || "port"}`, `
       <div class="big" id="shipclock">--:--</div>
       <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">
-        ${sun.timezone_abbreviation || sun.timezone || "ship time"} · ${vsYou}</div>
-      ${row("Sunrise", hhmm(sun.sunrise_local))}
-      ${row("Sunset", hhmm(sun.sunset_local))}
+        ${sun.civil_place || ""}${sun.civil_country ? ", " + sun.civil_country : ""} ·
+        UTC${off >= 0 ? "+" : ""}${off} · ${vsYou}</div>
+      ${row("Sunrise", fromUTC(sun.sunrise_utc))}
+      ${row("Sunset", fromUTC(sun.sunset_utc))}
       ${row("Daylight", sun.daylight_hours ? `${sun.daylight_hours} h` : "–")}
       ${row("Moon", moon.phase ? `${moon.phase} · ${Math.round(moon.illumination * 100)}% lit` : "–")}`);
+
     clearInterval(window.__clock);
     const tick = () => {
       const el = document.getElementById("shipclock");
       if (!el) return;
-      const t = new Date(Date.now() + (shipMin + new Date().getTimezoneOffset()) * 6e4);
-      el.textContent = t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      el.textContent = inTZ(new Date(),
+        { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     };
     window.__clock = setInterval(tick, 1000);
     setTimeout(tick, 0);

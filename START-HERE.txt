@@ -220,6 +220,20 @@ Two cards were removed - "Waves where she is now" and "Weather where she is
 now". They ran forward in time from a fixed point, which contradicts the route
 ahead now being paced to the plan.
 
+THE CLOCK
+---------
+The On board card is now "Clock in <port>" - the time ashore where she is
+lying, or in the port she is heading for. A city clock, with how many hours
+that is from yours.
+
+It used to say "GMT, 2 hours behind you" while she was 25 nm off Norway. That
+came from asking for the time zone AT THE SHIP: near a coast you get the
+nearest country's zone, out at sea you get plain GMT, and the card would have
+jumped between the two for reasons that had nothing to do with the ship.
+
+Sunrise and sunset are now fetched in UTC and converted to the port's time by
+the page, so the clock and the sun always agree.
+
 IF THE PAGE LOOKS OLD
 --------------------
 GitHub serves the page with a 10-minute cache, and a page added to a phone's

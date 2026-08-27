@@ -634,11 +634,31 @@ def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
 # --------------------------------------------------------- sun, moon, history
 
 
-def fetch_sun_moon(lat: float, lon: float) -> dict | None:
-    """Local time zone, sunrise and sunset where the ship is, plus the moon phase.
+def civil_place(ports: list) -> dict | None:
+    """The port whose clock belongs on the page: the one she is in, else the next."""
+    for q in ports:
+        if q.get("arrive") and q.get("depart") and q["arrive"] <= today_iso() <= q["depart"]:
+            return q
+    return next_port(ports)
 
-    Asking Open-Meteo with timezone=auto gives us the ship's own local time zone,
-    which is what tells you when it is reasonable to call home.
+
+def port_timezone(lat: float, lon: float) -> str | None:
+    """The IANA zone name ashore at a place, e.g. Europe/London.
+
+    The name and not the offset, so the page can work out the time for any date - summer
+    time included - rather than freezing today's offset into the file.
+    """
+    data = get_json("https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
+        "latitude": f"{lat:.4f}", "longitude": f"{lon:.4f}",
+        "current": "temperature_2m", "timezone": "auto", "forecast_days": "1"}), timeout=25)
+    return (data or {}).get("timezone")
+
+
+def fetch_sun_moon(lat: float, lon: float) -> dict | None:
+    """Sunrise, sunset and the moon where the ship is, plus the clock ashore.
+
+    Sunrise is asked for in UTC and converted by the page into the port's civil time, so
+    the clock and the sun on the card agree with each other.
     """
     data = get_json(
         "https://api.open-meteo.com/v1/forecast?"
@@ -647,28 +667,32 @@ def fetch_sun_moon(lat: float, lon: float) -> dict | None:
                 "latitude": f"{lat:.4f}",
                 "longitude": f"{lon:.4f}",
                 "daily": "sunrise,sunset,daylight_duration",
-                "timezone": "auto",
+                "timezone": "UTC",
                 "forecast_days": "2",
             }
         )
     )
     out: dict = {"moon": moon_phase()}
+
+    place = civil_place((read_json(DATA / "ports.json", {}).get("ports") or []))
+    if place:
+        tz = port_timezone(float(place["lat"]), float(place["lon"]))
+        if tz:
+            out.update({"civil_timezone": tz, "civil_place": place["name"],
+                        "civil_country": place.get("country")})
+
     if data:
         daily = data.get("daily") or {}
         sunrise = (daily.get("sunrise") or [None])[0]
         sunset = (daily.get("sunset") or [None])[0]
         seconds = (daily.get("daylight_duration") or [None])[0]
         out.update({
-            "timezone": data.get("timezone"),
-            "timezone_abbreviation": data.get("timezone_abbreviation"),
-            "utc_offset_seconds": data.get("utc_offset_seconds"),
-            "sunrise_local": sunrise,
-            "sunset_local": sunset,
+            "sunrise_utc": sunrise,
+            "sunset_utc": sunset,
             "daylight_hours": None if seconds is None else round(seconds / 3600, 1),
         })
-        print(f"  -> ship local time zone {out.get('timezone')} "
-              f"(UTC{out.get('utc_offset_seconds', 0) // 3600:+d}), "
-              f"sunrise {sunrise}, sunset {sunset}")
+        print(f"  -> clock ashore: {out.get('civil_place')} ({out.get('civil_timezone')}), "
+              f"sunrise {sunrise} UTC, sunset {sunset} UTC")
     return out
 
 

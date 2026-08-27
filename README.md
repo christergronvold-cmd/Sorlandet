@@ -400,10 +400,27 @@ actually runs out of.
 
 ## What else is on the page
 
-**On board** shows the ship's own local time as a running clock, how many hours that is
-from your clock, sunrise, sunset, length of the day, and the moon phase for the night
-watches. The time zone comes from Open-Meteo; the moon is computed locally from the
-synodic month, no API needed.
+**Clock in <port>** shows the time ashore in the port she is lying in, or the one she is
+heading for - a city clock, running, with how many hours that is from yours. Plus sunrise,
+sunset, day length and the moon phase for the night watches.
+
+It used to ask Open-Meteo for the time zone *at the ship*, which is a trap. Near a coast
+that returns the nearest country's zone; out at sea it falls back to plain GMT. So the card
+read "GMT · 2 hours behind you" while she was 25 nm off Norway - true, useless, and it would
+have jumped between Europe/Oslo, GMT and Europe/London for reasons that had nothing to do
+with the ship.
+
+Now the job looks up the IANA zone name **at the port** and stores the name rather than an
+offset, and asks for sunrise and sunset in **UTC**. The page converts both into that port's
+time with `Intl`, so the clock and the sun on the card cannot disagree, and summer time is
+right for a port she reaches in six months rather than frozen at whatever it was on the day
+the file was written. If the lookup fails, no zone is claimed and the card hides itself.
+
+Ships at sea do keep their own zone time - 15-degree bands off longitude, which is why her
+clock would be three hours from the town clock in Vigo, where Spain still keeps the Berlin
+time Franco adopted in 1940. That is a good story and a poor thing to put on a card for
+parents, so the page shows the city clock instead: the number that answers "can I call him
+now".
 
 **Voyage so far** and **Voyage progress** no longer count AIS fixes. The number said more
 about receiver coverage than about the voyage: it jumps by a thousand when she passes a
