@@ -50,6 +50,10 @@ THIN_RULES = [(7, 0), (30, 30), (120, 120), (10000, 360)]  # (days old, minutes 
 MIN_MOVE_NM = float(os.environ.get("MIN_MOVE_NM", "0.15"))
 MIN_GAP_MIN = float(os.environ.get("MIN_GAP_MIN", "8"))
 
+# How far back the rewind slider can reach. Open-Meteo serves past hours from the same
+# endpoints through past_days, so this needs no separate historical API and no key.
+WAKE_HOURS = int(os.environ.get("WAKE_HOURS", "48"))
+
 USER_AGENT = os.environ.get(
     "CONTACT_UA", "sorlandet-tracker/1.0 (family project; contact: change-me@example.com)"
 )
@@ -520,7 +524,7 @@ def fetch_weather(lat: float, lon: float) -> dict:
 
 GRID_CELLS = int(os.environ.get("GRID_CELLS", "5"))        # 5 x 5 points
 GRID_SPAN_NM = float(os.environ.get("GRID_SPAN_NM", "360"))  # box side in nautical miles
-GRID_HOURS = int(os.environ.get("GRID_HOURS", "24"))       # how far ahead
+GRID_HOURS = int(os.environ.get("GRID_HOURS", "72"))       # how far ahead
 GRID_STEP = int(os.environ.get("GRID_STEP", "3"))          # hours between steps
 
 
@@ -548,12 +552,18 @@ def grid_around(lat: float, lon: float) -> tuple[list[str], list[str]]:
 
 
 def _time_index(all_times: list[str]) -> tuple[list[int], list[str]]:
-    now_hour = now_utc().strftime("%Y-%m-%dT%H:00")
+    """Time steps for the grid: WAKE_HOURS behind us as well as GRID_HOURS ahead.
+
+    The slider on the page runs across the whole span, so the same arrows that show the
+    forecast can be wound back to the weather she actually sailed through.
+    """
+    back_hour = (now_utc() - timedelta(hours=WAKE_HOURS)).strftime("%Y-%m-%dT%H:00")
     try:
-        first = next(k for k, t in enumerate(all_times) if t >= now_hour)
+        first = next(k for k, t in enumerate(all_times) if t >= back_hour)
     except StopIteration:
         first = 0
-    idx = list(range(first, min(len(all_times), first + GRID_HOURS + 1), GRID_STEP))
+    span = WAKE_HOURS + GRID_HOURS
+    idx = list(range(first, min(len(all_times), first + span + 1), GRID_STEP))
     return idx, [all_times[k] for k in idx]
 
 
@@ -577,7 +587,8 @@ def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
         "latitude": ",".join(lats),
         "longitude": ",".join(lons),
         "hourly": fields,
-        "forecast_days": "3",
+        "past_days": str(max(1, min(7, (WAKE_HOURS + 23) // 24))),
+        "forecast_days": str(max(2, min(16, (GRID_HOURS + 47) // 24))),
         "timezone": "UTC",
     }
     if kind == "wind":
@@ -743,6 +754,7 @@ def thin_track(points: list) -> list:
 SEAGRID_BIN = DATA / "seagrid.bin"
 SEAGRID_META = DATA / "seagrid.json"
 AHEAD = DATA / "ahead.json"
+WAKE = DATA / "wake.json"
 AHEAD_HOURS = [int(h) for h in os.environ.get("AHEAD_HOURS", "6,12,24,36,48,72").split(",")]
 CRUISE_KN = float(os.environ.get("CRUISE_KN", "5.5"))     # used when she is lying still
 
@@ -932,6 +944,145 @@ def fetch_ahead(points: list) -> list:
             "wave_period_s": pick(s, "wave_period", si),
         })
     return out
+
+
+# ------------------------------------------------------- where she has been, and in what
+
+# How far back the rewind slider can go. Kept modest on purpose: this is "what was it
+# like last night", not an archive. Open-Meteo serves past hours from the same endpoints
+# through past_days, so no separate historical API and no key.
+def position_at(points: list, when: datetime) -> dict | None:
+    """Where she was at a given moment, interpolated between the two nearest fixes.
+
+    Returns None outside the track, and None across a gap longer than three hours -
+    drawing a straight line through a two-day AIS silence would be an invention, not
+    a position.
+    """
+    if len(points) < 2:
+        return None
+    lo, hi = 0, len(points) - 1
+    try:
+        if when < parse_iso(points[0]["t"]) or when > parse_iso(points[-1]["t"]):
+            return None
+    except Exception:
+        return None
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        if parse_iso(points[mid]["t"]) <= when:
+            lo = mid
+        else:
+            hi = mid
+    a, b = points[lo], points[hi]
+    ta, tb = parse_iso(a["t"]), parse_iso(b["t"])
+    span = (tb - ta).total_seconds()
+    if span > 3 * 3600:
+        return None
+    f = 0.0 if span <= 0 else (when - ta).total_seconds() / span
+    return {
+        "lat": a["lat"] + (b["lat"] - a["lat"]) * f,
+        "lon": a["lon"] + (b["lon"] - a["lon"]) * f,
+        "sog": a.get("sog") if f < 0.5 else b.get("sog"),
+        "cog": a.get("cog") if f < 0.5 else b.get("cog"),
+    }
+
+
+def fetch_past(slots: list) -> list:
+    """Wind and sea state at each past position, at the hour she was there.
+
+    One call to each API for the whole set: the coordinates go in comma-separated and
+    Open-Meteo answers with one block per location. past_days carries the history.
+    """
+    if not slots:
+        return []
+    lats = ",".join(f"{s['lat']:.4f}" for s in slots)
+    lons = ",".join(f"{s['lon']:.4f}" for s in slots)
+    span_h = (now_utc() - parse_iso(slots[0]["t"])).total_seconds() / 3600
+    past_days = max(1, min(7, int(span_h // 24) + 1))
+
+    air = get_json("https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
+        "latitude": lats, "longitude": lons,
+        "hourly": "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,weather_code",
+        "wind_speed_unit": "ms", "past_days": str(past_days), "forecast_days": "1",
+        "timezone": "UTC"}), timeout=45)
+    sea = get_json("https://marine-api.open-meteo.com/v1/marine?" + urllib.parse.urlencode({
+        "latitude": lats, "longitude": lons,
+        "hourly": "wave_height,wave_direction,wave_period",
+        "past_days": str(past_days), "forecast_days": "1", "timezone": "UTC"}), timeout=45)
+
+    def block(data, k):
+        if not data:
+            return {}
+        blocks = data if isinstance(data, list) else [data]
+        return (blocks[k].get("hourly") or {}) if k < len(blocks) else {}
+
+    out = []
+    for k, slot in enumerate(slots):
+        stamp = parse_iso(slot["t"]).strftime("%Y-%m-%dT%H:00")
+        a, sea_b = block(air, k), block(sea, k)
+        ai = a.get("time", []).index(stamp) if stamp in (a.get("time") or []) else None
+        si = sea_b.get("time", []).index(stamp) if stamp in (sea_b.get("time") or []) else None
+        pick = lambda d, key, i: (d.get(key) or [None])[i] if i is not None and d.get(key) else None
+        out.append({**slot,
+                    "wind_ms": pick(a, "wind_speed_10m", ai),
+                    "wind_dir": pick(a, "wind_direction_10m", ai),
+                    "gust_ms": pick(a, "wind_gusts_10m", ai),
+                    "temp_c": pick(a, "temperature_2m", ai),
+                    "weather_code": pick(a, "weather_code", ai),
+                    "wave_m": pick(sea_b, "wave_height", si),
+                    "wave_dir": pick(sea_b, "wave_direction", si),
+                    "wave_period_s": pick(sea_b, "wave_period", si)})
+    return out
+
+
+def build_wake(points: list) -> None:
+    """One entry per whole hour for the last WAKE_HOURS: where she was, and the weather
+    that was actually there.
+
+    Entries already fetched are kept, so a run only asks about the hours that are new -
+    normally one or two. That keeps the file honest as history rather than re-deriving it
+    from today's model run every time.
+    """
+    if len(points) < 2:
+        return
+    kept = {e["t"]: e for e in (read_json(WAKE, {}) or {}).get("hours", [])
+            if isinstance(e, dict) and e.get("t")}
+
+    top = now_utc().replace(minute=0, second=0, microsecond=0)
+    window = [top - timedelta(hours=h) for h in range(WAKE_HOURS, -1, -1)]
+    wanted, missing = [], []
+    for when in window:
+        stamp = iso(when)
+        where = position_at(points, when)
+        if not where:
+            continue                              # outside the track, or across a silence
+        old = kept.get(stamp)
+        if old and old.get("wind_ms") is not None:
+            wanted.append({**old, **where, "t": stamp})   # refresh the position, keep the weather
+        else:
+            slot = {"t": stamp, **where}
+            wanted.append(slot)
+            missing.append(slot)
+
+    if missing:
+        # Open-Meteo takes a bounded number of locations per call, so ask in chunks of 24
+        # - the same order of magnitude as the 5 x 5 grid that has always worked. Two
+        # chunks per run fills a 48-hour window on the first run; anything older than that
+        # (a long backfill) catches up over the next few runs, newest first.
+        CHUNK, MAX_CHUNKS = 24, 2
+        todo = missing[-CHUNK * MAX_CHUNKS:]
+        fresh = {}
+        for i in range(0, len(todo), CHUNK):
+            for e in fetch_past(todo[i:i + CHUNK]):
+                fresh[e["t"]] = e
+        wanted = [fresh.get(w["t"], w) for w in wanted]
+        left = len(missing) - len(todo)
+        if left:
+            print(f"  -> wake: {left} older hours left for the next run")
+
+    payload = {"generated_utc": iso(now_utc()), "hours_back": WAKE_HOURS, "hours": wanted}
+    write_json(WAKE, payload)
+    withw = sum(1 for w in wanted if w.get("wind_ms") is not None)
+    print(f"  -> wake: {len(wanted)} hours on the track, {withw} with weather")
 
 
 def next_port(ports: list) -> dict | None:
@@ -1141,6 +1292,7 @@ def main() -> int:
         },
     )
     build_ahead(lat, lon, position.get("sog_kn"))
+    build_wake(points)
     update_history(weather, points)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0

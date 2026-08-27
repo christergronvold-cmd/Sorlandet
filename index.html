@@ -76,6 +76,14 @@
   footer{margin-top:22px; font-size:12.5px; color:var(--muted); line-height:1.7}
   footer a{color:var(--accent)}
   .ship-marker{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .ghost-marker{opacity:.75}
+  #rewind[hidden]{display:none}
+  #rewind{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:10px 14px;margin:0 0 14px;display:flex;flex-wrap:wrap;gap:6px 18px;
+    align-items:baseline;font-size:13.5px;color:var(--muted)}
+  #rewind b{color:var(--text);font-size:14.5px}
+  #playbtn{min-width:34px}
+  #playbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .windbar{
     display:flex; align-items:center; gap:12px; margin-top:10px; padding:11px 14px;
     background:var(--panel); border:1px solid var(--line); border-radius:12px;
@@ -141,12 +149,22 @@
 
   <div class="windbar" id="windbar" hidden>
     <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
-    <button id="wavetoggle" title="Show or hide the wave forecast">Waves</button>
-    <label for="windtime">Forecast</label>
+    <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
+    <button id="playbtn" title="Play the last two days">▶</button>
+    <label for="windtime">Time</label>
     <input type="range" id="windtime" min="0" max="0" value="0" step="1">
     <span class="when" id="windwhen">now</span>
+    <button id="nowbtn" title="Jump back to now" hidden>Now</button>
     <span id="windlive" hidden title="The grid is being fetched for what you see"
           style="color:var(--accent);font-size:11.5px;font-weight:650">live grid</span>
+  </div>
+
+  <div id="rewind" hidden>
+    <b id="rw-when"></b>
+    <span id="rw-pos"></span>
+    <span id="rw-sail"></span>
+    <span id="rw-wind"></span>
+    <span id="rw-wave"></span>
   </div>
 
   <div class="grid" id="cards"></div>
@@ -361,13 +379,24 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18, attribution: "© OpenStreetMap"
 }).addTo(map);
 
-const shipIcon = heading => L.divIcon({
-  className: "ship-marker",
+const shipIcon = (heading, ghost = false) => L.divIcon({
+  className: ghost ? "ship-marker ghost-marker" : "ship-marker",
   html: `<svg width="34" height="34" viewBox="0 0 34 34" style="transform:rotate(${heading ?? 0}deg)">
-      <circle cx="17" cy="17" r="8.5" fill="#0b6ea8" stroke="#fff" stroke-width="2.5"/>
-      <path d="M17 1.5 L22 11 L12 11 Z" fill="#0b6ea8" stroke="#fff" stroke-width="1.6"/>
+      <circle cx="17" cy="17" r="8.5" fill="${ghost ? "#e0803a" : "#0b6ea8"}" stroke="#fff" stroke-width="2.5"/>
+      <path d="M17 1.5 L22 11 L12 11 Z" fill="${ghost ? "#e0803a" : "#0b6ea8"}" stroke="#fff" stroke-width="1.6"/>
     </svg>`,
   iconSize: [34, 34], iconAnchor: [17, 17]
+});
+
+// A position that has not happened yet: hollow, so it never reads as a logged fix.
+const futureIcon = () => L.divIcon({
+  className: "ship-marker future-marker",
+  html: `<svg width="30" height="30" viewBox="0 0 30 30">
+      <circle cx="15" cy="15" r="8" fill="none" stroke="#0b6ea8" stroke-width="2.5"
+              stroke-dasharray="3,2.6"/>
+      <circle cx="15" cy="15" r="2.5" fill="#0b6ea8"/>
+    </svg>`,
+  iconSize: [30, 30], iconAnchor: [15, 15]
 });
 
 // -------------------------------------------------------- wind and wave layers
@@ -389,7 +418,7 @@ const scaleColor = (v, table) => {
 
 let windLayer = null, waveLayer = null;
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: false };
+let gridIndex = 0, show = { wind: true, waves: true };
 
 function windIcon(ws, wd) {
   const len = Math.min(30, 12 + ws * 1.15);
@@ -460,7 +489,9 @@ function gridLabel(i) {
   const d = new Date(t + "Z");
   const hoursOut = Math.round((d - Date.now()) / 36e5);
   const clock = d.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" });
-  return hoursOut <= 0 ? `now · ${clock}` : `+${hoursOut} h · ${clock}`;
+  if (hoursOut <= -1) return `${hoursOut} h · ${clock}`;
+  if (hoursOut >= 1) return `+${hoursOut} h · ${clock}`;
+  return `now · ${clock}`;
 }
 
 function setupGrids(wind, waves) {
@@ -471,16 +502,21 @@ function setupGrids(wind, waves) {
   bar.hidden = false;                        // the grid can always be fetched for the map
   if (!times.length) return;
   slider.max = times.length - 1;
-  gridIndex = Math.min(gridIndex, times.length - 1);
+  const nowIdx = nowIndexOf(times);
+  gridIndex = gridPinned ? Math.min(gridIndex, times.length - 1) : nowIdx;
   slider.value = gridIndex;
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
   drawGrids();
+  drawRewind();
 }
 
 document.getElementById("windtime").addEventListener("input", e => {
+  gridPinned = true;
+  stopPlay();
   gridIndex = +e.target.value;
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
   drawGrids();
+  drawRewind();
 });
 [["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
@@ -490,6 +526,286 @@ document.getElementById("windtime").addEventListener("input", e => {
     drawGrids();
     if (show[key]) refreshViewportGrids();
   });
+});
+
+
+// ------------------------------------------------------------ winding time back
+// The slider reaches two days into the past. Drag it back and the ship goes to where
+// she was at that hour, the stretch she has sailed since is drawn on top of the track,
+// and the panel under the map shows the wind and sea she was actually in - taken from
+// data/wake.json, which the job fills hour by hour as it happens.
+
+let gridPinned = false, wake = null, rewindLayers = [], playTimer = null;
+
+// Where she was at a given moment. Straight-line between the two nearest fixes, but
+// never across a gap of more than three hours - drawing a line through an AIS silence
+// would be an invention, not a position.
+function positionAt(points, whenMs) {
+  if (!points || points.length < 2) return null;
+  const t0 = new Date(points[0].t).getTime();
+  const t1 = new Date(points[points.length - 1].t).getTime();
+  if (whenMs < t0 || whenMs > t1) return null;
+  let lo = 0, hi = points.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (new Date(points[mid].t).getTime() <= whenMs) lo = mid; else hi = mid;
+  }
+  const a = points[lo], b = points[hi];
+  const ta = new Date(a.t).getTime(), tb = new Date(b.t).getTime();
+  const span = tb - ta;
+  if (span > 3 * 36e5) return null;
+  const f = span <= 0 ? 0 : (whenMs - ta) / span;
+  return {
+    lat: a.lat + (b.lat - a.lat) * f,
+    lon: a.lon + (b.lon - a.lon) * f,
+    sog: f < 0.5 ? a.sog : b.sog,
+    cog: f < 0.5 ? a.cog : b.cog,
+    t: new Date(whenMs).toISOString()
+  };
+}
+
+// The wake entry closest to a moment, within half an hour.
+function wakeAt(whenMs) {
+  const hrs = wake?.hours || [];
+  let best = null, bestGap = Infinity;
+  for (const h of hrs) {
+    const gap = Math.abs(new Date(h.t).getTime() - whenMs);
+    if (gap < bestGap) { bestGap = gap; best = h; }
+  }
+  return bestGap <= 30 * 6e4 ? best : null;
+}
+
+// The forward twin of wakeAt. ahead.json holds her projected position and the weather
+// there at 6, 12, 24, 36, 48 and 72 hours out; anything between two of those is
+// interpolated, so the slider can stop anywhere.
+function aheadAt(hoursOut) {
+  const pts = (window.__ahead?.points || []).filter(x => x && x.lat != null)
+    .slice().sort((a, b) => a.hours - b.hours);
+  if (!pts.length) return null;
+  if (hoursOut <= pts[0].hours) return pts[0];
+  if (hoursOut >= pts[pts.length - 1].hours) return pts[pts.length - 1];
+  let i = 1;
+  while (i < pts.length && pts[i].hours < hoursOut) i++;
+  const a = pts[i - 1], b = pts[i];
+  const span = b.hours - a.hours;
+  const f = span <= 0 ? 0 : (hoursOut - a.hours) / span;
+  const mix = (x, y) => (x == null || y == null) ? (x ?? y) : x + (y - x) * f;
+  // Directions are angles: interpolate the short way round, not through 0.
+  const mixDeg = (x, y) => {
+    if (x == null || y == null) return x ?? y;
+    let d = ((y - x + 540) % 360) - 180;
+    return (x + d * f + 360) % 360;
+  };
+  return {
+    hours: hoursOut, interpolated: span > 0,
+    lat: mix(a.lat, b.lat), lon: mix(a.lon, b.lon),
+    wind_ms: mix(a.wind_ms, b.wind_ms), wind_dir: mixDeg(a.wind_dir, b.wind_dir),
+    gust_ms: mix(a.gust_ms, b.gust_ms),
+    wave_m: mix(a.wave_m, b.wave_m), wave_dir: mixDeg(a.wave_dir, b.wave_dir),
+    wave_period_s: mix(a.wave_period_s, b.wave_period_s)
+  };
+}
+
+function clearRewind() {
+  rewindLayers.forEach(l => map.removeLayer(l));
+  rewindLayers = [];
+  document.getElementById("rewind").hidden = true;
+  document.getElementById("nowbtn").hidden = true;
+}
+
+function drawRewind() {
+  clearRewind();
+  const times = (gridData.wind || gridData.waves)?.times || [];
+  const t = times[gridIndex];
+  if (!t) return;
+  const whenMs = new Date(t + "Z").getTime();
+  const offsetH = (whenMs - Date.now()) / 36e5;
+  if (Math.abs(offsetH) < 0.75) return;                // this is now: nothing to overlay
+
+  document.getElementById("nowbtn").hidden = false;
+  if (offsetH > 0) { drawForward(offsetH); return; }
+
+  const pts = (window.__track?.points) || [];
+  const was = positionAt(pts, whenMs);
+  const w = wakeAt(whenMs);
+
+  const el = id => document.getElementById(id);
+  const hoursAgo = Math.round((Date.now() - whenMs) / 36e5);
+  el("rw-when").textContent =
+    `${hoursAgo} h ago · ${new Date(whenMs).toLocaleString("en-GB",
+      { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} UTC`;
+
+  if (!was) {
+    el("rw-pos").textContent = "no position logged at this hour";
+    el("rw-sail").textContent = "";
+    el("rw-wind").textContent = "";
+    el("rw-wave").textContent = "";
+    el("rewind").hidden = false;
+    return;
+  }
+
+  el("rw-pos").textContent = `${dms(was.lat, "lat")} ${dms(was.lon, "lon")}`;
+
+  // How far she has come since that hour, along the track she actually sailed.
+  let since = 0;
+  const trail = [[was.lat, was.lon]];
+  for (const q of pts) {
+    const qt = new Date(q.t).getTime();
+    if (qt <= whenMs) continue;
+    const prev = trail[trail.length - 1];
+    const step = nm(prev, [q.lat, q.lon]);
+    if (step >= 0.02) since += step;
+    trail.push([q.lat, q.lon]);
+  }
+  el("rw-sail").textContent = since >= 0.5
+    ? `${since.toFixed(1)} nm sailed since${was.sog != null ? ` · ${N(was.sog)} kn then` : ""}`
+    : (was.sog != null ? `${N(was.sog)} kn` : "");
+
+  el("rw-wind").textContent = w?.wind_ms != null
+    ? `Wind ${N(w.wind_ms)} m/s from ${compass(w.wind_dir)}${w.gust_ms != null ? ` · gusts ${N(w.gust_ms)}` : ""}`
+    : "wind not recorded for this hour";
+  el("rw-wave").textContent = w?.wave_m != null
+    ? `Waves ${N(w.wave_m)} m from ${compass(w.wave_dir)}`
+    : "";
+  el("rewind").hidden = false;
+
+  if (trail.length > 1) {
+    rewindLayers.push(L.polyline(trail, {
+      color: "#e0803a", weight: 4, opacity: .85
+    }).bindTooltip(`${since.toFixed(1)} nm since ${hoursAgo} h ago`).addTo(map));
+  }
+  rewindLayers.push(L.marker([was.lat, was.lon], {
+    icon: shipIcon(was.cog, true), zIndexOffset: 400
+  }).bindTooltip(`Here ${hoursAgo} h ago`, { direction: "top" }).addTo(map));
+}
+
+// Dragging the slider forward: where she is expected to be, and what she is sailing into.
+// The dashed expected route is already on the map; this puts her on it at the chosen hour.
+function drawForward(hoursOut) {
+  const el = id => document.getElementById(id);
+  const a = aheadAt(hoursOut);
+  const to = window.__ahead?.to;
+  const when = new Date(Date.now() + hoursOut * 36e5);
+  const route = window.__ahead?.route || [];
+  const eta = window.__ahead?.eta_utc ? new Date(window.__ahead.eta_utc).getTime() : null;
+
+  el("rw-when").textContent =
+    `in ${Math.round(hoursOut)} h · ${when.toLocaleString("en-GB",
+      { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} UTC`;
+
+  // Past the estimated arrival there is nothing at sea to show. Clamping to the last
+  // forecast point would claim she is still 59 nm out three days after she docked.
+  if (eta && when.getTime() > eta && route.length) {
+    const port = route[route.length - 1];
+    el("rw-pos").textContent = `${dms(port[0], "lat")} ${dms(port[1], "lon")}`;
+    el("rw-sail").textContent = to
+      ? `alongside in ${to} by then · due ${new Date(eta).toLocaleString("en-GB",
+          { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} UTC`
+      : "arrived by then";
+    el("rw-wind").textContent = "beyond the leg - drag back to see the passage";
+    el("rw-wave").textContent = "";
+    el("rewind").hidden = false;
+    rewindLayers.push(L.marker(port, { icon: futureIcon(), zIndexOffset: 400 })
+      .bindTooltip(`Alongside in ${to || "port"} by then`, { direction: "top" }).addTo(map));
+    rewindLayers.push(L.polyline(route, {
+      color: "#0b6ea8", weight: 3.5, opacity: .75, dashArray: "1,6", lineCap: "round"
+    }).addTo(map));
+    return;
+  }
+
+  if (!a) {
+    el("rw-pos").textContent = "no route worked out yet";
+    el("rw-sail").textContent = "";
+    el("rw-wind").textContent = "the forecast on the way appears once the job has run";
+    el("rw-wave").textContent = "";
+    el("rewind").hidden = false;
+    return;
+  }
+
+  el("rw-pos").textContent = `${dms(a.lat, "lat")} ${dms(a.lon, "lon")}`;
+
+  // How much of the leg is still to run from there.
+  let left = null;
+  if (route.length > 1) {
+    const proj = alongLeg(route, [a.lat, a.lon]);
+    left = Math.max(0, proj.legLength - proj.covered);
+  }
+  el("rw-sail").textContent = to
+    ? `expected position${left != null ? ` · ${Math.round(left)} nm still to ${to}` : ` on the way to ${to}`}`
+    : "expected position";
+
+  el("rw-wind").textContent = a.wind_ms != null
+    ? `Wind ${N(a.wind_ms)} m/s from ${compass(a.wind_dir)}${a.gust_ms != null ? ` · gusts ${N(a.gust_ms)}` : ""}`
+    : "no wind forecast for this hour";
+  el("rw-wave").textContent = a.wave_m != null
+    ? `Waves ${N(a.wave_m)} m from ${compass(a.wave_dir)}` +
+      `${a.wave_period_s != null ? ` · ${N(a.wave_period_s, 0)} s` : ""}`
+    : "";
+  el("rewind").hidden = false;
+
+  // Her expected position, hollow so it never reads as a logged fix.
+  rewindLayers.push(L.marker([a.lat, a.lon], {
+    icon: futureIcon(), zIndexOffset: 400
+  }).bindTooltip(`Expected here in ${Math.round(hoursOut)} h`, { direction: "top" }).addTo(map));
+
+  // The stretch of the expected route she should have covered by then.
+  if (route.length > 1) {
+    const upto = [[route[0][0], route[0][1]]];
+    const proj = alongLeg(route, [a.lat, a.lon]);
+    let walked = 0;
+    for (let i = 1; i < route.length; i++) {
+      walked += nm(route[i - 1], route[i]);
+      if (walked > proj.covered) break;
+      upto.push(route[i]);
+    }
+    upto.push([a.lat, a.lon]);
+    if (upto.length > 1) {
+      rewindLayers.push(L.polyline(upto, {
+        color: "#0b6ea8", weight: 3.5, opacity: .75, dashArray: "1,6", lineCap: "round"
+      }).addTo(map));
+    }
+  }
+}
+
+function stopPlay() {
+  if (playTimer) clearInterval(playTimer);
+  playTimer = null;
+  const b = document.getElementById("playbtn");
+  b.classList.remove("on");
+  b.textContent = "▶";
+}
+
+document.getElementById("playbtn").addEventListener("click", () => {
+  if (playTimer) { stopPlay(); return; }
+  const times = (gridData.wind || gridData.waves)?.times || [];
+  if (times.length < 2) return;
+  const stop = times.length - 1;      // the whole span: two days behind, three ahead
+  gridPinned = true;
+  gridIndex = 0;
+  const b = document.getElementById("playbtn");
+  b.classList.add("on");
+  b.textContent = "❚❚";
+  const step = () => {
+    document.getElementById("windtime").value = gridIndex;
+    document.getElementById("windwhen").textContent = gridLabel(gridIndex);
+    drawGrids();
+    drawRewind();
+    if (gridIndex >= stop) { stopPlay(); return; }
+    gridIndex++;
+  };
+  step();
+  playTimer = setInterval(step, 500);
+});
+
+document.getElementById("nowbtn").addEventListener("click", () => {
+  stopPlay();
+  const times = (gridData.wind || gridData.waves)?.times || [];
+  gridPinned = false;
+  gridIndex = nowIndexOf(times);
+  document.getElementById("windtime").value = gridIndex;
+  document.getElementById("windwhen").textContent = gridLabel(gridIndex);
+  drawGrids();
+  drawRewind();
 });
 
 
@@ -518,13 +834,27 @@ function gridFromBounds(b, n) {
   return { lats, lons };
 }
 
+// The slider spans REWIND_HOURS behind us as well as the forecast ahead, so the same
+// arrows can be wound back to the weather she actually sailed through.
+const REWIND_HOURS = 48, AHEAD_HOURS_UI = 72;
+
 function pickTimes(all) {
-  const nowHour = new Date().toISOString().slice(0, 13) + ":00";
-  let first = all.findIndex(t => t >= nowHour);
+  const back = new Date(Date.now() - REWIND_HOURS * 36e5).toISOString().slice(0, 13) + ":00";
+  let first = all.findIndex(t => t >= back);
   if (first < 0) first = 0;
   const idx = [];
-  for (let k = first; k < Math.min(all.length, first + 25); k += 3) idx.push(k);
+  const span = REWIND_HOURS + AHEAD_HOURS_UI;
+  for (let k = first; k < Math.min(all.length, first + span + 1); k += 3) idx.push(k);
   return { idx, times: idx.map(k => all[k]) };
+}
+
+// Which slider step is "now" - the last one at or before this moment.
+function nowIndexOf(times) {
+  if (!times || !times.length) return 0;
+  const nowMs = Date.now();
+  let best = 0;
+  for (let i = 0; i < times.length; i++) if (new Date(times[i] + "Z") <= nowMs) best = i;
+  return best;
 }
 
 async function fetchViewportGrid(kind, bounds) {
@@ -537,7 +867,8 @@ async function fetchViewportGrid(kind, bounds) {
     latitude: lats.join(","), longitude: lons.join(","),
     hourly: kind === "wind" ? "wind_speed_10m,wind_direction_10m"
                             : "wave_height,wave_direction,wave_period",
-    forecast_days: "2", timezone: "UTC"
+    past_days: String(Math.max(1, Math.ceil(REWIND_HOURS / 24))),
+    forecast_days: String(Math.max(2, Math.ceil((AHEAD_HOURS_UI + 48) / 24))), timezone: "UTC"
   });
   if (kind === "wind") params.set("wind_speed_unit", "ms");
 
@@ -623,21 +954,22 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
     fetch("data/wind.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/waves.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] })),
-    fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead);
+  render(latest, track, plan, history, ahead, wakeFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -661,6 +993,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // on its last run, so a backfill would leave it saying "0 nm over 1 position".
   // Segments under 0.02 nm (about 37 m) are dropped: that is receiver jitter while she
   // lies still, not distance sailed.
+  window.__track = track;
+  window.__ahead = ahead;
+  wake = wakeFile || wake;
   const tp = track.points || [];
   let sailed = 0;
   for (let i = 1; i < tp.length; i++) {

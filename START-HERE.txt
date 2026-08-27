@@ -115,6 +115,34 @@ Then the round recalculates the weather and waves along the route she is
 actually likely to sail, and pushes it all to the repository. The page picks it
 up on its own.
 
+WINDING TIME BACK
+-----------------
+The slider under the map now starts 48 hours ago, not at now. Drag it left
+and the ship moves to where she actually was at that hour (orange), the
+stretch she has sailed since is drawn on top of the track, and the wind
+arrows and wave chevrons rewind to the weather that was there. The panel
+under the map reads out her position, how far she has come since, her speed
+then, and the wind and sea she was in.
+
+Drag it the other way and it does the mirror image: she moves to where she
+is EXPECTED to be at that hour - hollow marker, so it never reads as a real
+position - and the panel gives the wind and sea she is sailing into, plus how
+far she still has to run to the port. Past her estimated arrival it says she
+is alongside rather than pretending she is still at sea.
+
+  Play    the whole span through, one step per 500 ms
+  Now     jump back to the present
+
+The slider spans 48 hours back to 72 hours ahead in 3-hour steps. Two days of
+what happened, three of what is coming, on one control.
+
+It fills in from now on, so the first morning you will only see back to when
+this run started. After a day it reaches the full 48 hours.
+
+Hours with no AIS position - a silence longer than three hours - are simply
+absent, and the panel says so. Drawing a line through a two-day gap in
+mid-Atlantic would be an invention, not a position.
+
 WHY SOURCE 1 CHANGES THINGS
 ---------------------------
 It is a rolling window, not a live stream. So a run that starts within two days

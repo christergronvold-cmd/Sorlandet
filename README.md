@@ -16,6 +16,7 @@ data/ports.json               the 2026-2027 voyage plan (ports, dates, coordinat
 data/wind.json                wind forecast grid around the ship  <- written by the script
 data/waves.json               wave forecast grid around the ship  <- written by the script
 data/history.json             one row per day: strongest wind, highest wave  <- written by the script
+data/wake.json                hour by hour: where she was and the weather there  <- written by the script
 share-qr.svg                  QR code for the page address
 scripts/make_qr.py            regenerates share-qr.svg if the address changes
 scripts/update.py             fetches AIS position + weather
@@ -249,8 +250,8 @@ Coordinates are approximate port positions — good enough for distance and esti
 
 Each run also fetches two forecast grids around the ship's position: wind speed and
 direction, and wave height, direction and period. Each grid is 5 x 5 points covering a
-box of 360 x 360 nautical miles, for the next 24 hours in 3-hour steps, and each is a
-single API call. They are stored in `data/wind.json` and `data/waves.json`.
+box of 360 x 360 nautical miles, from 48 hours back to 72 hours ahead in 3-hour steps, and
+each is a single API call. They are stored in `data/wind.json` and `data/waves.json`.
 
 The box is measured in nautical miles rather than degrees, so the longitude span widens
 with latitude - 11.2 degrees wide in the Skagerrak, 6.0 at the equator - and the spacing
@@ -260,7 +261,7 @@ On the map, **wind** is a single arrow, coloured pale blue through green and amb
 red as it strengthens. **Waves** are a double chevron with the height in metres beside it,
 on a blue-to-purple scale. Both point the way they are travelling, and the two sit on
 either side of their grid point so they stay readable together. The slider under the map
-steps through the forecast; the two buttons turn each layer on and off. Waves start off.
+steps through the forecast; the two buttons turn each layer on and off. Both start on.
 
 ### The grid follows the map
 
@@ -279,6 +280,51 @@ These are forecasts for the surrounding sea, not measurements from on board - th
 anemometer on deck will read differently, especially in gusts. Grid size and horizon can
 be changed with the environment variables `GRID_CELLS`, `GRID_SPAN_NM`, `GRID_HOURS` and
 `GRID_STEP`.
+
+## Winding time back
+
+The slider under the map does not start at now - it starts **48 hours ago**. Drag it left
+and three things happen together:
+
+* the ship goes to where she actually was at that hour, drawn in orange
+* the stretch she has sailed since is drawn on top of the track, with the distance
+* the wind arrows and wave chevrons rewind to the weather that was there
+
+Drag it the other way instead and it does the mirror image: she moves to where she is
+**expected** to be at that hour - hollow marker, so it never reads as a logged fix - the
+stretch of the expected route she should have covered is drawn fine-dashed, and the panel
+gives the wind and sea she is sailing into, with how far she still has to run. Past the
+estimated arrival it says she is alongside rather than clamping to the last forecast point
+and claiming she is still 59 nm out three days after docking.
+
+The panel reads out the hour, her position, and the wind and sea - what she was in, or
+what she is heading for. **▶** plays the whole span through at 500 ms a step; **Now**
+jumps back to the present.
+
+The slider therefore covers **-48 h to +72 h** in 3-hour steps: two days of what happened
+and three of what is coming, on one control. `_time_index` in `update.py` and `pickTimes`
+in the page both span exactly that, which is why one slider can carry both. `GRID_HOURS`
+and `WAKE_HOURS` move the two ends.
+
+Two files make it work:
+
+`data/wake.json` - one entry per whole hour: where she was, and the wind and waves at that
+point at that time. Built by `build_wake()`, which interpolates her position between the
+two nearest fixes and asks Open-Meteo for that hour at that place. Hours already fetched
+are kept, so a run only asks about the hours that are new - normally one. That matters:
+the file is a record of what happened, not a re-derivation from today's model run. Change
+the window with `WAKE_HOURS`.
+
+The grids - the arrows themselves come from the same endpoints as the forecast, with
+`past_days` set, so no separate historical API and no key. `_time_index` in `update.py` and
+`pickTimes` in the page both span `-48 h .. +24 h` in 3-hour steps, which is why one slider
+can carry both.
+
+Two things it deliberately will not do. It never interpolates across an AIS silence longer
+than three hours - drawing a line through a two-day gap mid-Atlantic would be an invention,
+not a position, so those hours are simply absent and the panel says so. And it does not
+claim to be a measurement: it is the best reanalysis of the sea she was in, not the log
+from her own instruments.
 
 ## What else is on the page
 
@@ -323,6 +369,7 @@ parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url
 | Wind, temperature, pressure, forecast | [Open-Meteo Forecast](https://open-meteo.com) | none |
 | Wind grid for the map | [Open-Meteo Forecast](https://open-meteo.com), multi-location | none |
 | Wave grid for the map | [Open-Meteo Marine](https://open-meteo.com/en/docs/marine-weather-api), multi-location | none |
+| Weather she has already sailed through | the same two endpoints with `past_days` | none |
 | Map tiles | OpenStreetMap | none |
 
 Open-Meteo is free for non-commercial use. Norwegian waters can additionally be read from
