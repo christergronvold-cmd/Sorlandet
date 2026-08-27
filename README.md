@@ -463,6 +463,54 @@ computable check - lightness band, chroma floor, CVD separation, contrast - in b
 **Share** shows a QR code for the page, a copy-link button and a ready-made message for a
 parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url>`.
 
+## How fresh the pictures are
+
+This is not Google Earth. Google Earth is a mosaic stitched from deliberately cloud-free
+scenes gathered over months or years, with no single date - which is exactly why it never
+has weather in it. Everything on this page is a **single pass with its real cloud**.
+
+Latencies measured against the services, not taken from their marketing:
+
+| Source | Cadence | Shutter to available | Resolution |
+|---|---|---|---|
+| GOES-East | a new image every **10 minutes** | **45-50 minutes** | ~2 km |
+| VIIRS true colour | one pass a day, ~13:30 local | a few hours - today's pass over her longitude appeared between 13:00 and 14:40 UTC | 375 m |
+| Sentinel-2 | every 2-5 days over a given spot | **4 h 40 min** (11:25 shutter, 16:05 in the catalogue) | 10 m |
+
+The newest Sentinel-2 scene near her is usually a day or so old, and that is the *revisit*
+rather than the latency: the satellite simply has not been back yet.
+
+Because today's VIIRS pass is often published by mid-afternoon, the card asks for **today**
+first and lets the image fall back a day on its own error, up to three days, relabelling
+the caption as it goes. There is nothing to gain from assuming the worst.
+
+## From orbit
+
+Two different things share this card, and the first one matters every single day.
+
+**Yesterday's view of her weather.** A true-colour image from NASA centred on her position,
+with a red ring and cross on it. Cloud hiding the sea does not spoil this - the cloud *is*
+the thing worth seeing, and knowing she is underneath it is the point. Two panels: the wide
+one, widened until a coastline is in frame, and a sixth of it. This works everywhere on
+earth, every day, with no dependence on anyone's acquisition plan. The marker carries its
+own dark outline because it sits over white cloud as often as over dark sea.
+
+## Seen from space - the album
+
+Every pass that photographed the patch of sea she was in gets a tile, newest first, and the
+count sits in the card's title so it reads as something that grows over the year. Each tile
+links to ESA's own viewer so the reader can zoom in themselves rather than trusting a crop.
+
+**Port calls are the good ones**, and the card says which are which. Alongside she is not
+going anywhere, the quay gives the eye something to measure her against, and she arrives
+somewhere every ten days or so - which, given that every port on the voyage has Sentinel-2
+coverage while the ocean crossings have none, is where most of the album will come from. A
+tile for a port call is cropped tighter, 500 m instead of 800, because a stationary ship
+against a harbour wall is worth a closer look than one somewhere in open water.
+
+Whether she is alongside is worked out in the page from the voyage plan's own arrive and
+depart dates, so it costs nothing and stays right if the plan changes.
+
 ## Passes that actually looked at her
 
 `scripts/orbithunter.py` asks the right question. "Which scenes are near the ship" finds
@@ -490,6 +538,26 @@ outward from her position - 9°, 16°, 26°, 40° - and stores the first span th
 coastline; the page uses it for panel 1. In the North Sea that is 1,000 km. On the Cape
 Verde to Brazil crossing it comes out at 2,900 km, which puts the Brazilian coast in frame
 and a tropical cloud system in the middle: still a picture that says where she is.
+
+### Where the close passes are actually possible
+
+Measured against the catalogue rather than guessed at - 45 days of Sentinel-2 scenes at the
+midpoint of each leg, and 30 nm off each port:
+
+| | scenes | fairly clear |
+|---|---|---|
+| Skagerrak, North Sea, Shetland, Celtic Sea, Biscay | 25-40 | 3-23 |
+| **Funchal - Sevilla - Las Palmas** | 11-22 | **11-22, nearly all of them** |
+| Vigo to Funchal, Las Palmas to Mindelo | **0** | 0 |
+| Every Atlantic and Caribbean crossing | **0** | 0 |
+| **30 nm off every port on the voyage** | 8-28 | 5-25 |
+
+So coverage does not follow how coastal a leg looks on a chart - it follows where ESA
+chooses to photograph. Two legs that look coastal are blind, and every ocean crossing is
+blind. But **every port has coverage**, and she arrives somewhere every ten days or so, so
+the close passes come at the departures and arrivals. The best window of the whole voyage is
+October to December in the Morocco and Canaries corridor, where the sky is dry and almost
+every pass is usable.
 
 It worked the first week. On **26 August at 10:45:20 UTC** Sentinel-2A photographed her
 patch of the Skagerrak under 0 % cloud, with her nearest AIS fix 29 seconds from the

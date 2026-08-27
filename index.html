@@ -118,12 +118,32 @@
     background:var(--bg); border:1px solid var(--line)}
   .orbit figcaption{font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35}
   .orbit figcaption b{color:var(--ink)}
-  .orbit .xhair{position:absolute; left:50%; top:50%; width:34px; height:34px;
-    transform:translate(-50%,-50%); pointer-events:none;
-    background:
-      linear-gradient(var(--accent),var(--accent)) center/2px 11px no-repeat,
-      linear-gradient(var(--accent),var(--accent)) center/11px 2px no-repeat;
-    opacity:.9}
+  /* Sits over cloud as often as over sea, so it carries its own dark outline. */
+  .orbit .xhair{position:absolute; left:50%; top:50%; width:46px; height:46px;
+    transform:translate(-50%,-50%); pointer-events:none}
+  .orbit .xhair::before, .orbit .xhair::after{content:""; position:absolute;
+    background:#ff5f4a; box-shadow:0 0 0 1.5px rgba(0,0,0,.75)}
+  .orbit .xhair::before{left:50%; top:0; width:2.5px; height:15px; margin-left:-1.25px}
+  .orbit .xhair::after{left:0; top:50%; width:15px; height:2.5px; margin-top:-1.25px}
+  .album{display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .album figure{margin:0; position:relative}
+  .album a{display:block; position:relative; border-radius:10px; overflow:hidden}
+  .album img{width:100%; aspect-ratio:1; object-fit:cover; display:block;
+    background:var(--bg); border:1px solid var(--line); border-radius:10px}
+  .album figcaption{font-size:12px; margin-top:6px; line-height:1.4; color:var(--ink)}
+  .album .xhair{position:absolute; left:50%; top:50%; width:34px; height:34px;
+    transform:translate(-50%,-50%); pointer-events:none}
+  .album .xhair::before, .album .xhair::after{content:""; position:absolute;
+    background:#ff5f4a; box-shadow:0 0 0 1.5px rgba(0,0,0,.75)}
+  .album .xhair::before{left:50%; top:0; width:2px; height:11px; margin-left:-1px}
+  .album .xhair::after{left:0; top:50%; width:11px; height:2px; margin-top:-1px}
+  .album a::after{content:""; position:absolute; left:50%; top:50%; width:34px; height:34px;
+    transform:translate(-50%,-50%); border:2px solid #ff5f4a; border-radius:50%;
+    box-shadow:0 0 0 1.5px rgba(0,0,0,.55), inset 0 0 0 1.5px rgba(0,0,0,.55)}
+  .orbit figure::after{content:""; position:absolute; left:50%; top:50%; width:46px;
+    height:46px; transform:translate(-50%,-50%); border:2.5px solid #ff5f4a;
+    border-radius:50%; box-shadow:0 0 0 1.5px rgba(0,0,0,.55),
+    inset 0 0 0 1.5px rgba(0,0,0,.55); pointer-events:none}
   .log li:last-child{border-bottom:0}
   .log time{color:var(--muted); flex:0 0 74px; font-variant-numeric:tabular-nums}
   .log .ic{flex:0 0 20px; text-align:center}
@@ -413,7 +433,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1461688fa1";
+const BUILD = "607160fbc2";
 
 async function checkForNewBuild() {
   try {
@@ -588,7 +608,8 @@ function satSource() {
 
   // GOES only where it can see, and only for the recent past - it has no forecast.
   if (lon < -12 && ageMin > -60 && ageMin < 18 * 60) {
-    const clamped = Math.min(Date.now() - 40 * 6e4, when.getTime()) - satBackoff * 6e5;
+    // Measured: a slot 40 minutes old still 404s, 50 minutes old is there.
+    const clamped = Math.min(Date.now() - 50 * 6e4, when.getTime()) - satBackoff * 6e5;
     const slot = new Date(Math.floor(clamped / 6e5) * 6e5);
     return {
       kind: "goes", layer: "GOES-East_ABI_GeoColor", level: 7, maxNative: 7, ext: "jpg",
@@ -1587,20 +1608,22 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`) : "";
 
-  // ---- satellite passes that actually looked at her
-  // Three panels, widest first, so a blue square with a white speck has somewhere to be.
-  // Every panel is one image request; nothing is composited or stored.
+  // ---- from orbit
+  // Two things, and the first matters every day: a picture of the weather she is actually
+  // in, taken this morning, with a cross where she is. Cloud hiding the sea does not spoil
+  // it - the cloud IS the thing worth seeing, and knowing she is underneath it is the
+  // point. The third panel appears only when a satellite came close enough to show her.
   const GIBS_WMS = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
-  function wmsPanel(lat, lon, spanDeg, date, w, h) {
+  function wmsPanel(lat, lon, spanDeg, date, px) {
     const dLat = spanDeg / 2, dLon = spanDeg / 2 / Math.cos(lat * Math.PI / 180);
-    const p = new URLSearchParams({
+    const q = new URLSearchParams({
       SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetMap",
       LAYERS: "VIIRS_NOAA20_CorrectedReflectance_TrueColor,Coastlines",
       CRS: "EPSG:4326",
       BBOX: [lat - dLat, lon - dLon, lat + dLat, lon + dLon].map(v => v.toFixed(4)).join(","),
-      WIDTH: String(w), HEIGHT: String(h), FORMAT: "image/png", TIME: date
+      WIDTH: String(px), HEIGHT: String(px), FORMAT: "image/png", TIME: date
     });
-    return GIBS_WMS + "?" + p.toString();
+    return GIBS_WMS + "?" + q.toString();
   }
   function cropPanel(cog, lat, lon, metres, px) {
     const dLat = metres / 2 / 111320, dLon = dLat / Math.cos(lat * Math.PI / 180);
@@ -1608,58 +1631,101 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     return `https://titiler.xyz/cog/bbox/${bbox}/${px}x${px}.png` +
            `?url=${encodeURIComponent(cog)}&coord-crs=epsg:4326&rescale=4,46&resampling=nearest`;
   }
+  // Today's pass is published a few hours after the satellite crosses - measured at
+  // roughly mid-afternoon UTC for her longitude - so ask for today and let the image fall
+  // back a day if it is not there yet. Nothing is gained by assuming the worst.
+  const orbitDay = new Date().toISOString().slice(0, 10);
+  const dayBefore = d0 => new Date(new Date(d0 + "T12:00:00Z") - 864e5).toISOString().slice(0, 10);
+  window.__orbitBack = 0;
+  window.orbitFallback = img => {
+    if ((window.__orbitBack = (window.__orbitBack || 0) + 1) > 3) return;
+    const day = img.dataset.day || orbitDay;
+    const prev = dayBefore(day);
+    img.dataset.day = prev;
+    img.src = img.src.replace(/TIME=\d{4}-\d{2}-\d{2}/, "TIME=" + prev);
+    const cap = img.parentElement.querySelector("figcaption .daylabel");
+    if (cap) cap.textContent = new Date(prev + "T12:00:00Z")
+      .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
+  const kmOf = deg => Math.round(deg * 111 / 50) * 50;
 
-  // Only passes we can actually show. A row that links to pixels nobody can read is not
-  // worth the space, which is why radar is not here.
   const orbitHits = (orbitFile?.hits || []).filter(h => h.cog);
   const shot = orbitHits[0];
   let orbitCard = "";
-  if (shot) {
-    let panels = "";
-    {
-      const day = shot.t.slice(0, 10);
-      // The job widened this until the mask found a coastline: an empty blue square says
-      // nothing about where she is.
-      const wide = shot.wide_span_deg || 9;
-      const km = v => Math.round(v * 111 / 50) * 50;
-      panels = `
-        <div class="orbit">
-          <figure><img loading="lazy" alt="The sea area with the nearest coasts"
-              src="${wmsPanel(shot.lat, shot.lon, wide, day, 640, 640)}">
-            <figcaption><b>1</b> ${km(wide).toLocaleString("en-GB")} km ·
-              VIIRS, 375 m per pixel — widened until the coast is in frame</figcaption></figure>
-          <figure><img loading="lazy" alt="Closer in"
-              src="${wmsPanel(shot.lat, shot.lon, Math.max(1.2, wide / 6.5), day, 640, 640)}">
-            <figcaption><b>2</b> ${km(Math.max(1.2, wide / 6.5))} km ·
-              same satellite, same morning</figcaption></figure>
-          <figure><img loading="lazy" alt="Her patch of sea, 800 m across"
-              src="${cropPanel(shot.cog, shot.lat, shot.lon, 800, 640)}">
-            <span class="xhair"></span>
-            <figcaption><b>3</b> 800 m · Sentinel-2, 10 m per pixel. The cross is where
-              AIS put her${shot.gap_min >= 0.5 ? `, ${Math.round(shot.gap_min)} min before the
-              shutter` : ""}; she is about 6 pixels long and will have moved a little from
-              it</figcaption></figure>
-        </div>`;
-    }
-    const rows = orbitHits.slice(0, 8).map(h => {
-      const when = new Date(h.t).toLocaleString("en-GB",
-        { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  if (p.lat !== undefined && !waiting) {
+    // The job measured how far out the view has to reach to contain a coastline; without a
+    // hit on record, fall back to something sensible for where she is.
+    const wide = shot?.wide_span_deg || (Math.abs(p.lon) > 25 ? 26 : 9);
+    const near = Math.max(1.2, wide / 6.5);
+    const dayLabel = new Date(orbitDay + "T12:00:00Z")
+      .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+    let panels = `
+      <figure><img loading="lazy" alt="Her sea area from orbit" data-day="${orbitDay}"
+          onerror="orbitFallback(this)"
+          src="${wmsPanel(p.lat, p.lon, wide, orbitDay, 640)}">
+        <span class="xhair"></span>
+        <figcaption><b>${kmOf(wide).toLocaleString("en-GB")} km</b> ·
+          <span class="daylabel">${dayLabel}</span> ·
+          she is at the cross, under whatever weather you can see</figcaption></figure>
+      <figure><img loading="lazy" alt="Closer in on her position" data-day="${orbitDay}"
+          onerror="orbitFallback(this)"
+          src="${wmsPanel(p.lat, p.lon, near, orbitDay, 640)}">
+        <span class="xhair"></span>
+        <figcaption><b>${kmOf(near)} km</b> · <span class="daylabel">${dayLabel}</span> ·
+          VIIRS, 375 m per pixel — cloud, not sea, is usually what this shows</figcaption></figure>`;
+
+    orbitCard = wideCard("From orbit", `
+      <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
+        Today's view of the weather she is in, from NASA, with a cross on her position —
+        a single pass with its real cloud, not a cloud-free mosaic. Cloud hiding the sea
+        does not spoil it: the cloud is the thing worth seeing.
+      </div>
+      <div class="orbit">${panels}</div>`);
+  }
+
+  // ---- the album: every time a satellite was close enough to show the ship
+  // Port calls are the good ones. Alongside she is stationary, the quay gives the eye
+  // something to measure her against, and she arrives somewhere every ten days.
+  let albumCard = "";
+  if (orbitHits.length) {
+    const portAt = iso => {
+      const day = iso.slice(0, 10);
+      return (plan.ports || []).find(q => q.arrive && q.depart && q.arrive <= day && day <= q.depart);
+    };
+    const tiles = orbitHits.slice(0, 24).map(h => {
+      const port = portAt(h.t);
+      // Alongside she is not going anywhere, so a tighter crop shows the berth too.
+      const span = port ? 500 : 800;
+      const when = new Date(h.t);
       const link = `https://browser.dataspace.copernicus.eu/?zoom=15&lat=${h.lat}&lng=${h.lon}` +
         `&datasetId=S2_L2A_CDAS&fromTime=${h.t.slice(0,10)}T00:00:00.000Z` +
         `&toTime=${h.t.slice(0,10)}T23:59:59.999Z&layerId=1_TRUE_COLOR`;
-      return `<li><time>${when}</time><span>Sentinel-2` +
-        `${h.cloud_pct != null ? `, ${Math.round(h.cloud_pct)} % cloud` : ""}` +
-        ` · AIS ${h.gap_min < 1 ? "under a minute" : `${Math.round(h.gap_min)} min`} from the shutter` +
-        ` · <a href="${link}" target="_blank" rel="noopener">zoom it yourself</a></span></li>`;
+      return `
+        <figure>
+          <a href="${link}" target="_blank" rel="noopener" title="Open it in ESA's own viewer">
+            <img loading="lazy" alt="Satellite view of her position on ${h.t.slice(0,10)}"
+                 src="${cropPanel(h.cog, h.lat, h.lon, span, 520)}">
+            <span class="xhair"></span>
+          </a>
+          <figcaption>
+            <b>${when.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</b>
+            ${when.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ·
+            ${port ? `alongside in ${port.name}` : "at sea"}<br>
+            <span style="color:var(--muted)">${span} m across · 10 m per pixel${
+              h.cloud_pct != null ? ` · ${Math.round(h.cloud_pct)} % cloud` : ""}</span>
+          </figcaption>
+        </figure>`;
     }).join("");
-    orbitCard = wideCard("From orbit", `
+    const ports = orbitHits.filter(h => portAt(h.t)).length;
+    albumCard = wideCard(`Seen from space · ${orbitHits.length}`, `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
-        Passes that actually looked at her — where she was at the instant the shutter opened,
-        not merely near her today. Only cloud-free optical passes are listed, because a
-        picture showing neither the ship nor any coastline is not a picture.
+        Every pass that photographed the patch of sea she was in, at the moment she was in
+        it. She is about six pixels long, at the cross${ports ? `. ${ports} of these are port
+        calls, where she is lying still and the quay gives you something to measure her
+        against` : ""}. Tap one to open it in ESA's own viewer and zoom in yourself.
       </div>
-      ${panels}
-      <ul class="log scroll" style="margin-top:${shot ? "14px" : "0"}">${rows}</ul>`);
+      <div class="album">${tiles}</div>`);
   }
 
   // ---- event log, derived from the ship's own AIS fields
@@ -1737,6 +1803,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     logCard,
     eventCard,
     orbitCard,
+    albumCard,
     chartsCard,
     aheadCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
