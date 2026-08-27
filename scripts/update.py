@@ -1007,21 +1007,25 @@ PACE_MAX_KN = float(os.environ.get("PACE_MAX_KN", "10"))
 
 
 def pace_along(legs_nm: float, vmg_kn: float | None, plan_h: float | None,
-               cruise_kn: float, tau_h: float = PACE_TAU_H):
+               cruise_kn: float, hold_h: float = 24.0, tau_h: float = PACE_TAU_H):
     """Distance along the route at hour h, and a word for what it is based on.
 
     Two questions were being answered with one number, and each answer ruined the other.
     "Where is she in six hours" wants the rate she is actually making good. "When is she
     due" wants the plan, which on the Lerwick leg allows about eleven days for two hundred
     and fifty miles - a shade under one knot. Spreading the whole distance across the whole
-    plan, which is what this used to do, made her creep five miles in six hours while she
-    was in fact making forty. Using her observed rate for the whole passage had her
-    alongside a week early, which she certainly will not be.
+    plan, which is what this did first, made her creep five miles in six hours while she was
+    in fact making forty. Using her observed rate for the whole passage had her alongside a
+    week early, which she certainly will not be.
 
-    So the speed eases exponentially from the observed rate towards a residual chosen so
-    that the route still lands on the day the plan says she is due. Near term it matches
-    what she is doing; far term it matches what the school has planned; and it is monotone,
-    so the ghost never sails backwards.
+    So: she is assumed to keep up her measured rate for `hold_h` - the same span it was
+    measured over - and then to ease towards a residual chosen so that the route still lands
+    on the day the plan says she is due.
+
+    The flat first stretch matters. An exponential that starts decaying immediately covers
+    noticeably less in its first day than the rate it started from, which is a strange thing
+    to tell a reader: "she made 78 miles yesterday, so tomorrow, 51". Holding it means the
+    first day of the projection really is her last day's progress.
     """
     if vmg_kn is None or vmg_kn <= 0.1:
         if plan_h and plan_h > 1:
@@ -1031,17 +1035,27 @@ def pace_along(legs_nm: float, vmg_kn: float | None, plan_h: float | None,
         return (lambda h: rate * h), "cruise", rate
 
     v0 = min(vmg_kn, cruise_kn)
+    steady = (lambda h: v0 * h), "made good", v0
     if not plan_h or plan_h <= 1:
-        return (lambda h: v0 * h), "made good", v0
+        return steady
 
-    k = tau_h * (1 - math.exp(-plan_h / tau_h))
-    if plan_h - k <= 1:                        # the plan ends inside the easing window
-        return (lambda h: v0 * h), "made good", v0
-    resid = (legs_nm - v0 * k) / (plan_h - k)
+    hold = max(0.0, min(hold_h, plan_h))
+    held = v0 * hold
+    if held >= legs_nm:
+        return steady            # she gets there inside the held stretch; nothing to ease to
+
+    rest_h = plan_h - hold
+    k = tau_h * (1 - math.exp(-rest_h / tau_h))
+    if rest_h - k <= 1:                        # the plan ends inside the easing window
+        return steady
+    resid = (legs_nm - held - v0 * k) / (rest_h - k)
     resid = max(0.05, min(cruise_kn, resid))
 
     def distance_at(h: float) -> float:
-        return resid * h + (v0 - resid) * tau_h * (1 - math.exp(-h / tau_h))
+        if h <= hold:
+            return v0 * h
+        g = h - hold
+        return held + resid * g + (v0 - resid) * tau_h * (1 - math.exp(-g / tau_h))
 
     return distance_at, "made good easing to the plan", v0
 
@@ -1295,8 +1309,16 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
         # day of good progress whenever she was briefly slow.
         cruise = PACE_MAX_KN
         target = (port["lat"], port["lon"])
+
+        # A day is the window, not six hours. Six was the shortest one that showed progress,
+        # on the reasoning that the near-term marker is what a reader is asking about - but a
+        # square rigger on a cross tack makes almost nothing good for hours at a time, so the
+        # six-hour figure collapsed to nearly zero and the first waypoint stopped moving.
+        # Twenty-four hours spans a whole tack cycle and holds still while she works to
+        # windward. Longer windows only come in if a day of her track shows no net progress
+        # at all; the short ones only if the leg is younger than that.
         vmg, vmg_window = None, None
-        for window in (6, 12, 24, 48):
+        for window in (24, 48, 72, 12, 6):
             got = made_good_kn(track_points or [], target, window)
             if got is not None and got > 0.1:
                 vmg, vmg_window = got, window
@@ -1327,7 +1349,10 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
             except Exception:
                 pass
 
-        distance_at, basis, near_kn = pace_along(legs, vmg, plan_h, cruise)
+        # The rate is held for exactly the span it was measured over, so "her last day"
+        # really becomes "her next day".
+        distance_at, basis, near_kn = pace_along(legs, vmg, plan_h, cruise,
+                                                hold_h=float(vmg_window or 24))
         wait_h = max(0.0, (sails_at - now_utc()).total_seconds() / 3600)
 
         # When she gets there, solved from the pace itself. This has to be searched well
@@ -1355,6 +1380,7 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
             "speed_kn": round(near_kn, 1),        # the rate the next few hours are drawn at
             "vmg_kn": None if vmg is None else round(vmg, 2),
             "vmg_window_h": vmg_window,           # measured over her last N hours
+            "vmg_hold_h": None if vmg is None else float(vmg_window or 24),
             "pace_basis": basis,
             "due_utc": due_utc,
             "eta_utc": iso(now_utc() + timedelta(hours=wait_h + eta_h)),

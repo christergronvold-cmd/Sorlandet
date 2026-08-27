@@ -593,7 +593,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "362a72cb0a";
+const BUILD = "b6db228a93";
 
 async function checkForNewBuild() {
   try {
@@ -1823,9 +1823,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ? new Date(a.due_utc).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
       : null;
     if (a.pace_basis === "made good easing to the plan" && a.vmg_kn) {
-      return ` · paced on how fast she is really closing on ${a.to}, ${N(a.vmg_kn)} kn over` +
-        ` her last ${a.vmg_window_h} hours, easing towards the plan${
-          dueDay ? ` that has her due ${dueDay}` : ""}`;
+      return ` · closing on ${a.to} at ${N(a.vmg_kn)} kn, measured over her last ` +
+        `${a.vmg_window_h} hours · that rate is held for the next ${
+          a.vmg_hold_h || a.vmg_window_h} hours, then eased towards the plan${
+          dueDay ? `, which has her due ${dueDay}` : ""}`;
     }
     if (a.pace_basis === "made good" && a.vmg_kn) {
       return ` · paced on how fast she is really closing on ${a.to}, ${N(a.vmg_kn)} kn over` +
