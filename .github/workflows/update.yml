@@ -52,6 +52,28 @@ jobs:
           git config user.name "sorlandet-bot"
           git config user.email "bot@users.noreply.github.com"
 
+          save() {
+            if [ -n "$(git status --porcelain data/)" ]; then
+              git add data/
+              git commit -m "$1 $(date -u +'%Y-%m-%d %H:%M UTC')"
+              for attempt in 1 2 3; do
+                git pull --rebase --autostash origin main && git push && break
+                sleep 5
+              done
+            else
+              echo "nothing new to save"
+            fi
+          }
+
+          # A quick pass first. update.py spends its whole listening window before it
+          # writes anything, so without this a restart shows no change for 29 minutes -
+          # weather, route and forecast included, however fresh the code is. Twenty
+          # seconds is enough to refresh everything that does not depend on hearing her.
+          echo "::group::Quick first pass"
+          LISTEN_SECONDS=20 python3 scripts/update.py || echo "quick pass failed, carrying on"
+          save "Refresh"
+          echo "::endgroup::"
+
           HOURS="${{ inputs.hours || '5.5' }}"
           ROUNDS=$(python3 -c "print(max(1, min(11, round(float('$HOURS') * 2))))")
           echo "Running $ROUNDS rounds of 29 minutes"
@@ -59,16 +81,7 @@ jobs:
           for round in $(seq 1 "$ROUNDS"); do
             echo "::group::Round $round of $ROUNDS"
             python3 scripts/update.py || echo "round failed, carrying on"
-            if [ -n "$(git status --porcelain data/)" ]; then
-              git add data/
-              git commit -m "Position $(date -u +'%Y-%m-%d %H:%M UTC')"
-              for attempt in 1 2 3; do
-                git pull --rebase --autostash origin main && git push && break
-                sleep 5
-              done
-            else
-              echo "nothing new this round"
-            fi
+            save "Position"
             echo "::endgroup::"
           done
 
