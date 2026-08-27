@@ -15,14 +15,14 @@
     --bg:#f4f6f8; --panel:#ffffff; --ink:#12222e; --muted:#5d7385;
     --line:#e2e8ee; --accent:#0b6ea8; --warn:#a8580b; --warn-bg:#fff5e6;
     --shadow:0 1px 2px rgba(18,34,46,.06), 0 8px 24px rgba(18,34,46,.06);
-    --chart-a:#0b6ea8; --chart-b:#b58a1b;
+    --chart-a:#0b6ea8; --chart-b:#b58a1b; --chart-c:#a8437a;
   }
   @media (prefers-color-scheme: dark){
     :root{
       --bg:#0d1520; --panel:#131f2c; --ink:#e8eef4; --muted:#93a6b6;
       --line:#22323f; --accent:#5fb6e6; --warn:#f0b45c; --warn-bg:#2a2113;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-      --chart-a:#2f8fc4; --chart-b:#b6862c;
+      --chart-a:#2f8fc4; --chart-b:#b6862c; --chart-c:#c9628f;
     }
   }
   *{box-sizing:border-box}
@@ -157,6 +157,7 @@
   <div class="windbar" id="windbar" hidden>
     <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
     <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
+    <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
     <input type="range" id="windtime" min="0" max="0" value="0" step="1">
@@ -213,6 +214,14 @@ const beaufort = ms => {
 const WMO = {0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",56:"🌧️",57:"🌧️",
   61:"🌦️",63:"🌧️",65:"🌧️",66:"🌧️",67:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",77:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",
   85:"🌨️",86:"❄️",95:"⛈️",96:"⛈️",99:"⛈️"};
+
+// Words for the same codes, so the tooltip says something a person can read.
+const WMO_TEXT = {0:"clear",1:"mainly clear",2:"partly cloudy",3:"overcast",45:"fog",48:"freezing fog",
+  51:"light drizzle",53:"drizzle",55:"heavy drizzle",56:"freezing drizzle",57:"freezing drizzle",
+  61:"light rain",63:"rain",65:"heavy rain",66:"freezing rain",67:"freezing rain",
+  71:"light snow",73:"snow",75:"heavy snow",77:"snow grains",80:"light showers",81:"showers",
+  82:"violent showers",85:"snow showers",86:"heavy snow showers",95:"thunderstorm",
+  96:"thunderstorm with hail",99:"thunderstorm with hail"};
 
 const dms = (v, axis) => {
   if (v === null || v === undefined) return "–";
@@ -385,7 +394,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "bf36306646";
+const BUILD = "47c42edd91";
 
 async function checkForNewBuild() {
   try {
@@ -458,9 +467,9 @@ const scaleColor = (v, table) => {
   return c;
 };
 
-let windLayer = null, waveLayer = null;
+let windLayer = null, waveLayer = null, skyLayer = null;
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true };
+let gridIndex = 0, show = { wind: true, waves: true, weather: false };
 
 function windIcon(ws, wd) {
   const len = Math.min(30, 12 + ws * 1.15);
@@ -509,9 +518,34 @@ function gridCells(grid) {
   return cells.filter((_, i) => i % stride === 0);
 }
 
+function skyIcon(code, temp) {
+  return L.divIcon({
+    className: "wind-arrow",
+    html: `<div style="text-align:center;line-height:1.05;white-space:nowrap">
+        <div style="font-size:17px">${WMO[code] || "\u{1F321}\uFE0F"}</div>
+        ${temp == null ? "" : `<div style="font-size:10.5px;font-weight:650;
+          color:var(--ink);text-shadow:0 0 3px var(--panel),0 0 3px var(--panel)"
+          >${Math.round(temp)}\u00B0</div>`}
+      </div>`,
+    iconSize: [40, 40], iconAnchor: [20, 46]
+  });
+}
+
 function drawGrids() {
-  [["wind", windLayer], ["waves", waveLayer]].forEach(([k, l]) => { if (l) map.removeLayer(l); });
-  windLayer = waveLayer = null;
+  [windLayer, waveLayer, skyLayer].forEach(l => { if (l) map.removeLayer(l); });
+  windLayer = waveLayer = skyLayer = null;
+
+  if (gridData.wind && show.weather) {
+    const marks = [];
+    gridCells(gridData.wind).forEach(c => {
+      const wc = c.wc?.[gridIndex], t2 = c.t2?.[gridIndex];
+      if (wc == null && t2 == null) return;
+      marks.push(L.marker([c.lat, c.lon], { icon: skyIcon(wc, t2), keyboard: false })
+        .bindTooltip(`${WMO_TEXT[wc] || "sky"}${t2 == null ? "" : `, ${Math.round(t2)} °C`}`,
+                     { direction: "top" }));
+    });
+    skyLayer = L.layerGroup(marks).addTo(map);
+  }
 
   if (gridData.wind && show.wind) {
     const marks = [];
@@ -573,7 +607,8 @@ document.getElementById("windtime").addEventListener("input", e => {
   drawGrids();
   drawRewind();
 });
-[["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"]].forEach(([id, key, label]) => {
+[["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"],
+ ["weathertoggle", "weather", "Weather"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
     show[key] = !show[key];
     e.target.classList.toggle("on", show[key]);
@@ -931,7 +966,7 @@ async function fetchViewportGrid(kind, bounds) {
     : "https://marine-api.open-meteo.com/v1/marine?";
   const params = new URLSearchParams({
     latitude: lats.join(","), longitude: lons.join(","),
-    hourly: kind === "wind" ? "wind_speed_10m,wind_direction_10m"
+    hourly: kind === "wind" ? "wind_speed_10m,wind_direction_10m,weather_code,temperature_2m"
                             : "wave_height,wave_direction,wave_period",
     past_days: String(Math.max(1, Math.ceil(REWIND_HOURS / 24))),
     forecast_days: String(Math.max(2, Math.ceil((AHEAD_HOURS_UI + 48) / 24))), timezone: "UTC"
@@ -954,7 +989,9 @@ async function fetchViewportGrid(kind, bounds) {
       cells.push({
         lat: +(+b.latitude).toFixed(3), lon: +(+b.longitude).toFixed(3),
         ws: idx.map(k => h.wind_speed_10m[k] ?? null),
-        wd: idx.map(k => h.wind_direction_10m?.[k] ?? null)
+        wd: idx.map(k => h.wind_direction_10m?.[k] ?? null),
+        wc: idx.map(k => h.weather_code?.[k] ?? null),
+        t2: idx.map(k => h.temperature_2m?.[k] ?? null)
       });
     } else {
       if (!h.wave_height || h.wave_height.every(v => v === null)) return;   // land cell
@@ -1037,7 +1074,7 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, eventFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -1045,15 +1082,16 @@ async function load() {
     fetch("data/waves.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] })),
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/events.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile);
+  render(latest, track, plan, history, ahead, wakeFile, eventFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -1271,16 +1309,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
            ? " · beyond five days it is an outlook, not a forecast" : ""}
      </div><div class="fc">${aheadStrip}</div>`) : "";
 
-  const seaFc = (w.sea_forecast || []).slice(0, 6).map(f =>
-    `<div><b>${new Date(f.time_utc + "Z").toLocaleString("en-GB", { weekday: "short", hour: "2-digit" })}</b>
-      <div class="ic">🌊</div>${N(f.wave_height_m)} m</div>`).join("");
-
-  const airFc = (w.air_forecast || []).slice(0, 4).map(f =>
-    `<div><b>${new Date(f.date).toLocaleDateString("en-GB", { weekday: "short" })}</b>
-      <div class="ic">${WMO[f.weather_code] || "🌡️"}</div>
-      ${N(f.temp_max_c, 0)}° / ${N(f.temp_min_c, 0)}°<br>
-      <span style="color:var(--muted)">${N(f.wind_max_ms, 0)} m/s</span></div>`).join("");
-
   // ---- on board: local time, sun, moon
   const sun = d.sun || {}, moon = sun.moon || {};
   let boardCard = "";
@@ -1359,13 +1387,36 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     v: r.max_wind_ms, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
     short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
   }));
-  const chartsCard = (distRows.length > 1 || windRows.length > 1) ? wideCard("Day by day", `
+  const waveDays = (history.days || []).filter(r => r.max_wave_m != null).slice(-14);
+  const waveRows = waveDays.map(r => ({
+    v: r.max_wave_m, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  }));
+  const chartsCard = (distRows.length > 1 || windRows.length > 1 || waveRows.length > 1)
+    ? wideCard("Day by day", `
     <div class="charts">
       <div class="chart"><h3>Distance sailed</h3><p>nautical miles per day, last ${distRows.length} days</p>
         ${barChart(distRows, "nm", 0, "--chart-a") || '<p style="margin:0">Not enough data yet.</p>'}</div>
       <div class="chart"><h3>Strongest wind</h3><p>highest reading each day, m/s</p>
         ${barChart(windRows, "m/s", 1, "--chart-b") || '<p style="margin:0">Builds up from today.</p>'}</div>
+      <div class="chart"><h3>Highest wave</h3><p>highest reading each day, metres</p>
+        ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`) : "";
+
+  // ---- event log, derived from the ship's own AIS fields
+  const EVENT_ICON = { nav: "\u2693", destination: "\u{1F9ED}", eta: "\u{1F551}",
+                       eta_text: "\u{1F551}", draught_m: "\u{1F4CF}", coverage: "\u{1F4E1}" };
+  const evRows = (eventFile?.events || []).slice(-14).reverse().map(e => `
+    <li><time>${new Date(e.t).toLocaleString("en-GB",
+        { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time>
+      <span>${EVENT_ICON[e.kind] || "\u2022"} ${e.text}${
+        e.detail ? ` <span style="color:var(--muted)">(${e.detail})</span>` : ""}</span></li>`).join("");
+  const eventCard = evRows ? wideCard("Event log", `
+    <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
+      What she reports about herself: whether she is under sail or under engine, and the
+      voyage details the crew set by hand. Only changes are listed.
+    </div>
+    <ul class="log">${evRows}</ul>`) : "";
 
   // ---- share
   const shareCard = wideCard("Share with other parents", `
@@ -1418,11 +1469,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
     progressCard,
     logCard,
+    eventCard,
     chartsCard,
     aheadCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
-    seaFc ? wideCard("Waves where she is now", `<div class="fc">${seaFc}</div>`) : "",
-    airFc ? wideCard("Weather where she is now", `<div class="fc">${airFc}</div>`) : "",
     shareCard
   ].join("");
 

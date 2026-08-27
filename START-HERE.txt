@@ -121,6 +121,34 @@ Then the round recalculates the weather and waves along the route she is
 actually likely to sail, and pushes it all to the repository. The page picks it
 up on its own.
 
+WHAT SHE REPORTS ABOUT HERSELF
+-----------------------------
+New card: Event log. Ordinary AIS carries two things besides position - the
+navigational status in every report, and the voyage block the crew type in by
+hand. So the page can now show what a tracking site shows, derived from the
+same fields:
+
+  Under way under sail        status 8
+  Under way using engine      status 0
+  At anchor / Moored          status 1 / 5
+  Destination reported        the crew's entry
+  ETA reported                the crew's entry
+  Draught reported            the crew's entry
+  Back in AIS coverage        after a silence of six hours or more
+
+Only changes are listed, and a status must hold for two fixes before it counts,
+so a single stray report while she tacks does not fill the log with noise.
+
+Three map layers now: Wind, Waves, Weather. The third is sky and temperature at
+each grid point, and it costs no extra API call - it rides along in the wind
+request. It starts off; the other two start on.
+
+Day by day has a third chart: Highest wave.
+
+Two cards were removed - "Waves where she is now" and "Weather where she is
+now". They ran forward in time from a fixed point, which contradicts the route
+ahead now being paced to the plan.
+
 IF THE PAGE LOOKS OLD
 --------------------
 GitHub serves the page with a 10-minute cache, and a page added to a phone's

@@ -17,6 +17,7 @@ data/wind.json                wind forecast grid around the ship  <- written by 
 data/waves.json               wave forecast grid around the ship  <- written by the script
 data/history.json             one row per day: strongest wind, highest wave  <- written by the script
 data/wake.json                hour by hour: where she was and the weather there  <- written by the script
+data/events.json              what changed: sail or engine, destination, ETA  <- written by the script
 share-qr.svg                  QR code for the page address
 scripts/make_qr.py            regenerates share-qr.svg if the address changes
 scripts/update.py             fetches AIS position + weather
@@ -270,6 +271,12 @@ The box is measured in nautical miles rather than degrees, so the longitude span
 with latitude - 11.2 degrees wide in the Skagerrak, 6.0 at the equator - and the spacing
 between arrows stays 90 nautical miles wherever the ship is.
 
+There are three layers, and the third costs nothing: the wind grid already calls
+Open-Meteo's forecast endpoint, so asking the same request for `weather_code` and
+`temperature_2m` adds a **Weather** layer - sky symbol and temperature at each grid point -
+without a single extra API call. It starts off, because three glyphs per point is a lot at
+once; Wind and Waves start on.
+
 On the map, **wind** is a single arrow, coloured pale blue through green and amber to dark
 red as it strengthens. **Waves** are a double chevron with the height in metres beside it,
 on a blue-to-purple scale. Both point the way they are travelling, and the two sit on
@@ -417,12 +424,52 @@ first port is the exception - she sailed *from* Kristiansand, so the log shows t
 departure date (17 August) rather than the arrival date in `ports.json`, which is only
 the day the crew mustered.
 
-**Day by day** draws two small charts - distance per day from the track, and the
-strongest wind each day from `history.json`. They are deliberately two charts rather than
-one with two scales.
+**Day by day** draws three small charts - distance per day from the track, and the
+strongest wind and highest wave each day from `history.json`. They are deliberately three
+charts rather than one with three scales. The third series is rose rather than the teal
+that would suit "wave" better: teal came out 10.3 OKLab ΔE from the blue in dark mode,
+under the 15 floor, so the two would have been hard to tell apart. Rose passes every
+computable check - lightness band, chroma floor, CVD separation, contrast - in both themes.
 
 **Share** shows a QR code for the page, a copy-link button and a ready-made message for a
 parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url>`.
+
+## The event log
+
+A tracking site's "Manoeuvring" and "Destination changed" lines are not messages the ship
+sends. They are that site's reading of two things that ride along in ordinary AIS: the
+**navigational status** in every position report, and the **voyage block** the crew fill in
+by hand (message 5 - destination, ETA, draught). We receive both from aisstream and from
+BarentsWatch, so `build_events()` derives the same log itself into `data/events.json`.
+
+It can also name things more usefully than "manoeuvring". For a full-rigged ship the
+interesting change is status 0 against status 8:
+
+| Status | Shown as |
+|---|---|
+| 0 | Under way using engine |
+| 8 | **Under way under sail** |
+| 1 / 5 | At anchor / Moored |
+| 3 | Restricted manoeuvrability |
+
+Only changes are recorded, and a status has to hold for **two consecutive fixes** before it
+counts - a single stray report while she tacks would otherwise fill the log with noise.
+The log also notes when she comes back into AIS coverage after a silence of six hours or
+more, which on this voyage will mean an ocean.
+
+`data/events.json` keeps a `state` block alongside the events, so each run compares against
+what was last true rather than re-deriving the whole history.
+
+## What was taken out, and why
+
+**Waves where she is now** and **Weather where she is now** were forecast strips running
+forward in time from a fixed point. Once the route ahead is paced to the plan, they
+contradict it: one card says she will be 100 nm further on by Saturday, the other quietly
+assumes she is still here. They are gone, along with the API fields that fed them.
+
+**At current speed** and **Positions logged** went for the reasons in the sections above:
+a date extrapolated from this minute's speed is not a prediction, and a count of AIS fixes
+measures receiver coverage rather than the voyage.
 
 ## Data sources
 

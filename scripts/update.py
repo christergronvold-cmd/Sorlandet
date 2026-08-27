@@ -260,6 +260,16 @@ def fetch_position_from_aisstream(api_key: str) -> tuple[dict | None, list[dict]
                     dest = (body.get("Destination") or "").strip()
                     if dest:
                         static["destination"] = dest
+                    # Message 5 also carries the voyage fields the crew set by hand. These
+                    # are what a tracking site turns into "destination changed" events.
+                    draught = body.get("MaximumStaticDraught")
+                    if draught:
+                        static["draught_m"] = round(float(draught), 1)
+                    eta = body.get("Eta") or {}
+                    if isinstance(eta, dict) and eta.get("Month"):
+                        static["eta_text"] = (
+                            f"{int(eta.get('Day') or 0):02d}.{int(eta.get('Month') or 0):02d} "
+                            f"{int(eta.get('Hour') or 0):02d}:{int(eta.get('Minute') or 0):02d}")
 
                 lat = body.get("Latitude", meta.get("latitude"))
                 lon = body.get("Longitude", meta.get("longitude"))
@@ -346,6 +356,8 @@ def _bw_point(msg: dict) -> dict | None:
         "cog_deg": msg.get("courseOverGround"),
         "heading_deg": None if msg.get("trueHeading") in (511, None) else msg.get("trueHeading"),
         "nav_status": msg.get("navigationalStatus"),
+        "destination": (msg.get("destination") or "").strip() or None,
+        "draught_m": msg.get("draught"),
         "seen_utc": seen,
         "source": "barentswatch",
     }
@@ -469,13 +481,6 @@ def fetch_weather(lat: float, lon: float) -> dict:
             "sea_temp_c": cur.get("sea_surface_temperature"),
             "time_utc": cur.get("time"),
         }
-        hourly = marine.get("hourly") or {}
-        times, waves = hourly.get("time") or [], hourly.get("wave_height") or []
-        weather["sea_forecast"] = [
-            {"time_utc": t, "wave_height_m": w}
-            for t, w in list(zip(times, waves))[:72:6]
-            if w is not None
-        ]
 
     air = get_json(
         "https://api.open-meteo.com/v1/forecast?"
@@ -486,9 +491,8 @@ def fetch_weather(lat: float, lon: float) -> dict:
                 "current": "temperature_2m,apparent_temperature,wind_speed_10m,"
                 "wind_direction_10m,wind_gusts_10m,pressure_msl,cloud_cover,"
                 "precipitation,weather_code",
-                "daily": "weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max",
                 "wind_speed_unit": "ms",
-                "forecast_days": "4",
+                "forecast_days": "1",
                 "timezone": "UTC",
             }
         )
@@ -507,23 +511,6 @@ def fetch_weather(lat: float, lon: float) -> dict:
             "weather_code": cur.get("weather_code"),
             "time_utc": cur.get("time"),
         }
-        daily = air.get("daily") or {}
-        weather["air_forecast"] = [
-            {
-                "date": d,
-                "weather_code": wc,
-                "temp_max_c": tmax,
-                "temp_min_c": tmin,
-                "wind_max_ms": wmax,
-            }
-            for d, wc, tmax, tmin, wmax in zip(
-                daily.get("time") or [],
-                daily.get("weather_code") or [],
-                daily.get("temperature_2m_max") or [],
-                daily.get("temperature_2m_min") or [],
-                daily.get("wind_speed_10m_max") or [],
-            )
-        ]
 
     return weather
 
@@ -589,7 +576,8 @@ def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
     """Wind ('wind') or wave ('waves') forecast for the grid, in one API call."""
     lats, lons = grid_around(lat, lon)
     base, fields = (
-        ("https://api.open-meteo.com/v1/forecast?", "wind_speed_10m,wind_direction_10m")
+        ("https://api.open-meteo.com/v1/forecast?",
+         "wind_speed_10m,wind_direction_10m,weather_code,temperature_2m")
         if kind == "wind" else
         ("https://marine-api.open-meteo.com/v1/marine?", "wave_height,wave_direction,wave_period")
     )
@@ -622,7 +610,9 @@ def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
             speed, direction = h.get("wind_speed_10m") or [], h.get("wind_direction_10m") or []
             if not speed:
                 continue
-            cell = {"ws": _series(speed, idx, 1), "wd": _series(direction, idx, None)}
+            cell = {"ws": _series(speed, idx, 1), "wd": _series(direction, idx, None),
+                    "wc": _series(h.get("weather_code") or [], idx, None),
+                    "t2": _series(h.get("temperature_2m") or [], idx, 0)}
         else:
             height, direction = h.get("wave_height") or [], h.get("wave_direction") or []
             period = h.get("wave_period") or []
@@ -765,6 +755,7 @@ SEAGRID_BIN = DATA / "seagrid.bin"
 SEAGRID_META = DATA / "seagrid.json"
 AHEAD = DATA / "ahead.json"
 WAKE = DATA / "wake.json"
+EVENTS = DATA / "events.json"
 # Forecast points along the projected route. The ladder is trimmed to the leg, so a
 # two-day hop shows only the near steps and a two-week ocean crossing reaches as far as
 # the models do. Open-Meteo's marine model stops at 8 days, so 168 h is the ceiling.
@@ -1184,6 +1175,119 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
         print(f"  ! weather ahead failed: {exc}", file=sys.stderr)
 
 
+# ------------------------------------------------------------------ event log
+# A tracking site's "Manoeuvring" and "Destination changed" lines are not messages the
+# ship sends - they are that site's reading of two AIS fields: the navigational status in
+# every position report, and the voyage block the crew fill in by hand. We receive both,
+# so we can derive the same log ourselves, and name things more usefully than a generic
+# "manoeuvring": for a full-rigged ship, engine versus sail is the interesting change.
+
+NAV_STATUS = {
+    0: "Under way using engine",
+    1: "At anchor",
+    2: "Not under command",
+    3: "Restricted manoeuvrability",
+    4: "Constrained by draught",
+    5: "Moored",
+    6: "Aground",
+    7: "Engaged in fishing",
+    8: "Under way under sail",
+    11: "Under tow astern",
+    12: "Under tow alongside",
+    14: "Distress signal (AIS-SART)",
+    15: "Status not reported",
+}
+EVENT_CAP = int(os.environ.get("EVENT_CAP", "400"))
+SILENCE_HOURS = float(os.environ.get("SILENCE_HOURS", "6"))
+
+
+def build_events(collected: list, static: dict) -> None:
+    """Append what changed to data/events.json.
+
+    Only changes are recorded, and a status has to hold for two fixes before it counts -
+    a single stray report while she tacks would otherwise fill the log with noise.
+    """
+    stored = read_json(EVENTS, {}) or {}
+    events = [e for e in (stored.get("events") or []) if isinstance(e, dict) and e.get("t")]
+    state = dict(stored.get("state") or {})
+    added = 0
+
+    def note(when: str, kind: str, text: str, detail: str | None = None):
+        nonlocal added
+        if any(e["t"] == when and e.get("kind") == kind and e.get("text") == text for e in events):
+            return
+        row = {"t": when, "kind": kind, "text": text}
+        if detail:
+            row["detail"] = detail
+        events.append(row)
+        added += 1
+
+    fixes = sorted([c for c in collected if c.get("seen_utc")], key=lambda c: c["seen_utc"])
+
+    # A long silence, now ended: worth a line, because on this voyage it will mean an ocean.
+    if fixes and state.get("last_fix_utc"):
+        try:
+            gap = (parse_iso(fixes[0]["seen_utc"]) - parse_iso(state["last_fix_utc"])).total_seconds() / 3600
+            if gap >= SILENCE_HOURS:
+                note(fixes[0]["seen_utc"], "coverage",
+                     f"Back in AIS coverage after {round(gap)} hours",
+                     f"last heard {state['last_fix_utc']}")
+        except Exception:
+            pass
+
+    # Navigational status, with a two-fix confirmation.
+    pending, pending_since, count = state.get("nav_pending"), state.get("nav_pending_since"), state.get("nav_pending_n", 0)
+    for f in fixes:
+        ns = f.get("nav_status")
+        if ns is None or ns == 15:
+            continue
+        if ns == state.get("nav_status"):
+            pending, pending_since, count = None, None, 0
+            continue
+        if ns == pending:
+            count += 1
+        else:
+            pending, pending_since, count = ns, f["seen_utc"], 1
+        if count >= 2:
+            name = NAV_STATUS.get(ns, f"Status {ns}")
+            was = NAV_STATUS.get(state.get("nav_status"))
+            note(pending_since, "nav", name, f"was {was}" if was else None)
+            state["nav_status"] = ns
+            pending, pending_since, count = None, None, 0
+    state["nav_pending"], state["nav_pending_since"], state["nav_pending_n"] = pending, pending_since, count
+
+    # The voyage block the crew type in.
+    newest = fixes[-1]["seen_utc"] if fixes else iso(now_utc())
+    merged_static = dict(static or {})
+    for f in fixes:
+        for key in ("destination", "draught_m"):
+            if f.get(key):
+                merged_static.setdefault(key, f[key])
+    for key, label in (("destination", "Destination reported"),
+                       ("eta_text", "ETA reported"),
+                       ("draught_m", "Draught reported")):
+        value = merged_static.get(key)
+        if value in (None, "", 0):
+            continue
+        if state.get(key) != value:
+            shown = f"{value} m" if key == "draught_m" else str(value)
+            was = state.get(key)
+            note(newest, key, f"{label}: {shown}",
+                 f"was {was}{' m' if key == 'draught_m' and was else ''}" if was else None)
+            state[key] = value
+
+    if fixes:
+        state["last_fix_utc"] = fixes[-1]["seen_utc"]
+
+    events.sort(key=lambda e: e["t"])
+    events = events[-EVENT_CAP:]
+    write_json(EVENTS, {"generated_utc": iso(now_utc()), "state": state, "events": events})
+    if added:
+        print(f"  -> events: {added} new, {len(events)} kept")
+    else:
+        print(f"  -> events: nothing new, {len(events)} kept")
+
+
 # ----------------------------------------------------------------------- main
 
 
@@ -1368,6 +1472,9 @@ def main() -> int:
     )
     build_ahead(lat, lon, position.get("sog_kn"))
     build_wake(points)
+    # The voyage fields ride on the newest position, having been merged there from the
+    # static messages, so pass them along rather than re-deriving them.
+    build_events(collected, {k: position.get(k) for k in ("destination", "eta_text", "draught_m")})
     update_history(weather, points)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
