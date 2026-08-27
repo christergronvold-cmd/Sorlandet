@@ -20,6 +20,8 @@ data/wake.json                hour by hour: where she was and the weather there 
 data/events.json              what changed: sail or engine, destination, ETA  <- written by the script
 data/course.json              the fastest sailing course and its tacks  <- written by the script
 scripts/sailrouter.py         the polar diagram and the isochrone router
+scripts/orbithunter.py        finds the satellite passes that covered her
+data/orbit.json               those passes, newest first  <- written by the script
 share-qr.svg                  QR code for the page address
 scripts/make_qr.py            regenerates share-qr.svg if the address changes
 scripts/update.py             fetches AIS position + weather
@@ -426,6 +428,14 @@ first port is the exception - she sailed *from* Kristiansand, so the log shows t
 departure date (17 August) rather than the arrival date in `ports.json`, which is only
 the day the crew mustered.
 
+The **Course** layer no longer has a card of its own - six rows of numbers for one idea was
+too much. The comparison that matters lives in the tooltip on the drawn line: how long the
+fastest passage takes, and how much time the plan leaves in hand.
+
+**Event log** shows the last 24 hours and scrolls, rather than showing four lines and hiding
+the rest. If it has been a quiet day it falls back to the last dozen entries whenever they
+happened.
+
 **Day by day** draws three small charts - distance per day from the track, and the
 strongest wind and highest wave each day from `history.json`. They are deliberately three
 charts rather than one with three scales. The third series is rose rather than the teal
@@ -435,6 +445,81 @@ computable check - lightness band, chroma floor, CVD separation, contrast - in b
 
 **Share** shows a QR code for the page, a copy-link button and a ready-made message for a
 parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url>`.
+
+## Passes that actually looked at her
+
+`scripts/orbithunter.py` asks the right question. "Which scenes are near the ship" finds
+pictures of the water she happens to be in today, taken on a morning she was two hundred
+miles away. The question that matters is a **space-and-time intersection**: for every scene
+in the window, where was she at *that scene's own timestamp*, and does the footprint contain
+that point?
+
+It searches Element84's Earth Search over AWS Open Data - free, keyless - once an hour,
+for cloud-free **Sentinel-2** only: 10 m optical, so she is about six pixels, a bright patch
+with a wake.
+
+**Sentinel-1 radar was tried and dropped**, and the reason is worth recording. Radar is in
+principle the better sensor here: it sees through cloud and in the dark, it covers open
+ocean that ESA does not photograph optically, and a steel ship lights up in it. But its
+pixels live in a requester-pays bucket, so the only thing the page could offer was a link to
+a grey scene in someone else's viewer - neither the ship nor any coastline. A row you cannot
+look at is not worth its space. If a free route to S1 pixels appears, `COLLECTIONS` in
+`orbithunter.py` is where it goes back in.
+
+### The wide panel is widened until it finds a coast
+
+A picture with no ship and no landscape is not a picture. So the job walks the land mask
+outward from her position - 9°, 16°, 26°, 40° - and stores the first span that contains a
+coastline; the page uses it for panel 1. In the North Sea that is 1,000 km. On the Cape
+Verde to Brazil crossing it comes out at 2,900 km, which puts the Brazilian coast in frame
+and a tropical cloud system in the middle: still a picture that says where she is.
+
+It worked the first week. On **26 August at 10:45:20 UTC** Sentinel-2A photographed her
+patch of the Skagerrak under 0 % cloud, with her nearest AIS fix 29 seconds from the
+shutter. The bright object in the crop sits 26 m - under two pixels - from where her own
+course and speed put her at the exposure, 3° off her heading, and it is the only bright
+thing in 100 km² of sea. Three Sentinel-1 passes covered her the same two days, which is how we know radar would
+work if its pixels were reachable.
+
+The **From orbit** card shows three panels, widest first, because a blue square with a
+white speck in it means nothing without somewhere to be: the land-bearing wide view, then
+a sixth of it, then her 800 m. Each panel is a single image request - two to NASA's WMS, one to a titiler instance
+that crops the Sentinel-2 COG - so nothing is composited in the job or stored in the
+repository. A cross marks where AIS put her; she will have moved a little from it, and the
+caption says so.
+
+What the card claims is careful: a satellite photographed the patch of sea she was in, at
+the moment she was in it. Whether there is a ship in those pixels, the reader can see.
+
+## Actual satellite pictures
+
+**Satellite** swaps the map for the real picture of her weather, from NASA's Global Imagery
+Browse Services. Free, no key, no quota - it is the same service Worldview runs on. Two
+sources, and which applies depends on where she is:
+
+| Source | Where | How fresh | Resolution |
+|---|---|---|---|
+| **GOES-East GeoColor** | west of about 12° W | a new picture every **10 minutes** | ~2 km |
+| **VIIRS on NOAA-20**, true colour | worldwide | one pass a day | **375 m** |
+
+So in the North Sea she gets yesterday's polar-orbiter pass. From November, once she is out
+past the Azores and across to Brazil, the Caribbean and the American coast, GOES-East can
+see her and the picture refreshes every ten minutes for the rest of the winter - the whole
+Atlantic crossing, live.
+
+**It does not show the ship.** She is 64 m long and the best of these is 375 m to a pixel.
+What you see is her weather: the actual depression, on the day she was in it. Which is the
+better picture anyway - wind the time slider back and the clouds wind back with it.
+
+Both latencies were measured rather than assumed: GOES publishes about 40 minutes behind,
+the daily layers about a day, and *today's* date returns 404 until the pass is processed.
+The page therefore never asks for a slot that cannot exist, and if one is missing anyway it
+steps back - ten minutes for GOES, a day for the orbiter - up to three times, and says in
+the badge which picture it settled on and how old it is. Coastlines are drawn over the top,
+because true colour over open water is impossible to place otherwise.
+
+Zoom limits are real and enforced: 9 for the daily layers, 7 for GOES. Beyond that Leaflet
+upscales rather than showing a void.
 
 ## The course the wind would make fastest
 
@@ -532,6 +617,7 @@ measures receiver coverage rather than the voyage.
 | Wave grid for the map | [Open-Meteo Marine](https://open-meteo.com/en/docs/marine-weather-api), multi-location | none |
 | Weather she has already sailed through | the same two endpoints with `past_days` | none |
 | Map tiles | OpenStreetMap | none |
+| Satellite imagery | [NASA GIBS](https://worldview.earthdata.nasa.gov) - GOES-East, VIIRS | none |
 
 Open-Meteo is free for non-commercial use. Norwegian waters can additionally be read from
 the [BarentsWatch/Kystverket AIS API](https://developer.barentswatch.no/docs/category/ais/)

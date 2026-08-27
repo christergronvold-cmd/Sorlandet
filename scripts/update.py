@@ -757,6 +757,7 @@ AHEAD = DATA / "ahead.json"
 WAKE = DATA / "wake.json"
 EVENTS = DATA / "events.json"
 COURSE = DATA / "course.json"
+ORBIT = DATA / "orbit.json"
 # Forecast points along the projected route. The ladder is trimmed to the leg, so a
 # two-day hop shows only the near steps and a two-week ocean crossing reaches as far as
 # the models do. Open-Meteo's marine model stops at 8 days, so 168 h is the ceiling.
@@ -1391,6 +1392,58 @@ def build_events(collected: list, static: dict) -> None:
         print(f"  -> events: nothing new, {len(events)} kept")
 
 
+# --------------------------------------------------- satellite passes that saw her
+# Searched at most once an hour: the catalogues only gain a scene every few hours, and
+# each search is two HTTP calls we have no reason to repeat every round.
+
+ORBIT_EVERY_MIN = float(os.environ.get("ORBIT_EVERY_MIN", "55"))
+
+
+def build_orbit(points: list) -> None:
+    try:
+        import orbithunter
+    except ImportError as exc:
+        print(f"  ! orbithunter not importable: {exc}", file=sys.stderr)
+        return
+    try:
+        stored = read_json(ORBIT, {}) or {}
+        last = stored.get("generated_utc")
+        if last:
+            try:
+                if (now_utc() - parse_iso(last)).total_seconds() / 60 < ORBIT_EVERY_MIN:
+                    return
+            except Exception:
+                pass
+        # The wide panel must contain a coastline, or it is a square of blue. Widen it
+        # until the land mask finds land, capped: mid-Atlantic the nearest coast is a
+        # thousand miles off, and a panel that wide still says "she is between these two
+        # continents", which is the point.
+        sea_grid()
+
+        def land_span(lat: float, lon: float) -> float:
+            for span in (9.0, 16.0, 26.0, 40.0):
+                half = span / 2
+                step = span / 14
+                y = lat - half
+                while y <= lat + half:
+                    x = lon - half / max(0.25, math.cos(math.radians(lat)))
+                    while x <= lon + half / max(0.25, math.cos(math.radians(lat))):
+                        cell = _cell(y, x)
+                        if cell and not _is_sea(*cell):
+                            return span
+                        x += step
+                    y += step
+            return 40.0
+
+        hits = orbithunter.hunt(points, position_at, iso, parse_iso,
+                                known=stored.get("hits") or [], land_span=land_span)
+        write_json(ORBIT, {"generated_utc": iso(now_utc()), "hits": hits})
+        shot = [h for h in hits if h.get("cog")]
+        print(f"  -> orbit: {len(hits)} passes on record, {len(shot)} with a picture we can show")
+    except Exception as exc:
+        print(f"  ! orbit search failed: {exc}", file=sys.stderr)
+
+
 # ----------------------------------------------------------------------- main
 
 
@@ -1579,6 +1632,7 @@ def main() -> int:
     # static messages, so pass them along rather than re-deriving them.
     build_events(collected, {k: position.get(k) for k in ("destination", "eta_text", "draught_m")})
     build_course(lat, lon)
+    build_orbit(points)
     update_history(weather, points)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0

@@ -121,6 +121,55 @@ Then the round recalculates the weather and waves along the route she is
 actually likely to sail, and pushes it all to the repository. The page picks it
 up on its own.
 
+FROM ORBIT
+---------
+New card. A job now searches, once an hour, for satellite passes that
+ACTUALLY looked at her - not scenes near where she is today, but scenes whose
+footprint contained her at the instant that scene was taken.
+
+Only cloud-free Sentinel-2 is listed - 10 m optical, where she is about six
+pixels with a wake.
+
+Radar (Sentinel-1) was tried and dropped. It is the better sensor in
+principle: through cloud, in the dark, over ocean ESA does not photograph.
+But its pixels are in a paid bucket, so all the page could show was a link to
+a grey scene with neither ship nor coastline in it. Not worth a row.
+
+It worked the first week: Sentinel-2 caught her on 26 August at 10:45 UTC
+under 0 % cloud.
+
+The card shows three panels, widest first, because a blue square with a white
+speck means nothing without somewhere to be. The wide one is widened until a
+coastline is in frame - 1,000 km in the North Sea, about 2,900 km on the
+crossing to Brazil, which puts the Brazilian coast in the corner.
+
+ALSO CHANGED
+------------
+The Course card is gone; six rows for one idea was too much. Hover the purple
+line on the map instead - it says how long the fastest passage takes and how
+much time the plan leaves in hand.
+
+Event log now shows the last 24 hours and scrolls.
+
+SATELLITE PICTURES
+------------------
+New button: Satellite. It swaps the map for the actual picture from orbit,
+from NASA's imagery service. Free, no key.
+
+  In the North Sea      yesterday's pass, 375 m per pixel
+  West of about 12 W    GOES-East, a new picture every 10 MINUTES
+
+So from November, when she is out past the Azores and crossing to Brazil, the
+whole Atlantic passage is visible almost live. Wind the time slider back and
+the clouds wind back with it - you see the weather she actually sailed
+through, from space, on the day she was in it.
+
+It does NOT show the ship. She is 64 m long; the sharpest of these pictures is
+375 m to a pixel. What you see is her weather.
+
+The badge next to the slider says which satellite the picture came from and
+how old it is.
+
 ESTIMATED COURSE
 ----------------
 New button above the map: Course. It shows where the wind forecast would push

@@ -109,6 +109,21 @@
   .bar>i{display:block; height:100%; background:var(--accent); border-radius:99px}
   .log{list-style:none; margin:0; padding:0; font-size:14px}
   .log li{display:flex; gap:10px; padding:5px 0; border-bottom:1px solid var(--line)}
+  .log.scroll{max-height:290px; overflow-y:auto; overscroll-behavior:contain;
+    scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+  .log.scroll li:last-child{border-bottom:none}
+  .orbit{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .orbit figure{margin:0; position:relative}
+  .orbit img{width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:10px;
+    background:var(--bg); border:1px solid var(--line)}
+  .orbit figcaption{font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35}
+  .orbit figcaption b{color:var(--ink)}
+  .orbit .xhair{position:absolute; left:50%; top:50%; width:34px; height:34px;
+    transform:translate(-50%,-50%); pointer-events:none;
+    background:
+      linear-gradient(var(--accent),var(--accent)) center/2px 11px no-repeat,
+      linear-gradient(var(--accent),var(--accent)) center/11px 2px no-repeat;
+    opacity:.9}
   .log li:last-child{border-bottom:0}
   .log time{color:var(--muted); flex:0 0 74px; font-variant-numeric:tabular-nums}
   .log .ic{flex:0 0 20px; text-align:center}
@@ -159,11 +174,13 @@
     <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
     <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
     <button id="coursetoggle" title="The course the wind would make fastest, and where she would tack">Course</button>
+    <button id="sattoggle" title="Swap the map for the actual satellite picture of her weather">Satellite</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
     <input type="range" id="windtime" min="0" max="0" value="0" step="1">
     <span class="when" id="windwhen">now</span>
     <button id="nowbtn" title="Jump back to now" hidden>Now</button>
+    <span id="satwhen" hidden style="color:#7a3fb8;font-size:11.5px;font-weight:650"></span>
     <span id="windlive" hidden title="The grid is being fetched for what you see"
           style="color:var(--accent);font-size:11.5px;font-weight:650">live grid</span>
   </div>
@@ -184,7 +201,8 @@
     Norwegian Coastal Administration via <a href="https://www.barentswatch.no/" target="_blank" rel="noopener">BarentsWatch</a>,
     and <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a> ·
     weather and sea state from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
-    map by OpenStreetMap · voyage plan from the A+ World Academy 2026–2027 plan, which is tentative and
+    map by OpenStreetMap · satellite imagery from
+    <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS/Worldview</a> · voyage plan from the A+ World Academy 2026–2027 plan, which is tentative and
     subject to change.
     <br>The wind arrows and wave chevrons are a forecast for a 360 x 360 nautical mile box around the
     ship, not measurements from on board. Both point the way they are travelling, and the slider steps
@@ -395,7 +413,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "0b47cdd082";
+const BUILD = "fec0a24f64";
 
 async function checkForNewBuild() {
   try {
@@ -427,9 +445,10 @@ const map = L.map("map", {
   zoomControl: true, worldCopyJump: true,
   preferCanvas: true            // the track is thousands of points; canvas beats SVG nodes
 }).setView([45, -25], 3);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+const baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18, attribution: "© OpenStreetMap"
-}).addTo(map);
+});
+baseLayer.addTo(map);
 
 const shipIcon = (heading, ghost = false) => L.divIcon({
   className: ghost ? "ship-marker ghost-marker" : "ship-marker",
@@ -470,7 +489,7 @@ const scaleColor = (v, table) => {
 
 let windLayer = null, waveLayer = null, skyLayer = null;
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true, weather: false, course: false };
+let gridIndex = 0, show = { wind: true, waves: true, weather: false, course: false, sat: false };
 
 function windIcon(ws, wd) {
   const len = Math.min(30, 12 + ws * 1.15);
@@ -532,6 +551,111 @@ function skyIcon(code, temp) {
   });
 }
 
+// ---------------------------------------------------------------- satellite imagery
+// NASA's Global Imagery Browse Services serves the actual pictures, free and without a
+// key. Two kinds, and which one applies depends on where she is:
+//
+//   GOES-East GeoColor    geostationary over the Americas and the Atlantic, a fresh
+//                         picture every ten minutes, about 2 km per pixel. Useless east
+//                         of roughly 12 W - the satellite cannot see round the earth.
+//   VIIRS true colour     polar orbiter, one pass a day, 375 m per pixel, worldwide.
+//
+// Neither shows the ship. She is 64 m long; the best of these is 375 m to a pixel. What
+// you see is her weather - the actual depression, on the day she was in it.
+//
+// Measured latency, not guessed: GOES about 40 minutes, the daily layers about a day.
+
+const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
+const SAT_DAILY = "VIIRS_NOAA20_CorrectedReflectance_TrueColor";
+let satLayer = null, satCoast = null, satBackoff = 0;
+
+function satTarget() {
+  // The moment the slider is on, and where she is at it.
+  const times = (gridData.wind || gridData.waves)?.times || [];
+  const t = times[gridIndex];
+  const when = t ? new Date(t + "Z") : new Date();
+  const p = window.__latest?.position || {};
+  let lon = p.lon;
+  const was = positionAt(window.__track?.points || [], when.getTime());
+  if (was) lon = was.lon;
+  if (lon == null) lon = map.getCenter().lng;
+  return { when, lon };
+}
+
+function satSource() {
+  const { when, lon } = satTarget();
+  const ageMin = (Date.now() - when.getTime()) / 6e4;
+
+  // GOES only where it can see, and only for the recent past - it has no forecast.
+  if (lon < -12 && ageMin > -60 && ageMin < 18 * 60) {
+    const clamped = Math.min(Date.now() - 40 * 6e4, when.getTime()) - satBackoff * 6e5;
+    const slot = new Date(Math.floor(clamped / 6e5) * 6e5);
+    return {
+      kind: "goes", layer: "GOES-East_ABI_GeoColor", level: 7, maxNative: 7, ext: "jpg",
+      stamp: slot.toISOString().replace(/\.\d+Z$/, "Z"), at: slot,
+      label: "GOES-East", res: "about 2 km per pixel, a new picture every 10 minutes"
+    };
+  }
+
+  // Daily true colour. Today is not published yet, so never ask for it.
+  const newest = new Date(Date.now() - 24 * 36e5);
+  const day = new Date(Math.min(newest.getTime(), when.getTime()) - satBackoff * 864e5);
+  const iso = day.toISOString().slice(0, 10);
+  return {
+    kind: "daily", layer: SAT_DAILY, level: 9, maxNative: 9, ext: "jpg",
+    stamp: iso, at: day,
+    label: "VIIRS on NOAA-20", res: "375 m per pixel, one pass a day"
+  };
+}
+
+function drawSatellite() {
+  const badge = document.getElementById("satwhen");
+  [satLayer, satCoast].forEach(l => { if (l) map.removeLayer(l); });
+  satLayer = satCoast = null;
+
+  if (!show.sat) {
+    if (!map.hasLayer(baseLayer)) baseLayer.addTo(map);
+    badge.hidden = true;
+    satBackoff = 0;
+    return;
+  }
+
+  const src = satSource();
+  const url = `${GIBS}/${src.layer}/default/${src.stamp}` +
+              `/GoogleMapsCompatible_Level${src.level}/{z}/{y}/{x}.${src.ext}`;
+
+  satLayer = L.tileLayer(url, {
+    maxNativeZoom: src.maxNative, maxZoom: 18, minZoom: 1, opacity: 1,
+    attribution: 'Imagery: <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>'
+  });
+
+  // Step back and try again if that slot has not been published: an hour for GOES,
+  // a day for the polar orbiter. Three tries, then say so rather than showing a void.
+  let failed = 0;
+  satLayer.on("tileerror", () => {
+    failed++;
+    if (failed === 1 && satBackoff < 3) { satBackoff++; drawSatellite(); }
+  });
+  satLayer.on("load", () => { badge.title = src.res; });
+
+  satLayer.addTo(map);
+  if (map.hasLayer(baseLayer)) map.removeLayer(baseLayer);
+
+  // Coastlines, or true colour over open water is impossible to place.
+  satCoast = L.tileLayer(
+    `${GIBS}/Coastlines/default/${src.kind === "goes" ? src.at.toISOString().slice(0, 10) : src.stamp}` +
+    `/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`,
+    { maxNativeZoom: 9, maxZoom: 18, opacity: .55 }).addTo(map);
+
+  const mins = Math.round((Date.now() - src.at.getTime()) / 6e4);
+  const age = mins < 90 ? `${mins} min ago`
+            : mins < 36 * 60 ? `${Math.round(mins / 60)} h ago`
+            : `${Math.round(mins / 1440)} days ago`;
+  badge.hidden = false;
+  badge.textContent = `${src.label} · ${age}`;
+  badge.title = src.res + (satBackoff ? ` (stepped back ${satBackoff} to the newest published)` : "");
+}
+
 let courseLayers = [];
 
 function drawCourse() {
@@ -544,8 +668,12 @@ function drawCourse() {
   courseLayers.push(L.polyline(line, {
     color: "#7a3fb8", weight: 3, opacity: .9
   }).bindTooltip(
-    `Fastest sailing course to ${c.to}: ${Math.round(c.hours)} h, ` +
-    `${Math.round(c.sailed_nm)} nm through the water`, { sticky: true }).addTo(map));
+    `<b>Fastest sailing course to ${c.to}</b><br>` +
+    `${Math.round(c.hours)} h · ${Math.round(c.sailed_nm)} nm through the water · ` +
+    `${(c.tacks || []).length} tacks` +
+    (c.plan_hours ? `<br>The plan allows ${Math.round(c.plan_hours / 24 * 10) / 10} days, ` +
+      `so about ${Math.round((c.plan_hours - c.hours) / 24 * 10) / 10} in hand` : ""),
+    { sticky: true }).addTo(map));
 
   (c.tacks || []).forEach(i => {
     const p = c.points[i];
@@ -630,18 +758,22 @@ document.getElementById("windtime").addEventListener("input", e => {
   stopPlay();
   gridIndex = +e.target.value;
   rememberTime();
+  satBackoff = 0;
+  if (show.sat) drawSatellite();
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
   drawGrids();
   drawRewind();
 });
 [["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"],
  ["weathertoggle", "weather", "Weather"],
- ["coursetoggle", "course", "Course"]].forEach(([id, key, label]) => {
+ ["coursetoggle", "course", "Course"],
+ ["sattoggle", "sat", "Satellite"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
     show[key] = !show[key];
     e.target.classList.toggle("on", show[key]);
     e.target.textContent = show[key] ? `${label} ✓` : label;
     if (key === "course") { drawCourse(); return; }
+    if (key === "sat") { drawSatellite(); return; }
     drawGrids();
     if (show[key]) refreshViewportGrids();
   });
@@ -1103,7 +1235,7 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile, eventFile, courseFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, eventFile, courseFile, orbitFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -1113,16 +1245,17 @@ async function load() {
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/events.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/course.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/course.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, eventFile, courseFile);
+  render(latest, track, plan, history, ahead, wakeFile, eventFile, courseFile, orbitFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   drawCourse();
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile, courseFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile, courseFile, orbitFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -1149,6 +1282,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   window.__track = track;
   window.__ahead = ahead;
   window.__course = courseFile;
+  window.__latest = d;
   wake = wakeFile || wake;
   const tp = track.points || [];
   let sailed = 0;
@@ -1435,45 +1569,102 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`) : "";
 
-  // ---- the course the wind would make fastest
-  let courseCard = "";
-  const c = courseFile;
-  if (c && (c.points || []).length > 1) {
-    const spare = (c.plan_hours != null && c.reached) ? c.plan_hours - c.hours : null;
-    const detour = c.direct_nm ? (c.sailed_nm / c.direct_nm - 1) * 100 : null;
-    courseCard = wideCard(`Course the wind would make fastest`, `
-      <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
-        Where the forecast would push a ship that cannot point within 58° of the wind.
-        Turn on <b>Course</b> above the map to see it, with a ring at every tack.
+  // ---- satellite passes that actually looked at her
+  // Three panels, widest first, so a blue square with a white speck has somewhere to be.
+  // Every panel is one image request; nothing is composited or stored.
+  const GIBS_WMS = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
+  function wmsPanel(lat, lon, spanDeg, date, w, h) {
+    const dLat = spanDeg / 2, dLon = spanDeg / 2 / Math.cos(lat * Math.PI / 180);
+    const p = new URLSearchParams({
+      SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetMap",
+      LAYERS: "VIIRS_NOAA20_CorrectedReflectance_TrueColor,Coastlines",
+      CRS: "EPSG:4326",
+      BBOX: [lat - dLat, lon - dLon, lat + dLat, lon + dLon].map(v => v.toFixed(4)).join(","),
+      WIDTH: String(w), HEIGHT: String(h), FORMAT: "image/png", TIME: date
+    });
+    return GIBS_WMS + "?" + p.toString();
+  }
+  function cropPanel(cog, lat, lon, metres, px) {
+    const dLat = metres / 2 / 111320, dLon = dLat / Math.cos(lat * Math.PI / 180);
+    const bbox = [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map(v => v.toFixed(5)).join(",");
+    return `https://titiler.xyz/cog/bbox/${bbox}/${px}x${px}.png` +
+           `?url=${encodeURIComponent(cog)}&coord-crs=epsg:4326&rescale=4,46&resampling=nearest`;
+  }
+
+  // Only passes we can actually show. A row that links to pixels nobody can read is not
+  // worth the space, which is why radar is not here.
+  const orbitHits = (orbitFile?.hits || []).filter(h => h.cog);
+  const shot = orbitHits[0];
+  let orbitCard = "";
+  if (shot) {
+    let panels = "";
+    {
+      const day = shot.t.slice(0, 10);
+      // The job widened this until the mask found a coastline: an empty blue square says
+      // nothing about where she is.
+      const wide = shot.wide_span_deg || 9;
+      const km = v => Math.round(v * 111 / 50) * 50;
+      panels = `
+        <div class="orbit">
+          <figure><img loading="lazy" alt="The sea area with the nearest coasts"
+              src="${wmsPanel(shot.lat, shot.lon, wide, day, 640, 640)}">
+            <figcaption><b>1</b> ${km(wide).toLocaleString("en-GB")} km ·
+              VIIRS, 375 m per pixel — widened until the coast is in frame</figcaption></figure>
+          <figure><img loading="lazy" alt="Closer in"
+              src="${wmsPanel(shot.lat, shot.lon, Math.max(1.2, wide / 6.5), day, 640, 640)}">
+            <figcaption><b>2</b> ${km(Math.max(1.2, wide / 6.5))} km ·
+              same satellite, same morning</figcaption></figure>
+          <figure><img loading="lazy" alt="Her patch of sea, 800 m across"
+              src="${cropPanel(shot.cog, shot.lat, shot.lon, 800, 640)}">
+            <span class="xhair"></span>
+            <figcaption><b>3</b> 800 m · Sentinel-2, 10 m per pixel. The cross is where
+              AIS put her${shot.gap_min >= 0.5 ? `, ${Math.round(shot.gap_min)} min before the
+              shutter` : ""}; she is about 6 pixels long and will have moved a little from
+              it</figcaption></figure>
+        </div>`;
+    }
+    const rows = orbitHits.slice(0, 8).map(h => {
+      const when = new Date(h.t).toLocaleString("en-GB",
+        { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      const link = `https://browser.dataspace.copernicus.eu/?zoom=15&lat=${h.lat}&lng=${h.lon}` +
+        `&datasetId=S2_L2A_CDAS&fromTime=${h.t.slice(0,10)}T00:00:00.000Z` +
+        `&toTime=${h.t.slice(0,10)}T23:59:59.999Z&layerId=1_TRUE_COLOR`;
+      return `<li><time>${when}</time><span>Sentinel-2` +
+        `${h.cloud_pct != null ? `, ${Math.round(h.cloud_pct)} % cloud` : ""}` +
+        ` · AIS ${h.gap_min < 1 ? "under a minute" : `${Math.round(h.gap_min)} min`} from the shutter` +
+        ` · <a href="${link}" target="_blank" rel="noopener">zoom it yourself</a></span></li>`;
+    }).join("");
+    orbitCard = wideCard("From orbit", `
+      <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
+        Passes that actually looked at her — where she was at the instant the shutter opened,
+        not merely near her today. Only cloud-free optical passes are listed, because a
+        picture showing neither the ship nor any coastline is not a picture.
       </div>
-      ${row("Fastest passage", c.reached
-        ? `${Math.round(c.hours)} h · ${Math.round(c.hours / 24 * 10) / 10} days`
-        : `more than ${Math.round(c.hours)} h — beyond the forecast`)}
-      ${c.plan_hours != null ? row("The plan allows",
-        `${Math.round(c.plan_hours)} h · ${Math.round(c.plan_hours / 24 * 10) / 10} days`) : ""}
-      ${spare != null && spare > 6 ? row("Time in hand",
-        `<b>${Math.round(spare / 24 * 10) / 10} days</b> — expect drills and standing off`) : ""}
-      ${spare != null && spare <= 6 ? row("Time in hand", "little — this one is a passage") : ""}
-      ${row("Through the water", `${Math.round(c.sailed_nm)} nm` +
-        (detour != null && detour > 3 ? ` · ${Math.round(detour)}% more than the direct line` : ""))}
-      ${row("Tacks", `${(c.tacks || []).length}`)}
-      ${c.wind_kn ? row("Wind on the way", `${c.wind_kn.min}–${c.wind_kn.max} knots`) : ""}`);
+      ${panels}
+      <ul class="log scroll" style="margin-top:${shot ? "14px" : "0"}">${rows}</ul>`);
   }
 
   // ---- event log, derived from the ship's own AIS fields
   const EVENT_ICON = { nav: "\u2693", destination: "\u{1F9ED}", eta: "\u{1F551}",
                        eta_text: "\u{1F551}", draught_m: "\u{1F4CF}", coverage: "\u{1F4E1}" };
-  const evRows = (eventFile?.events || []).slice(-14).reverse().map(e => `
+  // A day of events, or the last dozen if it has been a quiet day - a card that shows
+  // four lines and hides the rest is worse than one you can scroll.
+  const dayAgo = Date.now() - 36e5 * 24;
+  const allEvents = (eventFile?.events || []);
+  const recent = allEvents.filter(e => new Date(e.t).getTime() >= dayAgo);
+  const evList = (recent.length >= 4 ? recent : allEvents.slice(-12)).slice(-60).reverse();
+  const evRows = evList.map(e => `
     <li><time>${new Date(e.t).toLocaleString("en-GB",
         { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time>
       <span>${EVENT_ICON[e.kind] || "\u2022"} ${e.text}${
         e.detail ? ` <span style="color:var(--muted)">(${e.detail})</span>` : ""}</span></li>`).join("");
   const eventCard = evRows ? wideCard("Event log", `
     <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
-      What she reports about herself: whether she is under sail or under engine, and the
-      voyage details the crew set by hand. Only changes are listed.
+      What she reports about herself: under sail or under engine, and the voyage details the
+      crew set by hand. Only changes are listed${
+        recent.length >= 4 ? " — the last 24 hours, scroll for more" : ""}.
     </div>
-    <ul class="log">${evRows}</ul>`) : "";
+    <ul class="log scroll">${evRows}</ul>`) : "";
 
   // ---- share
   const shareCard = wideCard("Share with other parents", `
@@ -1525,9 +1716,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ${row("Data updated", ago(d.updated_utc))}`),
 
     progressCard,
-    courseCard,
     logCard,
     eventCard,
+    orbitCard,
     chartsCard,
     aheadCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
