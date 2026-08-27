@@ -279,20 +279,53 @@ There are three layers, and the third costs nothing: the wind grid already calls
 Open-Meteo's forecast endpoint, so asking the same request for `weather_code` and
 `temperature_2m` adds a **Weather** layer - sky symbol and temperature at each grid point -
 without a single extra API call. It starts off, because three glyphs per point is a lot at
-once; Wind and Waves start on.
+once; Wind and Waves start on. Turning it on does not re-fetch anything - the sky symbol
+and the temperature were already in the wind block.
 
 On the map, **wind** is a single arrow, coloured pale blue through green and amber to dark
-red as it strengthens. **Waves** are a double chevron with the height in metres beside it,
-on a blue-to-purple scale. Both point the way they are travelling, and the two sit on
-either side of their grid point so they stay readable together. The slider under the map
-steps through the forecast; the two buttons turn each layer on and off. Both start on. It opens on **now**, which
-with the axis above puts the handle a little under half way along.
+red as it strengthens. **Waves** are a double chevron with the height in metres under it,
+on a blue-to-purple scale. Both point the way they are travelling. Each grid point holds up
+to three glyphs, so each has its own corner of the cell: sky and temperature above, wind to
+the left, waves to the right with the height below them. The slider under the map steps
+through the forecast; the buttons turn each layer on and off. Wind and Waves start on. It
+opens on **now**, which with the axis above puts the handle a little under half way along.
+
+Hovering a glyph gives the numbers in words - wind speed and Beaufort, wave height and
+period, sky and temperature. On a phone, where nothing hovers, a tap does the same.
+
+### One canvas, and why density is now free
+
+The glyphs used to be one Leaflet marker each, carrying an inline SVG the browser had to
+re-position on every pan. That is what capped the density, and the cap bit hardest on a
+phone - the smallest map, where density matters most, got the fewest arrows. A 390 px
+screen was down to 3 x 3, which is not a weather map.
+
+They are now all drawn into a **single canvas** in the map's overlay pane, repositioned
+once per frame instead of once per glyph. Eighty arrows cost about what four used to, so
+the grid is set by what a reader can tell apart rather than by what the DOM can afford:
+one glyph roughly every 64 px across and 78 px down. A phone gets 6 x 6, a desktop 6 x 14.
+
+Two details that turned out to matter:
+
+* **The grid is spaced in pixels, not in degrees.** An evenly spaced set of latitudes is
+  only evenly spaced on screen for a small map. Zoomed out to the whole voyage, from 10 N
+  to 62 N, Mercator stretches the top of the map to twice the scale of the bottom - so an
+  even grid of latitudes came out as wide gaps in the tropics and rows almost touching up
+  by Norway. The density target is a distance in pixels, so the projection is asked for
+  pixel positions and converted back.
+* **The map's shape matters as much as its size.** A phone map is 356 x 471 and wants a
+  square grid; a desktop map is 1006 x 478 and wants many columns and few rows. Asking for
+  a square grid on the desktop put nine rows into 478 px, and the temperatures landed on
+  the wave heights.
+
+The total is capped at 84 points because that is how many go into one Open-Meteo request -
+a limit of politeness to the API, not of the browser, which no longer cares.
 
 ### The grid follows the map
 
 The files above are a fixed box around the ship: dense when you look at the whole North
 Sea, sparse when you zoom in on her. So the page also asks Open-Meteo directly, in the
-browser, for a 6 x 6 grid covering **what is actually on screen**, whenever the map is
+browser, for a grid covering **what is actually on screen**, whenever the map is
 moved or zoomed. Zoom in and the arrows tighten to a few nautical miles apart; zoom out
 and they spread again. A small "live grid" mark appears in the bar when that is what you
 are looking at.
@@ -391,7 +424,7 @@ changed:
 | Coordinates rounded to 5 decimals | some fixes carried 15 digits of float noise; 5 decimals is about a metre, and the ship is 64 m long |
 | One track point per 2 minutes for the last week | the dense sources gave one a minute - 0.1 nm apart at cruising speed, invisible at any zoom |
 | `preferCanvas: true` on the map | the track and route were hundreds of SVG nodes the browser re-laid-out on every pan; now one canvas |
-| Arrow grid scales to the screen | each arrow is a DOM node with an inline SVG. 6 x 6 on a desktop, 3 x 3 on a phone: 51 markers down to 19 |
+| All the glyphs on one canvas | each used to be a DOM node with an inline SVG, re-positioned on every pan. One canvas is repositioned once a frame instead, so 72 glyphs on a phone cost less than the 18 did |
 | The weather bar wraps | at 390 px the time and the Now button ran off the right edge |
 
 Gzip already squeezed the whitespace out on the wire, so those first two changes barely

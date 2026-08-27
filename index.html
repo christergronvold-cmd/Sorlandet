@@ -49,6 +49,16 @@
     height:min(56vh,480px); border-radius:14px; border:1px solid var(--line);
     box-shadow:var(--shadow); background:var(--panel); z-index:0;
   }
+  /* One readout for the whole glyph canvas. The arrows used to be DOM nodes with a
+     title each; now a single handler finds the nearest cell and fills this in. */
+  #glyphtip{
+    position:absolute; z-index:650; pointer-events:none; opacity:0; transition:opacity .12s;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    box-shadow:var(--shadow); padding:5px 8px; font-size:12px; line-height:1.45;
+    color:var(--ink); white-space:nowrap; transform:translate(-50%,-100%);
+  }
+  #glyphtip.show{opacity:1}
+  #glyphtip b{font-weight:650}
   .grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); margin-top:14px}
   .card{
     background:var(--panel); border:1px solid var(--line); border-radius:14px;
@@ -433,7 +443,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "607160fbc2";
+const BUILD = "2d0722adab";
 
 async function checkForNewBuild() {
   try {
@@ -507,69 +517,8 @@ const scaleColor = (v, table) => {
   return c;
 };
 
-let windLayer = null, waveLayer = null, skyLayer = null;
 let gridData = { wind: null, waves: null };
 let gridIndex = 0, show = { wind: true, waves: true, weather: false, course: false, sat: false };
-
-function windIcon(ws, wd) {
-  const len = Math.min(30, 12 + ws * 1.15);
-  const col = scaleColor(ws, WIND_COLORS);
-  return L.divIcon({
-    className: "wind-arrow",
-    html: `<svg width="46" height="46" viewBox="0 0 46 46" style="transform:rotate(${(wd + 180) % 360}deg)">
-        <line x1="23" y1="${23 + len / 2}" x2="23" y2="${23 - len / 2}"
-              stroke="${col}" stroke-width="2.4" stroke-linecap="round" opacity=".95"/>
-        <path d="M23 ${23 - len / 2 - 1} l-4.2 6 h8.4 z" fill="${col}" opacity=".95"/>
-      </svg>`,
-    // Nudged up-left so the wave chevrons can sit beside it, not under it.
-    iconSize: [46, 46], iconAnchor: [31, 31]
-  });
-}
-
-// Waves get a different shape on purpose: a chevron pair, so the two layers stay
-// tellable apart when both are on.
-function waveIcon(hs, wd) {
-  const col = scaleColor(hs, WAVE_COLORS);
-  const w = Math.min(9, 4.5 + hs * 1.1);
-  return L.divIcon({
-    className: "wind-arrow",
-    html: `<svg width="42" height="42" viewBox="0 0 42 42" style="transform:rotate(${(wd + 180) % 360}deg)">
-        <path d="M${21 - w} 25 L21 17 L${21 + w} 25" fill="none" stroke="${col}"
-              stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
-        <path d="M${21 - w} 31 L21 23 L${21 + w} 31" fill="none" stroke="${col}"
-              stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
-        <text x="21" y="14" text-anchor="middle" font-size="9.5" font-weight="700"
-              fill="${col}" transform="rotate(${-((wd + 180) % 360)} 21 21)">${hs.toFixed(1)}</text>
-      </svg>`,
-    // Nudged down-right, opposite the wind arrow.
-    iconSize: [42, 42], iconAnchor: [13, 13]
-  });
-}
-
-// Each arrow is a DOM node carrying an inline SVG, repositioned on every pan, and both
-// layers are on by default. The stored grid is always 5 x 5, so on a narrow screen the
-// first paint would carry fifty of them whatever the viewport grid later decides. Thin
-// the cells to roughly what the screen can usefully show.
-function gridCells(grid) {
-  const cells = grid?.cells || [];
-  const want = VIEWPORT_CELLS * VIEWPORT_CELLS;
-  if (cells.length <= want) return cells;
-  const stride = Math.ceil(cells.length / want);
-  return cells.filter((_, i) => i % stride === 0);
-}
-
-function skyIcon(code, temp) {
-  return L.divIcon({
-    className: "wind-arrow",
-    html: `<div style="text-align:center;line-height:1.05;white-space:nowrap">
-        <div style="font-size:17px">${WMO[code] || "\u{1F321}\uFE0F"}</div>
-        ${temp == null ? "" : `<div style="font-size:10.5px;font-weight:650;
-          color:var(--ink);text-shadow:0 0 3px var(--panel),0 0 3px var(--panel)"
-          >${Math.round(temp)}\u00B0</div>`}
-      </div>`,
-    iconSize: [40, 40], iconAnchor: [20, 46]
-  });
-}
 
 // ---------------------------------------------------------------- satellite imagery
 // NASA's Global Imagery Browse Services serves the actual pictures, free and without a
@@ -707,44 +656,240 @@ function drawCourse() {
   });
 }
 
-function drawGrids() {
-  [windLayer, waveLayer, skyLayer].forEach(l => { if (l) map.removeLayer(l); });
-  windLayer = waveLayer = skyLayer = null;
+// --------------------------------------------------- the glyph layer, on one canvas
+// These used to be one DOM node per arrow, each carrying an inline SVG that the browser
+// had to reposition on every pan. That capped how dense the grid could be - and the cap
+// bit hardest on a phone, which is where the map is smallest and density matters most.
+// Everything is now drawn into a single canvas, so a hundred and sixty glyphs cost about
+// the same as four, and the grid can be as dense as the screen can usefully show.
 
+const GlyphLayer = L.Layer.extend({
+  onAdd(map) {
+    this._c = L.DomUtil.create("canvas", "glyph-canvas");
+    Object.assign(this._c.style, { position: "absolute", left: 0, top: 0, pointerEvents: "none" });
+    map.getPanes().overlayPane.appendChild(this._c);
+    map.on("move zoom viewreset resize zoomend moveend", this._reset, this);
+    this._reset();
+  },
+  onRemove(map) {
+    map.off("move zoom viewreset resize zoomend moveend", this._reset, this);
+    if (this._c && this._c.parentNode) this._c.parentNode.removeChild(this._c);
+    this._c = null;
+  },
+  redraw() { if (this._c) this._reset(); },
+  _reset() {
+    if (!this._c || !this._map) return;
+    const size = this._map.getSize();
+    // Keep the canvas pinned to the viewport while Leaflet translates the pane under us.
+    L.DomUtil.setPosition(this._c, this._map.containerPointToLayerPoint([0, 0]));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (this._c.width !== size.x * dpr || this._c.height !== size.y * dpr) {
+      this._c.width = size.x * dpr;
+      this._c.height = size.y * dpr;
+      this._c.style.width = size.x + "px";
+      this._c.style.height = size.y + "px";
+    }
+    const ctx = this._c.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size.x, size.y);
+    drawGlyphs(ctx, this._map, size);
+  }
+});
+let glyphLayer = null;
+
+function atPoint(map, lat, lon) { return map.latLngToContainerPoint([lat, lon]); }
+
+// The three glyphs share a cell, so each has its own corner of it: sky above, wind to the
+// left, waves to the right. The arrow is also shorter than the SVG one was - at six cells
+// across a phone there is about 60 px between neighbours, and a 30 px arrow reached into
+// the next cell's wave.
+function drawWind(ctx, x, y, ws, wd) {
+  const len = Math.min(21, 9 + ws * 0.95);
+  ctx.save();
+  ctx.translate(x - 10, y + 6);
+  ctx.rotate(((wd + 180) % 360) * Math.PI / 180);
+  ctx.strokeStyle = ctx.fillStyle = scaleColor(ws, WIND_COLORS);
+  ctx.globalAlpha = 0.95;
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, len / 2);
+  ctx.lineTo(0, -len / 2);
+  ctx.stroke();
+  ctx.beginPath();                             // head
+  ctx.moveTo(0, -len / 2 - 1);
+  ctx.lineTo(-4.2, -len / 2 + 5);
+  ctx.lineTo(4.2, -len / 2 + 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawWave(ctx, x, y, hs, wd) {
+  const col = scaleColor(hs, WAVE_COLORS);
+  const w = Math.min(8, 4.2 + hs);
+  ctx.save();
+  ctx.translate(x + 10, y + 5);
+  ctx.rotate(((wd + 180) % 360) * Math.PI / 180);
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = ctx.lineJoin = "round";
+  for (const [dy, alpha] of [[3, 0.95], [9, 0.7]]) {
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(-w, dy);
+    ctx.lineTo(0, dy - 7);
+    ctx.lineTo(w, dy);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // The height goes below the chevrons. Above is the sky glyph and the temperature, and to
+  // the right is the next cell's wind arrow - there is only about 60 px between cells on a
+  // phone, but nearly 80 px between rows, so downwards is where the room is.
+  ctx.save();
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = col;
+  ctx.font = "700 9.5px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(hs.toFixed(1), x + 10, y + 23);
+  ctx.restore();
+}
+
+// getComputedStyle is not free, and this runs once per cell per frame. Read the two
+// colours once and forget them when the theme changes.
+let skyColors = null;
+const themeColors = () => {
+  if (!skyColors) {
+    const cs = getComputedStyle(document.body);
+    skyColors = { halo: cs.getPropertyValue("--panel").trim() || "#fff",
+                  ink: cs.getPropertyValue("--ink").trim() || "#000" };
+  }
+  return skyColors;
+};
+const forgetThemeColors = () => { skyColors = null; };
+// The page has no theme switch; the system has. Drop the cached colours when it flips.
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    forgetThemeColors();
+    if (glyphLayer) glyphLayer.redraw();
+  });
+}
+const skyHalo = () => themeColors().halo;
+const skyInk = () => themeColors().ink;
+
+function drawSky(ctx, x, y, code, temp) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.textAlign = "center";
+  ctx.font = "13px system-ui, sans-serif";
+  ctx.fillText(WMO[code] || "\u{1F321}\uFE0F", x, y - 22);
+  if (temp != null) {
+    ctx.font = "700 10px system-ui, sans-serif";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = skyHalo();
+    ctx.strokeText(`${Math.round(temp)}\u00B0`, x, y - 11);
+    ctx.fillStyle = skyInk();
+    ctx.fillText(`${Math.round(temp)}\u00B0`, x, y - 11);
+  }
+  ctx.restore();
+}
+
+// Only what is on screen, and never two glyphs on top of each other: the stored 5 x 5 file
+// grid and a dense viewport grid can both feed this, so thin by screen distance rather
+// than by array index.
+function visibleCells(map, grid, size, minGapPx) {
+  const out = [], taken = [];
+  for (const c of (grid?.cells || [])) {
+    const pt = atPoint(map, c.lat, c.lon);
+    if (pt.x < -40 || pt.y < -40 || pt.x > size.x + 40 || pt.y > size.y + 40) continue;
+    if (taken.some(t => Math.abs(t.x - pt.x) < minGapPx && Math.abs(t.y - pt.y) < minGapPx)) continue;
+    taken.push(pt);
+    out.push({ c, pt });
+  }
+  return out;
+}
+
+// What the last frame actually put on screen, so the readout below can answer a hover
+// without walking the grid again.
+let drawn = { sky: [], waves: [], wind: [] };
+
+function drawGlyphs(ctx, map, size) {
+  const i = gridIndex;
+  drawn = { sky: [], waves: [], wind: [] };
   if (gridData.wind && show.weather) {
-    const marks = [];
-    gridCells(gridData.wind).forEach(c => {
-      const wc = c.wc?.[gridIndex], t2 = c.t2?.[gridIndex];
-      if (wc == null && t2 == null) return;
-      marks.push(L.marker([c.lat, c.lon], { icon: skyIcon(wc, t2), keyboard: false })
-        .bindTooltip(`${WMO_TEXT[wc] || "sky"}${t2 == null ? "" : `, ${Math.round(t2)} °C`}`,
-                     { direction: "top" }));
-    });
-    skyLayer = L.layerGroup(marks).addTo(map);
+    for (const { c, pt } of visibleCells(map, gridData.wind, size, 46)) {
+      const wc = c.wc?.[i], t2 = c.t2?.[i];
+      if (wc == null && t2 == null) continue;
+      drawSky(ctx, pt.x, pt.y, wc, t2);
+      drawn.sky.push({ pt, wc, t2 });
+    }
   }
-
-  if (gridData.wind && show.wind) {
-    const marks = [];
-    gridCells(gridData.wind).forEach(c => {
-      const ws = c.ws?.[gridIndex], wd = c.wd?.[gridIndex];
-      if (ws == null || wd == null) return;
-      marks.push(L.marker([c.lat, c.lon], { icon: windIcon(ws, wd), keyboard: false })
-        .bindTooltip(`Wind ${ws.toFixed(1)} m/s from ${compass(wd)}`, { direction: "top" }));
-    });
-    windLayer = L.layerGroup(marks).addTo(map);
-  }
-
   if (gridData.waves && show.waves) {
-    const marks = [];
-    gridCells(gridData.waves).forEach(c => {
-      const hs = c.hs?.[gridIndex], wd = c.wd?.[gridIndex], tp = c.tp?.[gridIndex];
-      if (hs == null || wd == null) return;
-      marks.push(L.marker([c.lat, c.lon], { icon: waveIcon(hs, wd), keyboard: false })
-        .bindTooltip(`Waves ${hs.toFixed(1)} m from ${compass(wd)}${tp ? `, ${tp} s` : ""}`,
-                     { direction: "top" }));
-    });
-    waveLayer = L.layerGroup(marks).addTo(map);
+    for (const { c, pt } of visibleCells(map, gridData.waves, size, 44)) {
+      const hs = c.hs?.[i], wd = c.wd?.[i], tp = c.tp?.[i];
+      if (hs == null || wd == null) continue;
+      drawWave(ctx, pt.x, pt.y, hs, wd);
+      drawn.waves.push({ pt, hs, wd, tp });
+    }
   }
+  if (gridData.wind && show.wind) {
+    for (const { c, pt } of visibleCells(map, gridData.wind, size, 44)) {
+      const ws = c.ws?.[i], wd = c.wd?.[i];
+      if (ws == null || wd == null) continue;
+      drawWind(ctx, pt.x, pt.y, ws, wd);
+      drawn.wind.push({ pt, ws, wd });
+    }
+  }
+}
+
+// The readout. A canvas has no per-shape node to hover, so one handler on the map finds
+// the nearest glyph within reach and says what it is - the same words the old per-arrow
+// titles carried. On a phone, where nothing hovers, a tap does it.
+const glyphTip = document.createElement("div");
+glyphTip.id = "glyphtip";
+document.getElementById("map").appendChild(glyphTip);
+let tipTimer = null;
+
+function nearest(list, pt, reach) {
+  let best = null, bestD = reach * reach;
+  for (const item of list) {
+    const dx = item.pt.x - pt.x, dy = item.pt.y - pt.y, d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = item; }
+  }
+  return best;
+}
+
+function showGlyphTip(pt) {
+  const lines = [];
+  const w = nearest(drawn.wind, pt, 40);
+  if (w) lines.push(`<b>Wind</b> ${w.ws.toFixed(1)} m/s from ${compass(w.wd)} · ${beaufort(w.ws)}`);
+  const v = nearest(drawn.waves, pt, 40);
+  if (v) lines.push(`<b>Waves</b> ${v.hs.toFixed(1)} m from ${compass(v.wd)}`
+    + (v.tp != null ? `, ${Math.round(v.tp)} s apart` : ""));
+  const s = nearest(drawn.sky, pt, 46);
+  if (s && (s.wc != null || s.t2 != null)) {
+    lines.push(`<b>Sky</b> ${WMO_TEXT[s.wc] || "–"}`
+      + (s.t2 != null ? ` · ${Math.round(s.t2)}°C` : ""));
+  }
+  if (!lines.length) { glyphTip.classList.remove("show"); return; }
+  const anchor = (w || v || s).pt;
+  glyphTip.innerHTML = lines.join("<br>");
+  glyphTip.style.left = anchor.x + "px";
+  glyphTip.style.top = (anchor.y - 16) + "px";
+  glyphTip.classList.add("show");
+}
+
+map.on("mousemove", e => { clearTimeout(tipTimer); showGlyphTip(e.containerPoint); });
+map.on("mouseout", () => glyphTip.classList.remove("show"));
+map.on("click", e => {
+  showGlyphTip(e.containerPoint);
+  clearTimeout(tipTimer);
+  tipTimer = setTimeout(() => glyphTip.classList.remove("show"), 3500);
+});
+
+function drawGrids() {
+  if (!glyphLayer) glyphLayer = new GlyphLayer().addTo(map);
+  glyphLayer.redraw();
 }
 
 function gridLabel(i) {
@@ -1091,23 +1236,46 @@ document.getElementById("nowbtn").addEventListener("click", () => {
 // looks dense when zoomed out and sparse when zoomed in. So when the map moves, the
 // page asks Open-Meteo for a grid matching what is actually on screen. The file grid
 // stays the fallback: it works offline and shows instantly.
-// Arrows are DOM nodes, and both layers are on by default, so a phone would carry 72 of
-// them through every pan. Scale the grid to the screen instead of the map.
-const VIEWPORT_CELLS = Math.min(6, Math.max(3, Math.round(Math.min(window.innerWidth, 900) / 150)));
+// The glyphs are all drawn into one canvas now (see GlyphLayer), so the old reason to keep
+// the grid small - one DOM node per arrow, repositioned on every pan - is gone. Density is
+// now set by what a reader can tell apart: a glyph stack is about 40 px wide and 50 px
+// tall, so aim for one every 64 px across and 78 px down.
+//
+// The map's shape matters as much as its size. A phone map is 356 x 471 and wants a square
+// grid; a desktop map is 1006 x 478 and wants many columns and few rows. A square grid on
+// the desktop put nine rows into 478 px and the temperatures landed on the wave heights.
+// The cap on the total is for the API - that many points go into one Open-Meteo request -
+// not for the browser, which no longer cares.
+const GLYPH_X = 64, GLYPH_Y = 78, MAX_NODES = 84;
+
+function gridShape() {
+  const size = map.getSize();
+  let cols = Math.min(14, Math.max(3, Math.round(size.x / GLYPH_X)));
+  let rows = Math.min(10, Math.max(3, Math.round(size.y / GLYPH_Y)));
+  while (cols * rows > MAX_NODES) { if (cols >= rows) cols--; else rows--; }
+  return { rows, cols };
+}
 const viewportCache = new Map();
 let viewportTimer = null, viewportLive = false;
 
-function gridFromBounds(b, n) {
-  const pad = 0.08;
-  const s = b.getSouth(), w = b.getWest(), nn = b.getNorth(), e = b.getEast();
-  const dLat = (nn - s), dLon = (e - w);
+// Spaced evenly across the screen, not evenly across latitude. Those are the same thing
+// only on a small map. Zoomed out to the whole voyage - 10 N to 62 N - Mercator stretches
+// the top of the map to twice the scale of the bottom, so an even grid of latitudes came
+// out as widely spaced rows in the tropics and rows almost touching up by Norway. The
+// density target is a pixel distance, so ask the projection for pixel positions.
+function gridFromScreen(map, rows, cols) {
+  const size = map.getSize();
+  // The floors keep the first cell clear of Leaflet's zoom control in the top-left corner,
+  // and keep the bottom row's wave height from being cut off by the edge of the map.
+  const padX = Math.max(size.x * 0.08, 52), padY = Math.max(size.y * 0.08, 44);
+  const stepX = cols > 1 ? (size.x - 2 * padX) / (cols - 1) : 0;
+  const stepY = rows > 1 ? (size.y - 2 * padY) / (rows - 1) : 0;
   const lats = [], lons = [];
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      const la = s + dLat * (pad + (1 - 2 * pad) * i / (n - 1));
-      const lo = w + dLon * (pad + (1 - 2 * pad) * j / (n - 1));
-      lats.push(Math.max(-89, Math.min(89, la)).toFixed(3));
-      lons.push((((lo + 180) % 360 + 360) % 360 - 180).toFixed(3));
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const ll = map.containerPointToLatLng([padX + j * stepX, padY + i * stepY]);
+      lats.push(Math.max(-89, Math.min(89, ll.lat)).toFixed(3));
+      lons.push((((ll.lng + 180) % 360 + 360) % 360 - 180).toFixed(3));
     }
   }
   return { lats, lons };
@@ -1141,8 +1309,8 @@ function nowIndexOf(times) {
 }
 
 async function fetchViewportGrid(kind, bounds) {
-  const n = VIEWPORT_CELLS;
-  const { lats, lons } = gridFromBounds(bounds, n);
+  const { rows, cols } = gridShape();
+  const { lats, lons } = gridFromScreen(map, rows, cols);
   const base = kind === "wind"
     ? "https://api.open-meteo.com/v1/forecast?"
     : "https://marine-api.open-meteo.com/v1/marine?";
@@ -1190,15 +1358,19 @@ async function fetchViewportGrid(kind, bounds) {
 }
 
 function boundsKey(b) {
+  const { rows, cols } = gridShape();
   return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]
-    .map(v => v.toFixed(1)).join(",");
+    .map(v => v.toFixed(1)).join(",") + `@${rows}x${cols}`;
 }
 
 async function refreshViewportGrids() {
-  if (!show.wind && !show.waves) return;
+  // The sky glyphs come out of the wind block (weather code and temperature live there),
+  // so Weather on its own is also a reason to fetch it.
+  if (!show.wind && !show.waves && !show.weather) return;
   const b = map.getBounds();
   const key = boundsKey(b);
-  const wanted = [["wind", show.wind], ["waves", show.waves]].filter(([, on]) => on);
+  const wanted = [["wind", show.wind || show.weather], ["waves", show.waves]]
+    .filter(([, on]) => on);
 
   for (const [kind] of wanted) {
     const cacheKey = kind + "|" + key;

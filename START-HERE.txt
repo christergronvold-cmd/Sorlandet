@@ -298,6 +298,31 @@ Hours with no AIS position - a silence longer than three hours - are simply
 absent, and the panel says so. Drawing a line through a two-day gap in
 mid-Atlantic would be an invention, not a position.
 
+THE WEATHER MAP IS DENSER NOW
+-----------------------------
+On a phone the wind and wave grid had thinned out to 3 x 3 - nine arrows for a
+whole screen, which tells you nothing about a weather system. That was there
+for speed: every arrow was a separate little drawing the browser had to move
+every time you dragged the map, so more arrows meant a slower page.
+
+They are now all painted onto one single picture instead, redrawn once per
+frame rather than one at a time. Eighty arrows now cost about what four used
+to, so the number of them is set by what you can actually tell apart on the
+screen: a phone gets 6 x 6, a laptop 6 x 14. That is 72 glyphs on a phone
+where there were 18, and it is faster than before, not slower.
+
+Two smaller things came with it. The arrows are spaced evenly across the
+SCREEN rather than evenly by latitude, which matters when you zoom out to the
+whole voyage - the map stretches the north, so an even set of latitudes came
+out bunched up near Norway and spread out near the equator. And each grid
+point now gives its three glyphs their own corner - sky and temperature above,
+wind left, waves right - because at this spacing they were sitting on top of
+each other.
+
+Hover an arrow and you get the numbers in words: wind speed and Beaufort
+force, wave height and period, sky and temperature. On a phone, tap it.
+
+
 WHY SOURCE 1 CHANGES THINGS
 ---------------------------
 It is a rolling window, not a live stream. So a run that starts within two days
