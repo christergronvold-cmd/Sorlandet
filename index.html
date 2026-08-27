@@ -394,8 +394,14 @@ function milestones(points, ports, todayISO, sogFrom) {
     // ...and only from the era in which the track records where a speed came from. Points
     // older than that were written before the distinction existed and cannot be classified
     // now, because the source was never stored. An unknown number is not a record.
+    //
+    // No stamp at all means the job has not yet run the code that makes the distinction, so
+    // nothing in the file is known to be a reported speed - and then there is no record to
+    // show. That is deliberately the strict way round: this page gets shared with other
+    // families who can check it against MarineTraffic, so a missing line costs nothing and
+    // a wrong number costs the page its credibility.
     if (points[i].sog && !points[i].d && points[i].sog > top.kn &&
-        (!sogFrom || points[i].t >= sogFrom)) {
+        sogFrom && points[i].t >= sogFrom) {
       top = { kn: points[i].sog, t: points[i].t };
     }
     // best run in any rolling 24 hours
@@ -587,7 +593,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "0dda15db6e";
+const BUILD = "362a72cb0a";
 
 async function checkForNewBuild() {
   try {
