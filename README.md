@@ -18,6 +18,8 @@ data/waves.json               wave forecast grid around the ship  <- written by 
 data/history.json             one row per day: strongest wind, highest wave  <- written by the script
 data/wake.json                hour by hour: where she was and the weather there  <- written by the script
 data/events.json              what changed: sail or engine, destination, ETA  <- written by the script
+data/course.json              the fastest sailing course and its tacks  <- written by the script
+scripts/sailrouter.py         the polar diagram and the isochrone router
 share-qr.svg                  QR code for the page address
 scripts/make_qr.py            regenerates share-qr.svg if the address changes
 scripts/update.py             fetches AIS position + weather
@@ -433,6 +435,52 @@ computable check - lightness band, chroma floor, CVD separation, contrast - in b
 
 **Share** shows a QR code for the page, a copy-link button and a ready-made message for a
 parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url>`.
+
+## The course the wind would make fastest
+
+The dashed route to the next port assumes she closes on it steadily. She cannot: a
+full-rigged ship makes no progress inside about 58 degrees of the true wind, so on a
+headwind leg she has to beat, and where the tacks fall depends entirely on the forecast.
+
+`scripts/sailrouter.py` works that out by **isochrone routing**. From her position it fans
+out across 36 headings, advances each by three hours at the speed her sails would give in
+the wind forecast for that place and hour, keeps only the best position in each of 90
+bearing sectors, and repeats. The frontier after n steps is everywhere she could be in n
+steps; the first to reach the port carries the fastest route back with it. Land comes from
+the same packed bitmap the port waypoints use.
+
+One Open-Meteo call covers the whole box for the whole passage - 40 to 90 nodes, 3-hourly -
+and the wind between nodes is interpolated, with directions summed as vectors so that 350°
+and 10° average to 0° rather than to 180°. On the Lerwick leg the whole thing takes **0.2
+seconds**; on the 1,320 nm Cape Verde to Brazil crossing, 0.6.
+
+### The polar is an estimate
+
+Sørlandet's real polars are not published. The table in `sailrouter.py` is built from what
+is known about her - 64 m, 1,236 m² of sail, cruising around 5-8 knots, best runs in low
+double figures - and from how square riggers behave: useless close to the wind, fastest on
+a broad reach at 110-150°. The routes say "this is where the wind would push a ship like
+her", not "this is what the master will do".
+
+Two things fall out of it that are worth seeing, and both are emergent rather than coded:
+
+* **Dead upwind she beats.** 300 nm straight into a 16-knot wind: 186 hours and 35 tacks,
+  using only 60° and 70° off the wind. That is exactly the time a perfect beat at best VMG
+  would take, which is the check that the router is not cheating.
+* **Dead downwind she gybes.** She does not run square before it, because 153° makes better
+  progress than 180° does. 300 nm downwind: 45 hours and 3 gybes. Nobody told it to do
+  that; it comes out of the polar.
+
+### The number that actually explains the voyage
+
+The card compares the fastest passage against what the plan allows. For Kristiansand to
+Lerwick that is roughly **39 hours against 264** - nine and a half days in hand. That single
+comparison explains what you see on the map: they are not making for Shetland, they are
+sailing a school ship around the North Sea with a fortnight to do it in. On a leg where the
+two numbers converge, she is on passage and the course estimate is worth watching.
+
+Turn on **Course** above the map. A ring marks every tack, with the wind angle and which
+side it is on. It is recomputed from her current position on every run.
 
 ## The event log
 

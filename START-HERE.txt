@@ -121,6 +121,28 @@ Then the round recalculates the weather and waves along the route she is
 actually likely to sail, and pushes it all to the repository. The page picks it
 up on its own.
 
+ESTIMATED COURSE
+----------------
+New button above the map: Course. It shows where the wind forecast would push
+her if she sailed for speed - not the drawn line to the port, but a beat with
+the tacks worked out, because a full-rigged ship cannot point within about 58
+degrees of the wind. A ring marks every tack. Recomputed from her actual
+position on every run.
+
+The card under it gives the number that explains the voyage:
+
+  Fastest passage    about 39 h to Lerwick
+  The plan allows    264 h
+  Time in hand       9.5 days
+
+That is why she wanders. They are not making for Shetland - they are sailing a
+school ship around the North Sea with a fortnight to do it in. When those two
+numbers get close, she is on passage and the estimate is worth watching.
+
+The polar diagram behind it is an estimate: her real one is not published, so
+it is built from her dimensions and sail area plus how square riggers behave.
+It says where the wind would push a ship like her, not what the master will do.
+
 WHAT SHE REPORTS ABOUT HERSELF
 -----------------------------
 New card: Event log. Ordinary AIS carries two things besides position - the

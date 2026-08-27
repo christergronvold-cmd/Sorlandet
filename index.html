@@ -158,6 +158,7 @@
     <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
     <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
     <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
+    <button id="coursetoggle" title="The course the wind would make fastest, and where she would tack">Course</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
     <input type="range" id="windtime" min="0" max="0" value="0" step="1">
@@ -394,7 +395,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "47c42edd91";
+const BUILD = "0b47cdd082";
 
 async function checkForNewBuild() {
   try {
@@ -469,7 +470,7 @@ const scaleColor = (v, table) => {
 
 let windLayer = null, waveLayer = null, skyLayer = null;
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true, weather: false };
+let gridIndex = 0, show = { wind: true, waves: true, weather: false, course: false };
 
 function windIcon(ws, wd) {
   const len = Math.min(30, 12 + ws * 1.15);
@@ -528,6 +529,32 @@ function skyIcon(code, temp) {
           >${Math.round(temp)}\u00B0</div>`}
       </div>`,
     iconSize: [40, 40], iconAnchor: [20, 46]
+  });
+}
+
+let courseLayers = [];
+
+function drawCourse() {
+  courseLayers.forEach(l => map.removeLayer(l));
+  courseLayers = [];
+  const c = window.__course;
+  if (!show.course || !c || !(c.points || []).length) return;
+
+  const line = c.points.map(p => [p.lat, p.lon]);
+  courseLayers.push(L.polyline(line, {
+    color: "#7a3fb8", weight: 3, opacity: .9
+  }).bindTooltip(
+    `Fastest sailing course to ${c.to}: ${Math.round(c.hours)} h, ` +
+    `${Math.round(c.sailed_nm)} nm through the water`, { sticky: true }).addTo(map));
+
+  (c.tacks || []).forEach(i => {
+    const p = c.points[i];
+    if (!p) return;
+    courseLayers.push(L.circleMarker([p.lat, p.lon], {
+      radius: 5, color: "#7a3fb8", weight: 2.5, fillColor: "var(--panel)", fillOpacity: 1
+    }).bindTooltip(
+      `Tack after ${Math.round(p.hours)} h<br>${N(p.tws, 0)} kn at ${Math.abs(p.twa)}° ` +
+      `${p.twa < 0 ? "to port" : "to starboard"}`, { direction: "top" }).addTo(map));
   });
 }
 
@@ -608,11 +635,13 @@ document.getElementById("windtime").addEventListener("input", e => {
   drawRewind();
 });
 [["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"],
- ["weathertoggle", "weather", "Weather"]].forEach(([id, key, label]) => {
+ ["weathertoggle", "weather", "Weather"],
+ ["coursetoggle", "course", "Course"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
     show[key] = !show[key];
     e.target.classList.toggle("on", show[key]);
     e.target.textContent = show[key] ? `${label} ✓` : label;
+    if (key === "course") { drawCourse(); return; }
     drawGrids();
     if (show[key]) refreshViewportGrids();
   });
@@ -1074,7 +1103,7 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile, eventFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, eventFile, courseFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -1083,15 +1112,17 @@ async function load() {
     fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] })),
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/events.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/events.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/course.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, eventFile);
+  render(latest, track, plan, history, ahead, wakeFile, eventFile, courseFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
+  drawCourse();
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile, courseFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -1117,6 +1148,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // lies still, not distance sailed.
   window.__track = track;
   window.__ahead = ahead;
+  window.__course = courseFile;
   wake = wakeFile || wake;
   const tp = track.points || [];
   let sailed = 0;
@@ -1403,6 +1435,31 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`) : "";
 
+  // ---- the course the wind would make fastest
+  let courseCard = "";
+  const c = courseFile;
+  if (c && (c.points || []).length > 1) {
+    const spare = (c.plan_hours != null && c.reached) ? c.plan_hours - c.hours : null;
+    const detour = c.direct_nm ? (c.sailed_nm / c.direct_nm - 1) * 100 : null;
+    courseCard = wideCard(`Course the wind would make fastest`, `
+      <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
+        Where the forecast would push a ship that cannot point within 58° of the wind.
+        Turn on <b>Course</b> above the map to see it, with a ring at every tack.
+      </div>
+      ${row("Fastest passage", c.reached
+        ? `${Math.round(c.hours)} h · ${Math.round(c.hours / 24 * 10) / 10} days`
+        : `more than ${Math.round(c.hours)} h — beyond the forecast`)}
+      ${c.plan_hours != null ? row("The plan allows",
+        `${Math.round(c.plan_hours)} h · ${Math.round(c.plan_hours / 24 * 10) / 10} days`) : ""}
+      ${spare != null && spare > 6 ? row("Time in hand",
+        `<b>${Math.round(spare / 24 * 10) / 10} days</b> — expect drills and standing off`) : ""}
+      ${spare != null && spare <= 6 ? row("Time in hand", "little — this one is a passage") : ""}
+      ${row("Through the water", `${Math.round(c.sailed_nm)} nm` +
+        (detour != null && detour > 3 ? ` · ${Math.round(detour)}% more than the direct line` : ""))}
+      ${row("Tacks", `${(c.tacks || []).length}`)}
+      ${c.wind_kn ? row("Wind on the way", `${c.wind_kn.min}–${c.wind_kn.max} knots`) : ""}`);
+  }
+
   // ---- event log, derived from the ship's own AIS fields
   const EVENT_ICON = { nav: "\u2693", destination: "\u{1F9ED}", eta: "\u{1F551}",
                        eta_text: "\u{1F551}", draught_m: "\u{1F4CF}", coverage: "\u{1F4E1}" };
@@ -1468,6 +1525,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ${row("Data updated", ago(d.updated_utc))}`),
 
     progressCard,
+    courseCard,
     logCard,
     eventCard,
     chartsCard,

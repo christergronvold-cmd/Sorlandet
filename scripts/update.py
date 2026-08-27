@@ -756,6 +756,7 @@ SEAGRID_META = DATA / "seagrid.json"
 AHEAD = DATA / "ahead.json"
 WAKE = DATA / "wake.json"
 EVENTS = DATA / "events.json"
+COURSE = DATA / "course.json"
 # Forecast points along the projected route. The ladder is trimmed to the leg, so a
 # two-day hop shows only the near steps and a two-week ocean crossing reaches as far as
 # the models do. Open-Meteo's marine model stops at 8 days, so 168 h is the ceiling.
@@ -1175,6 +1176,108 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
         print(f"  ! weather ahead failed: {exc}", file=sys.stderr)
 
 
+# --------------------------------------------------------- the course she would sail
+# The dashed route to the next port assumes she closes on it steadily. She does not: she
+# cannot point within about 58 degrees of the wind, so on a headwind leg she has to beat,
+# and where the tacks fall depends on the forecast. This works that out.
+
+COURSE_MAX_HOURS = float(os.environ.get("COURSE_MAX_HOURS", "168"))
+COURSE_STEP_H = float(os.environ.get("COURSE_STEP_H", "3"))
+
+
+def build_course(lat: float, lon: float) -> None:
+    try:
+        import sailrouter as SR
+    except ImportError as exc:
+        print(f"  ! sailrouter not importable: {exc}", file=sys.stderr)
+        return
+    try:
+        plan = read_json(DATA / "ports.json", {})
+        ports = plan.get("ports") or []
+        port = next_port(ports)
+        if not port:
+            return
+
+        start, goal = (lat, lon), (float(port["lat"]), float(port["lon"]))
+        direct = nm_between(start, goal)
+        if direct < 15:
+            write_json(COURSE, {"generated_utc": iso(now_utc()), "to": port["name"],
+                                "note": "already within 15 nm of the port", "points": []})
+            return
+
+        # She sails when she sails: if alongside, the passage starts at her departure.
+        depart = now_utc()
+        for q in ports:
+            if q.get("arrive") and q.get("depart") and q["arrive"] <= today_iso() <= q["depart"]:
+                try:
+                    depart = max(depart, parse_iso(q["depart"] + "T12:00:00Z"))
+                except Exception:
+                    pass
+                break
+
+        # How long the plan allows, for the comparison that is the interesting part.
+        plan_hours = None
+        if port.get("arrive"):
+            try:
+                plan_hours = round(
+                    (parse_iso(port["arrive"] + "T12:00:00Z") - depart).total_seconds() / 3600, 1)
+            except Exception:
+                pass
+
+        pad = max(1.5, direct / 120)
+        box = (min(start[0], goal[0]) - pad, max(start[0], goal[0]) + pad,
+               min(start[1], goal[1]) - pad, max(start[1], goal[1]) + pad)
+        horizon = int(min(COURSE_MAX_HOURS, (plan_hours or COURSE_MAX_HOURS) + 24))
+        field = SR.WindField.fetch(box, depart, horizon, get_json)
+        if not field:
+            print("  ! no wind field for the course estimate", file=sys.stderr)
+            return
+
+        sea_grid()                                # make sure the bitmap is loaded
+
+        # The land mask keeps a 6 km clearance, so her actual position in or near a
+        # harbour often falls inside it. That is a property of the mask, not a mistake
+        # about where she is: the router only ever tests positions it is proposing to
+        # sail to, and the start is exempt because she is demonstrably afloat there.
+        def is_sea(la, lo):
+            cell = _cell(la, lo)
+            return True if cell is None else _is_sea(*cell)
+
+        route = SR.isochrone_route(start, goal, depart, field, is_sea=is_sea,
+                                  step_h=COURSE_STEP_H, max_hours=horizon)
+        if not route or len(route.get("points") or []) < 2:
+            print("  ! could not work out a sailing course", file=sys.stderr)
+            return
+
+        pts = route["points"]
+        winds = [p["tws"] for p in pts if p.get("tws") is not None]
+        payload = {
+            "generated_utc": iso(now_utc()),
+            "to": port["name"],
+            "depart_utc": iso(depart),
+            "reached": bool(route.get("reached")),
+            "hours": route["hours"],
+            "plan_hours": plan_hours,
+            "direct_nm": round(direct, 1),
+            "sailed_nm": round(sum(nm_between((pts[i-1]["lat"], pts[i-1]["lon"]),
+                                              (pts[i]["lat"], pts[i]["lon"]))
+                                   for i in range(1, len(pts))), 1),
+            "tacks": route["tacks"],
+            "wind_kn": {"min": round(min(winds), 1), "max": round(max(winds), 1)} if winds else None,
+            "points": pts,
+        }
+        write_json(COURSE, payload)
+        verdict = "arrives" if route.get("reached") else "runs out of forecast"
+        extra = ""
+        if plan_hours and route.get("reached"):
+            extra = f", plan allows {plan_hours:.0f} h"
+        print(f"  -> sailing course to {port['name']}: {verdict} in {route['hours']:.0f} h"
+              f"{extra}, {len(route['tacks'])} tacks over {payload['sailed_nm']:.0f} nm "
+              f"({payload['direct_nm']:.0f} nm direct)")
+    except Exception as exc:
+        print(f"  ! course estimate failed: {exc}", file=sys.stderr)
+
+
 # ------------------------------------------------------------------ event log
 # A tracking site's "Manoeuvring" and "Destination changed" lines are not messages the
 # ship sends - they are that site's reading of two AIS fields: the navigational status in
@@ -1475,6 +1578,7 @@ def main() -> int:
     # The voyage fields ride on the newest position, having been merged there from the
     # static messages, so pass them along rather than re-deriving them.
     build_events(collected, {k: position.get(k) for k in ("destination", "eta_text", "draught_m")})
+    build_course(lat, lon)
     update_history(weather, points)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
