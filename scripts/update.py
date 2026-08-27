@@ -942,8 +942,115 @@ def _thin_route(points: list) -> list:
     return out
 
 
-def positions_ahead(route: list, speed_kn: float, hours: list, wait_h: float = 0.0) -> list:
-    """Walks along the route at the given speed and notes where she will be.
+def made_good_kn(points: list, target: tuple, window_h: float,
+                 cap_kn: float = 12.0) -> float | None:
+    """How fast she has actually been closing on the target, over the last window_h.
+
+    Not her speed through the water: a square rigger tacking makes seven knots through the
+    water and two towards where she is going. What the projection needs is the second
+    number - the rate at which the distance still to run is shrinking - and the only honest
+    place to get it is her own track.
+    """
+    if len(points) < 2:
+        return None
+    try:
+        t_end = parse_iso(points[-1]["t"])
+    except Exception:
+        return None
+    cutoff = t_end - timedelta(hours=window_h)
+    start = None
+    for q in points:
+        try:
+            if parse_iso(q["t"]) >= cutoff:
+                start = q
+                break
+        except Exception:
+            continue
+    if start is None:
+        return None
+
+    # A least-squares slope through every fix in the window, not the difference between the
+    # first and the last. Two-point arithmetic is exactly what produced the phantom 11-knot
+    # speed record: one bad fix at either end moves the answer a long way, and here it would
+    # move the whole projection with it. With fifty fixes in six hours, one outlier barely
+    # shifts the line.
+    rows = []
+    for q in points:
+        try:
+            t = parse_iso(q["t"])
+        except Exception:
+            continue
+        if t < cutoff:
+            continue
+        rows.append(((t - cutoff).total_seconds() / 3600,
+                     nm_between((q["lat"], q["lon"]), target)))
+    if len(rows) < 2:
+        return None
+    span = rows[-1][0] - rows[0][0]
+    if span < 1:
+        return None
+    n = len(rows)
+    mx = sum(x for x, _ in rows) / n
+    my = sum(y for _, y in rows) / n
+    var = sum((x - mx) ** 2 for x, _ in rows)
+    if var <= 0:
+        return None
+    slope = sum((x - mx) * (y - my) for x, y in rows) / var   # nm per hour, negative = closing
+    return min(cap_kn, -slope)
+
+
+# How quickly the pace eases from what she is doing now towards what the plan implies.
+PACE_TAU_H = float(os.environ.get("PACE_TAU_H", "18"))
+# The most this ship credibly makes good on a destination, day in day out. A ceiling on the
+# measured rate, so one strange stretch of track cannot launch the projection into orbit.
+PACE_MAX_KN = float(os.environ.get("PACE_MAX_KN", "10"))
+
+
+def pace_along(legs_nm: float, vmg_kn: float | None, plan_h: float | None,
+               cruise_kn: float, tau_h: float = PACE_TAU_H):
+    """Distance along the route at hour h, and a word for what it is based on.
+
+    Two questions were being answered with one number, and each answer ruined the other.
+    "Where is she in six hours" wants the rate she is actually making good. "When is she
+    due" wants the plan, which on the Lerwick leg allows about eleven days for two hundred
+    and fifty miles - a shade under one knot. Spreading the whole distance across the whole
+    plan, which is what this used to do, made her creep five miles in six hours while she
+    was in fact making forty. Using her observed rate for the whole passage had her
+    alongside a week early, which she certainly will not be.
+
+    So the speed eases exponentially from the observed rate towards a residual chosen so
+    that the route still lands on the day the plan says she is due. Near term it matches
+    what she is doing; far term it matches what the school has planned; and it is monotone,
+    so the ghost never sails backwards.
+    """
+    if vmg_kn is None or vmg_kn <= 0.1:
+        if plan_h and plan_h > 1:
+            rate = max(0.05, legs_nm / plan_h)
+            return (lambda h: rate * h), "plan", rate
+        rate = max(0.5, min(cruise_kn, vmg_kn or cruise_kn))
+        return (lambda h: rate * h), "cruise", rate
+
+    v0 = min(vmg_kn, cruise_kn)
+    if not plan_h or plan_h <= 1:
+        return (lambda h: v0 * h), "made good", v0
+
+    k = tau_h * (1 - math.exp(-plan_h / tau_h))
+    if plan_h - k <= 1:                        # the plan ends inside the easing window
+        return (lambda h: v0 * h), "made good", v0
+    resid = (legs_nm - v0 * k) / (plan_h - k)
+    resid = max(0.05, min(cruise_kn, resid))
+
+    def distance_at(h: float) -> float:
+        return resid * h + (v0 - resid) * tau_h * (1 - math.exp(-h / tau_h))
+
+    return distance_at, "made good easing to the plan", v0
+
+
+def positions_ahead(route: list, distance_at, hours: list, wait_h: float = 0.0) -> list:
+    """Walks along the route and notes where she will be at each hour on the ladder.
+
+    distance_at(h) gives how far along the route she is after h hours of sailing - a
+    function rather than a speed, because the pace is not constant (see pace_along).
 
     wait_h holds her at the start until she is due to sail, so a leg that begins after a
     stay in port does not have her creeping out of the harbour on day one.
@@ -952,7 +1059,7 @@ def positions_ahead(route: list, speed_kn: float, hours: list, wait_h: float = 0
     total = sum(legs)
     out = []
     for h in hours:
-        want = speed_kn * max(0.0, h - wait_h)
+        want = distance_at(max(0.0, h - wait_h))
         if want > total:                       # she arrives before this hour
             break
         run = 0.0
@@ -1159,7 +1266,8 @@ def next_port(ports: list) -> dict | None:
     return next((q for q in ports if q.get("arrive", "") > today), None)
 
 
-def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
+def build_ahead(lat: float, lon: float, speed_kn: float | None,
+                track_points: list | None = None) -> None:
     """The whole chain: route from here to the next port, then the weather on the way."""
     try:
         plan = read_json(DATA / "ports.json", {})
@@ -1172,13 +1280,28 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
             return
         legs = sum(nm_between(route[i - 1], route[i]) for i in range(1, len(route)))
 
-        # How fast to assume she covers the route. Her speed through the water is the
-        # wrong basis: a square rigger beats to windward and runs sail drills, so at
-        # 5.5 knots she would "arrive" at Lerwick in two days when the plan says eleven.
-        # The plan is the better predictor of when she is due, so pace her to it - and
-        # never faster than she can actually sail.
-        cruise = max(3.0, speed_kn or CRUISE_KN)
-        speed, basis, due_utc, sails_at = cruise, "speed", None, now_utc()
+        # How fast to assume she covers the route. Neither of the obvious answers works.
+        # Her speed through the water is far too fast - she beats to windward and runs sail
+        # drills, so at 7 knots she would "arrive" at Lerwick in a day and a half when the
+        # plan says eleven. Spreading the distance across the days until she is due, which
+        # is what this did before, is far too slow: 250 nm over 11 days is 0.9 knots, so
+        # six hours ahead put her five miles on while she was in fact making forty.
+        #
+        # What the near term actually wants is the rate she is making good on the port,
+        # measured from her own track. What the far term wants is the plan. pace_along
+        # eases from the first to the second.
+        # The ceiling is what this ship can do, not what she happens to be doing this
+        # minute. Using her current speed over the ground as the cap threw away a measured
+        # day of good progress whenever she was briefly slow.
+        cruise = PACE_MAX_KN
+        target = (port["lat"], port["lon"])
+        vmg, vmg_window = None, None
+        for window in (6, 12, 24, 48):
+            got = made_good_kn(track_points or [], target, window)
+            if got is not None and got > 0.1:
+                vmg, vmg_window = got, window
+                break
+        due_utc, sails_at = None, now_utc()
 
         # If she is alongside somewhere, the passage has not begun: the clock starts when
         # she sails, not now. Otherwise pacing a leg that starts in three weeks would
@@ -1194,40 +1317,55 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
             except Exception:
                 pass
 
+        plan_h = None
         if port.get("arrive"):
             try:
                 due = parse_iso(port["arrive"] + "T12:00:00Z")
                 passage_h = (due - sails_at).total_seconds() / 3600
                 if passage_h > 1:
-                    plan_kn = legs / passage_h
-                    if plan_kn < cruise:
-                        speed, basis, due_utc = max(0.2, plan_kn), "plan", iso(due)
+                    plan_h, due_utc = passage_h, iso(due)
             except Exception:
                 pass
+
+        distance_at, basis, near_kn = pace_along(legs, vmg, plan_h, cruise)
         wait_h = max(0.0, (sails_at - now_utc()).total_seconds() / 3600)
-        # Trim the ladder to this leg: to her own arrival at cruising speed, and never
-        # past the day the plan says she is due, nor past what the models will answer.
-        eta_h = legs / speed
-        limit = min(AHEAD_MAX_HOURS, eta_h + 12)
+
+        # When she gets there, solved from the pace itself. This has to be searched well
+        # past the forecast horizon: the Lerwick leg is eleven days and the models answer
+        # for seven, and an eta capped at the forecast horizon would have claimed she
+        # arrives four days early.
+        horizon = int(max(AHEAD_MAX_HOURS, plan_h or 0) + 48)
+        eta_h = horizon
+        for h in range(1, horizon + 1):
+            if distance_at(h) >= legs:
+                eta_h = h
+                break
+        # Trim the ladder to this leg: never past her own arrival, nor past what the
+        # weather models will answer for.
+        limit = min(AHEAD_MAX_HOURS, eta_h + wait_h + 12)
         hours = [h for h in AHEAD_LADDER if h <= limit]
         if not hours:
             hours = [AHEAD_LADDER[0]]
-        points = positions_ahead(route, speed, hours, wait_h)
+        points = positions_ahead(route, distance_at, hours, wait_h)
         ahead = fetch_ahead(points)
         write_json(AHEAD, {
             "generated_utc": iso(now_utc()),
             "to": port["name"], "country": port.get("country"),
             "distance_nm": round(legs, 1),
-            "speed_kn": round(speed, 1),
-            "pace_basis": basis,          # "plan" = spread across the days until she is due
+            "speed_kn": round(near_kn, 1),        # the rate the next few hours are drawn at
+            "vmg_kn": None if vmg is None else round(vmg, 2),
+            "vmg_window_h": vmg_window,           # measured over her last N hours
+            "pace_basis": basis,
             "due_utc": due_utc,
-            "eta_utc": iso(now_utc() + timedelta(hours=legs / speed)),
+            "eta_utc": iso(now_utc() + timedelta(hours=wait_h + eta_h)),
             "route": [[round(a, 4), round(b, 4)] for a, b in route],
             "points": ahead,
         })
-        print(f"  -> route to {port['name']}: {legs:.0f} nm at {speed:.2f} kn "
-              f"({'paced to the plan' if basis == 'plan' else 'at cruising speed'}), "
-              f"{len(ahead)} forecast points on the way")
+        vmg_note = (f"making good {vmg:.2f} kn on it over her last {vmg_window} h"
+                    if vmg is not None else "no usable made-good rate in the track")
+        print(f"  -> route to {port['name']}: {legs:.0f} nm, {vmg_note}; "
+              f"pace = {basis}; 6 h ahead is {distance_at(6):.1f} nm along, "
+              f"24 h is {distance_at(24):.1f} nm; {len(ahead)} forecast points")
     except Exception as exc:
         print(f"  ! weather ahead failed: {exc}", file=sys.stderr)
 
@@ -1679,7 +1817,7 @@ def main() -> int:
             },
         },
     )
-    build_ahead(lat, lon, position.get("sog_kn"))
+    build_ahead(lat, lon, position.get("sog_kn"), points)
     build_wake(points)
     # The voyage fields ride on the newest position, having been merged there from the
     # static messages, so pass them along rather than re-deriving them.

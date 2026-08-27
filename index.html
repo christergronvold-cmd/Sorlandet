@@ -587,7 +587,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "ed09b7e664";
+const BUILD = "0dda15db6e";
 
 async function checkForNewBuild() {
   try {
@@ -1807,6 +1807,31 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ${dayName(q.arrive)}<br><span style="color:var(--muted)">${q.country}</span></div>`;
   }).join("");
 
+  // What the dashed route is paced on, said plainly. The two numbers a reader might expect
+  // are both wrong: her speed through the water would have her alongside in a day and a
+  // half, and the plan's own average is under a knot, which had the six-hour mark five
+  // miles on while she was making forty. So it is the rate she is really closing on the
+  // port, easing towards what the plan implies - and the card says which.
+  const paceNote = a => {
+    const dueDay = a.due_utc
+      ? new Date(a.due_utc).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+      : null;
+    if (a.pace_basis === "made good easing to the plan" && a.vmg_kn) {
+      return ` · paced on how fast she is really closing on ${a.to}, ${N(a.vmg_kn)} kn over` +
+        ` her last ${a.vmg_window_h} hours, easing towards the plan${
+          dueDay ? ` that has her due ${dueDay}` : ""}`;
+    }
+    if (a.pace_basis === "made good" && a.vmg_kn) {
+      return ` · paced on how fast she is really closing on ${a.to}, ${N(a.vmg_kn)} kn over` +
+        ` her last ${a.vmg_window_h} hours`;
+    }
+    if (a.pace_basis === "plan") {
+      return ` · she is not closing on ${a.to} at the moment, so this is spread across the` +
+        ` days until she is due${dueDay ? `, ${dueDay}` : ""}`;
+    }
+    return " · at cruising speed";
+  };
+
   const aheadStrip = (ahead?.points || []).filter(pt => pt.hours > 0).map(pt => `
     <div><b class="plain">${pt.hours >= 48 ? `in ${Math.round(pt.hours / 24)} days` : `in ${pt.hours} h`}</b>
       <div class="ic">${WMO[pt.weather_code] || "🧭"}</div>
@@ -1817,12 +1842,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const aheadCard = aheadStrip ? wideCard(
     `On the way to ${ahead.to}`,
     `<div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
-       ${Math.round(ahead.distance_nm)} nm to run${
-         ahead.pace_basis === "plan" && ahead.due_utc
-           ? ` · spread across the days until she is due, ${new Date(ahead.due_utc)
-               .toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, because she
-               is not sailing direct`
-           : " · at cruising speed"} · forecast for where she will be, not where she is${
+       ${Math.round(ahead.distance_nm)} nm to run${paceNote(ahead)} · forecast for where she
+       will be, not where she is${
          (ahead.points || []).some(x => x.hours > 120)
            ? " · beyond five days it is an outlook, not a forecast" : ""}
      </div><div class="fc">${aheadStrip}</div>`) : "";
