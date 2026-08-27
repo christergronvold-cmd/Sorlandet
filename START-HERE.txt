@@ -96,7 +96,13 @@ repository.
 
 WHAT EACH RUN DOES
 ------------------
-Eleven rounds of 29 minutes. Every round now reads THREE position sources
+First a quick pass: one twenty-second pass that refreshes the weather, the
+route and the forecast straight away, committed as "Refresh". Without it a
+restarted run changes nothing on the page for 29 minutes, because the script
+spends its whole listening window before it writes anything - which looks
+exactly like a broken deploy.
+
+Then eleven rounds of 29 minutes. Every round now reads THREE position sources
 instead of two:
 
   1. The ship's own position page (new). The foundation publishes a plain

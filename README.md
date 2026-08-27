@@ -90,6 +90,19 @@ From then on it runs by itself every 20 minutes, and the track grows a little ea
 > **Tip:** open the link on a phone and choose *Add to Home Screen*. It then behaves like
 > a small app with its own icon.
 
+## Why a restart used to look like nothing happened
+
+`update.py` spends its whole listening window before it writes a file: it opens both AIS
+streams, waits, merges, and only then recalculates the weather, the route and the forecast.
+With a 29-minute window that means a restarted run changes nothing on the page for 29
+minutes - however fresh the code is. That looked exactly like a bug, twice.
+
+So each run now does a **quick pass first**: one invocation with `LISTEN_SECONDS=20`,
+committed as `Refresh`, before the long rounds begin. Twenty seconds is plenty for
+everything that does not depend on hearing her - and the ship's own feed is a rolling
+window, so even the positions are not really lost. A restart is now visible within a
+minute.
+
 ## How often it updates
 
 The ship transmits a position every few minutes while she is within reach of a shore
