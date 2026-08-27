@@ -242,6 +242,31 @@ function routeDistances(ports) {
   return cum;
 }
 
+// How far along a leg the ship has come. The old sum-of-remaining-waypoints was wrong
+// the moment she passed the first waypoint: it walked back to it and the leg came out
+// longer than the leg itself, which clamped the whole voyage to 0 %.
+// Instead: project her onto the leg's own polyline and measure to that point.
+function alongLeg(legPts, pos) {
+  let bestD = Infinity, bestAt = 0, walked = 0;
+  for (let i = 1; i < legPts.length; i++) {
+    const a = legPts[i - 1], b = legPts[i];
+    const segLen = nm(a, b);
+    // Flat approximation inside one segment - a few hundred nm at most, so the error
+    // is far below the precision this card shows.
+    const kx = Math.cos((a[0] + b[0]) / 2 * Math.PI / 180);
+    const ax = a[1] * kx, ay = a[0], bx = b[1] * kx, by = b[0];
+    const px = pos[1] * kx, py = pos[0];
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    const cx = ax + t * dx, cy = ay + t * dy;
+    const off = Math.hypot(px - cx, py - cy) * 60;   // degrees -> nautical miles
+    if (off < bestD) { bestD = off; bestAt = walked + t * segLen; }
+    walked += segLen;
+  }
+  return { covered: bestAt, legLength: walked, offRoute: bestD };
+}
+
 function dailyDistance(points) {
   const byDay = new Map();
   for (let i = 1; i < points.length; i++) {
@@ -284,7 +309,16 @@ function milestones(points, ports, todayISO) {
   if (top.t && top.kn >= 8) {
     out.push({ t: top.t, ic: "🚀", text: `Fastest logged: ${top.kn.toFixed(1)} knots` });
   }
-  ports.forEach(q => {
+  ports.forEach((q, i) => {
+    // The first port is where she sailed from, so the date that belongs in the log is
+    // the departure - not the arrival, which is only the day the crew mustered.
+    if (i === 0) {
+      if (q.depart && q.depart <= todayISO) {
+        out.push({ t: q.depart + "T12:00:00Z", ic: "⛵",
+                   text: `Departed ${q.name}, ${q.country}`, soft: true });
+      }
+      return;
+    }
     if (q.arrive <= todayISO) {
       out.push({ t: q.arrive + "T12:00:00Z", ic: "🏙️", text: `${q.name}, ${q.country}`, soft: true });
     }
@@ -861,11 +895,15 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     const total = cum[cum.length - 1];
     const k = nextPort ? ports.indexOf(nextPort) : ports.length - 1;
     let done = cum[Math.max(0, k - 1)];
-    if (nextPort && p.lat !== undefined && !waiting) {
-      const legPts = [[p.lat, p.lon], ...(nextPort.waypoints || []), [nextPort.lat, nextPort.lon]];
-      let left = 0;
-      for (let i = 1; i < legPts.length; i++) left += nm(legPts[i - 1], legPts[i]);
-      done = Math.max(done, cum[k] - left);
+    let legNote = "";
+    if (nextPort && k > 0 && p.lat !== undefined && !waiting) {
+      const legPts = [[ports[k - 1].lat, ports[k - 1].lon],
+                      ...(nextPort.waypoints || []),
+                      [nextPort.lat, nextPort.lon]];
+      const leg = alongLeg(legPts, [p.lat, p.lon]);
+      done = cum[k - 1] + Math.min(leg.covered, leg.legLength);
+      legNote = `${Math.round(leg.covered).toLocaleString("en-GB")} of ` +
+                `${Math.round(leg.legLength).toLocaleString("en-GB")} nm on this leg`;
     }
     const pct = Math.max(0, Math.min(100, (done / total) * 100));
     const firstDay = new Date(ports[0].depart + "T12:00:00Z");
@@ -875,6 +913,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     progressCard = wideCard("Voyage progress", `
       <div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>
       ${row("Along the route", `${Math.round(done).toLocaleString("en-GB")} of ${Math.round(total).toLocaleString("en-GB")} nm · ${pct < 1 ? pct.toFixed(2) : pct.toFixed(0)}%`)}
+      ${legNote ? row(`Towards ${nextPort.name}`, legNote) : ""}
       ${row("Day of the voyage", `${dayNo} of ${daysTotal}`)}
       ${row("Logged in the track", `${N(stats.distance_nm, 0)} nm over ${stats.points.toLocaleString("en-GB")} positions`)}`);
   }

@@ -288,11 +288,22 @@ watches. The time zone comes from Open-Meteo; the moon is computed locally from 
 synodic month, no API needed.
 
 **Voyage progress** measures how far along the planned route she has come, in nautical
-miles and percent, next to the distance actually logged. The whole route is about 14,700
+miles and percent, next to the distance actually logged. The whole route is 14,848
 nautical miles.
 
+It works by projecting her position onto the current leg's own polyline and measuring to
+that point - not by summing the distance still to run through the leg's waypoints. The
+latter is what the page used to do, and it broke as soon as she passed the first waypoint:
+the sum walked back east to pick it up, came out longer than the whole leg, and the card
+clamped to `0 of 14,848 nm · 0.00%` while she was already 88 nm on her way. The card also
+shows the leg on its own (`88 of 338 nm on this leg`), which is the figure that visibly
+moves day to day - the whole-voyage percentage crawls, because the voyage is long.
+
 **Ship's log** fills itself in from the track: every 1,000 nautical miles, the equator
-crossing, the best 24-hour run, the fastest speed logged, and each port reached.
+crossing, the best 24-hour run, the fastest speed logged, and each port reached. The
+first port is the exception - she sailed *from* Kristiansand, so the log shows the
+departure date (17 August) rather than the arrival date in `ports.json`, which is only
+the day the crew mustered.
 
 **Day by day** draws two small charts - distance per day from the track, and the
 strongest wind each day from `history.json`. They are deliberately two charts rather than
