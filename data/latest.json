@@ -2,44 +2,44 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-08-27T17:31:19Z",
+ "updated_utc": "2026-08-27T18:02:02Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 58.87598,
-  "lon": 5.03902,
-  "sog_kn": 5.6,
+  "lat": 58.91879,
+  "lon": 5.0541,
+  "sog_kn": 4.9,
   "cog_deg": 11.9,
-  "heading_deg": 16,
+  "heading_deg": 17,
   "nav_status": 8,
   "destination": null,
   "draught_m": null,
-  "seen_utc": "2026-08-27T17:30:23Z",
+  "seen_utc": "2026-08-27T18:01:23Z",
   "source": "barentswatch"
  },
  "weather": {
-  "fetched_utc": "2026-08-27T17:31:15Z",
+  "fetched_utc": "2026-08-27T18:01:57Z",
   "sea": {
-   "wave_height_m": 1.3,
-   "wave_direction_deg": 155,
-   "wave_period_s": 5.0,
-   "swell_height_m": 0.78,
-   "swell_period_s": 5.25,
-   "wind_wave_height_m": 0.88,
-   "sea_temp_c": 16.1,
-   "time_utc": "2026-08-27T17:30"
+   "wave_height_m": 1.24,
+   "wave_direction_deg": 161,
+   "wave_period_s": 5.1,
+   "swell_height_m": 1.1,
+   "swell_period_s": 4.5,
+   "wind_wave_height_m": 0.42,
+   "sea_temp_c": 15.8,
+   "time_utc": "2026-08-27T18:00"
   },
   "air": {
-   "temp_c": 16.4,
-   "feels_c": 13.2,
-   "wind_ms": 7.7,
-   "gust_ms": 11.0,
-   "wind_direction_deg": 159,
+   "temp_c": 16.3,
+   "feels_c": 13.4,
+   "wind_ms": 7.2,
+   "gust_ms": 9.6,
+   "wind_direction_deg": 162,
    "pressure_hpa": 1017.8,
-   "cloud_pct": 6,
+   "cloud_pct": 0,
    "precip_mm": 0.0,
    "weather_code": 0,
-   "time_utc": "2026-08-27T17:30"
+   "time_utc": "2026-08-27T18:00"
   }
  },
  "sun": {
@@ -56,8 +56,8 @@
   "daylight_hours": 14.5
  },
  "stats": {
-  "points": 906,
-  "distance_nm": 298.8,
+  "points": 918,
+  "distance_nm": 301.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
