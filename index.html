@@ -369,7 +369,7 @@ function dailyDistance(points) {
 }
 
 // Milestones worth telling the family about, worked out from the track itself.
-function milestones(points, ports, todayISO) {
+function milestones(points, ports, todayISO, sogFrom) {
   const out = [];
   if (points.length) {
     out.push({ t: points[0].t, ic: "⚓", text: "Tracking started" });
@@ -385,7 +385,19 @@ function milestones(points, ports, todayISO) {
     if ((points[i - 1].lat > 0) !== (points[i].lat > 0)) {
       out.push({ t: points[i].t, ic: "🌍", text: "Crossed the equator" });
     }
-    if (points[i].sog && points[i].sog > top.kn) top = { kn: points[i].sog, t: points[i].t };
+    // Only a speed the ship actually transmitted can be a record. Points carrying "d" have
+    // a speed worked out here from the step between two positions, and that number is not a
+    // measurement: the straight line between two fixes is the shortest path, so a ship
+    // sailing a curve reads slow, while a little receiver error over a short step reads
+    // fast. Letting those into the maximum is how the log claimed 11.1 knots when the
+    // fastest thing she ever reported was 9.6.
+    // ...and only from the era in which the track records where a speed came from. Points
+    // older than that were written before the distinction existed and cannot be classified
+    // now, because the source was never stored. An unknown number is not a record.
+    if (points[i].sog && !points[i].d && points[i].sog > top.kn &&
+        (!sogFrom || points[i].t >= sogFrom)) {
+      top = { kn: points[i].sog, t: points[i].t };
+    }
     // best run in any rolling 24 hours
     let j = i, run = 0;
     while (j > 0 && (new Date(points[i].t) - new Date(points[j - 1].t)) <= 864e5) {
@@ -398,7 +410,8 @@ function milestones(points, ports, todayISO) {
     out.push({ t: best.t, ic: "💨", text: `Best day so far: ${Math.round(best.nm)} nm in 24 hours` });
   }
   if (top.t && top.kn >= 8) {
-    out.push({ t: top.t, ic: "🚀", text: `Fastest logged: ${top.kn.toFixed(1)} knots` });
+    out.push({ t: top.t, ic: "🚀",
+               text: `Fastest speed she reported: ${top.kn.toFixed(1)} knots` });
   }
   ports.forEach((q, i) => {
     // The first port is where she sailed from, so the date that belongs in the log is
@@ -474,32 +487,107 @@ async function showVisitorCount() {
       `https://${COUNTER_CODE}.goatcounter.com/counter/TOTAL.json`, { cache: "no-store" });
     if (!r.ok) return;                          // setting off, or nothing counted yet
     const { count } = await r.json();
-    if (!count) return;
-    el.innerHTML = `<b>${count}</b> visits to this page · counted without cookies, ` +
-      `and nothing is stored in your browser · the total updates every few hours`;
+    // "0 visits to this page", read by somebody who is on the page, is a contradiction -
+    // it reads as broken rather than as new. GoatCounter caches this total for up to four
+    // hours, so a zero is exactly what the first few hours after switching it on look
+    // like. Say nothing until there is something true to say. Note that "0" is a truthy
+    // string, so this has to be parsed, not just checked for emptiness.
+    const total = parseInt(String(count == null ? "" : count).replace(/[^\d]/g, ""), 10);
+    if (!Number.isFinite(total) || total < 1) return;
+    // Sessions are switched off in GoatCounter's own settings, so this is every time the
+    // page was opened, not how many different people opened it. The link goes to about a
+    // hundred and forty families; "times opened" is the number that says whether they keep
+    // coming back, which is the interesting question. So the wording has to say that, and
+    // not "visitors", which would be a different and smaller number.
+    el.innerHTML = `<b>${count}</b> ${total === 1 ? "time" : "times"} this page has been ` +
+      `opened · counted without cookies, and nothing is stored in your browser · ` +
+      `the total updates every few hours`;
     el.hidden = false;
   } catch { /* offline, or blocked: the page is fine without it */ }
 }
 
+// Why a visit was or was not counted, on demand: add ?countcheck to the address. There is
+// no other way to find this out on a phone, where there is no console to open - and the
+// answer is usually one of a small number of things, all of them checkable from here.
+async function countCheck() {
+  const el = document.getElementById("hits");
+  if (!el) return;
+  const dnt = navigator.doNotTrack === "1";
+  const gpc = navigator.globalPrivacyControl === true;
+  let skip = null;
+  try { skip = localStorage.getItem("skipgc"); } catch { skip = "(blocked)"; }
+  // Ask the script tag whether it loaded, rather than poking at GoatCounter's internals -
+  // those are theirs to change, and "did the file arrive" is the question anyway.
+  const loaded = window.__gcState || "not started";
+  let total = "(not asked)";
+  if (COUNTER_CODE) {
+    try {
+      const r = await fetch(
+        `https://${COUNTER_CODE}.goatcounter.com/counter/TOTAL.json`, { cache: "no-store" });
+      total = r.ok ? JSON.stringify(await r.json()) : `HTTP ${r.status}`;
+    } catch (e) { total = "request failed or blocked"; }
+  }
+  const line = (k, v, bad) =>
+    `<div style="display:flex;gap:10px;justify-content:space-between;max-width:520px;` +
+    `margin:0 auto;padding:2px 0"><span>${k}</span><b style="color:${
+      bad ? "var(--warn)" : "var(--ink)"}">${v}</b></div>`;
+  el.innerHTML =
+    `<div style="text-align:left;max-width:520px;margin:0 auto">` +
+    `<b>Counter check</b>` +
+    line("site code", COUNTER_CODE || "(empty — counter off)", !COUNTER_CODE) +
+    line("Do Not Track in this browser", dnt ? "on — you are not counted" : "off", dnt) +
+    line("Global Privacy Control", gpc ? "on — you are not counted" : "off", gpc) +
+    line("counting script", loaded, loaded !== "loaded") +
+    line("you excluded yourself (skipgc)", skip ? String(skip) : "no", !!skip) +
+    line("public total says", total, /HTTP|failed/.test(total)) +
+    `<div style="margin-top:8px;line-height:1.6">If everything above is fine and the total ` +
+    `is still 0: GoatCounter caches this number for up to four hours. Your own dashboard ` +
+    `at ${COUNTER_CODE || "…"}.goatcounter.com is current, and is the one to trust.</div>` +
+    `</div>`;
+  el.hidden = false;
+}
+
+// Was this load the stale-page check reloading the page, rather than a person opening it?
+// The check records the build it is reloading towards in sessionStorage immediately before
+// navigating, so a ?v= that matches something in that list is a reload we caused ourselves.
+// It matters because sessions are off and every pageview counts: without this, every time a
+// new version is published, every reader's next look would count twice.
+function isSelfHealReload() {
+  const v = new URLSearchParams(location.search).get("v");
+  if (!v) return false;
+  try {
+    return JSON.parse(sessionStorage.getItem("selfheal") || "[]").includes(v);
+  } catch { return false; }
+}
+
 (function countVisit() {
-  if (!COUNTER_CODE) return;
+  if (!COUNTER_CODE) { window.__gcState = "off (no site code)"; return; }
   // Anyone who has asked not to be counted, isn't. Two different signals mean that.
-  if (navigator.doNotTrack === "1" || navigator.globalPrivacyControl === true) return;
-  // The stale-page check below reloads once with a ?v= on the end. Left alone, that would
-  // land as a second, different path and read as a second visitor - so pin the counted
-  // path to the page itself and let the query string be nobody's business.
+  if (navigator.doNotTrack === "1") { window.__gcState = "skipped (Do Not Track)"; return; }
+  if (navigator.globalPrivacyControl === true) {
+    window.__gcState = "skipped (Global Privacy Control)"; return;
+  }
+  if (isSelfHealReload()) {
+    window.__gcState = "skipped (our own reload for a new version)"; return;
+  }
+  // The stale-page check reloads with a ?v= on the end. Even for the loads we do count,
+  // pin the counted path to the page itself so the query string never splits the total
+  // across several near-identical rows.
   window.goatcounter = { path: location.pathname };
   const tag = document.createElement("script");
   tag.async = true;
   tag.dataset.goatcounter = `https://${COUNTER_CODE}.goatcounter.com/count`;
   tag.src = "https://gc.zgo.at/count.js";
+  window.__gcState = "requested";
+  tag.onload = () => { window.__gcState = "loaded"; };
+  tag.onerror = () => { window.__gcState = "blocked (ad blocker or network)"; };
   document.head.appendChild(tag);
 })();
 
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "c7c5b46834";
+const BUILD = "ed09b7e664";
 
 async function checkForNewBuild() {
   try {
@@ -509,19 +597,27 @@ async function checkForNewBuild() {
     if (!served || served[1] === BUILD) return;
 
     // Reload through a fresh URL, because reload() alone may be served the same cached
-    // copy. Once per session, so a misconfigured cache can never spin.
-    if (!sessionStorage.getItem("selfheal")) {
-      sessionStorage.setItem("selfheal", served[1]);
+    // copy. The guard is keyed to the build we are trying to REACH, not to the session:
+    // this check runs every five minutes, so a session guard meant the second genuine
+    // update of the day could never heal, and the page went straight to complaining at a
+    // reader whose cache was working perfectly well.
+    let tried = [];
+    try { tried = JSON.parse(sessionStorage.getItem("selfheal") || "[]"); } catch { tried = []; }
+    if (!tried.includes(served[1])) {
+      tried.push(served[1]);
+      try { sessionStorage.setItem("selfheal", JSON.stringify(tried.slice(-8))); } catch {}
       location.replace(location.pathname + "?v=" + encodeURIComponent(served[1]));
       return;
     }
-    // Already tried: say so rather than reloading again.
+    // This exact build has already failed to arrive once, so the cache really is stuck.
+    // Say only what is true: the address never changes, so there is nothing to re-add
+    // anywhere - it is one copy of one file that a browser will not let go of.
     const note = document.getElementById("note");
     if (note) {
       note.hidden = false;
-      note.innerHTML = '<b>A newer version of this page is available.</b> ' +
-        'Your browser is holding on to an old copy. Close the tab and open the link again, ' +
-        'or on a phone remove it from the home screen and re-add it.';
+      note.innerHTML = '<b>You are looking at an older version of this page.</b> ' +
+        'Your browser is serving a copy it saved earlier. Pull down to refresh, or close ' +
+        'it and open it again. The address has not changed, so there is nothing to re-add.';
     }
   } catch (e) { /* offline, or the check is blocked - the page still works */ }
 }
@@ -1038,6 +1134,7 @@ function positionAt(points, whenMs) {
     lat: a.lat + (b.lat - a.lat) * f,
     lon: a.lon + (b.lon - a.lon) * f,
     sog: f < 0.5 ? a.sog : b.sog,
+    sogDerived: !!(f < 0.5 ? a.d : b.d),
     cog: f < 0.5 ? a.cog : b.cog,
     t: new Date(whenMs).toISOString()
   };
@@ -1137,8 +1234,10 @@ function drawRewind() {
     trail.push([q.lat, q.lon]);
   }
   el("rw-sail").textContent = since >= 0.5
-    ? `${since.toFixed(1)} nm sailed since${was.sog != null ? ` · ${N(was.sog)} kn then` : ""}`
-    : (was.sog != null ? `${N(was.sog)} kn` : "");
+    ? `${since.toFixed(1)} nm sailed since${was.sog != null
+        ? ` · ${N(was.sog)} kn then${was.sogDerived ? " (from her track)" : ""}` : ""}`
+    : (was.sog != null
+        ? `${N(was.sog)} kn${was.sogDerived ? " (from her track)" : ""}` : "");
 
   el("rw-wind").textContent = w?.wind_ms != null
     ? `Wind ${N(w.wind_ms)} m/s from ${compass(w.wind_dir)}${w.gust_ms != null ? ` · gusts ${N(w.gust_ms)}` : ""}`
@@ -1502,7 +1601,9 @@ async function load() {
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   drawCourse();
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
-  showVisitorCount();
+  // ?countcheck swaps the count for a diagnosis of why it is what it is.
+  if (/(^|[?&])countcheck($|[=&])/.test(location.search)) setTimeout(countCheck, 1200);
+  else showVisitorCount();
 }
 
 function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile, courseFile, orbitFile) {
@@ -1516,7 +1617,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     p = {
       ...p,
       lat: lastPt.lat, lon: lastPt.lon,
-      sog_kn: lastPt.sog ?? null, cog_deg: lastPt.cog ?? null, heading_deg: null,
+      sog_kn: lastPt.sog ?? null, sog_derived: !!lastPt.d,
+      cog_deg: lastPt.cog ?? null, heading_deg: null,
       seen_utc: lastPt.t,
       source: p.source || "track",
     };
@@ -1803,7 +1905,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   }
 
   // ---- ship's log
-  const marks = milestones(track.points || [], ports, todayISO);
+  const marks = milestones(track.points || [], ports, todayISO,
+                           track.sog_provenance_from);
   const logCard = marks.length ? wideCard("Ship's log", `<ul class="log">${
     marks.map(m => `<li><time>${new Date(m.t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</time>
       <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${m.text}</span></li>`).join("")
@@ -1989,7 +2092,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     card("Position", waiting ? row("Status", "no AIS message yet") : `
       <div class="big">${dms(p.lat, "lat")}<br>${dms(p.lon, "lon")}</div>
       ${row("Last seen", fmtTime(p.seen_utc))}
-      ${row("Speed", `${N(p.sog_kn)} knots`)}
+      ${row("Speed", `${N(p.sog_kn)} knots${p.sog_derived ? ' <span title="This position came from a feed that sends no speed, so it is worked out from the step between two fixes - a curve reads low.">(worked out from her track)</span>' : ""}`)}
       ${row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`)}
       ${row("Heard by", SOURCES[p.source] || p.source || "unknown")}
       ${p.destination ? row("Reported destination", p.destination) : ""}`),

@@ -50,6 +50,29 @@ THIN_RULES = [(7, 2), (30, 30), (120, 120), (10000, 360)]  # (days old, minutes 
 MIN_MOVE_NM = float(os.environ.get("MIN_MOVE_NM", "0.15"))
 MIN_GAP_MIN = float(os.environ.get("MIN_GAP_MIN", "8"))
 
+# AIS reports speed over ground in tenths of a knot, and 1023 (102.3 kn) means "not
+# available". Some receivers pass that straight through, and a few emit other junk. None of
+# it is a speed, and any of it becomes a permanent record on a page that keeps a maximum.
+SOG_MAX_PLAUSIBLE = float(os.environ.get("SOG_MAX_PLAUSIBLE", "20"))
+# The ship's own feed carries positions only, so speed there has to be worked out from the
+# step between two fixes. Over a short step that number is mostly noise: the chord between
+# two positions is the shortest path, so a curve reads low, while a metre or two of receiver
+# error divided by thirty seconds reads high. Two minutes is the shortest step worth using.
+MIN_DERIVE_SEC = float(os.environ.get("MIN_DERIVE_SEC", "120"))
+
+
+def clean_sog(value) -> float | None:
+    """A transmitted speed, or None if what arrived cannot be one."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    if v < 0 or v >= SOG_MAX_PLAUSIBLE:
+        return None
+    return v
+
 # How far back the rewind slider can reach. Open-Meteo serves past hours from the same
 # endpoints through past_days, so this needs no separate historical API and no key.
 WAKE_HOURS = int(os.environ.get("WAKE_HOURS", "48"))
@@ -175,23 +198,31 @@ def fetch_from_foundation() -> list[dict]:
 
     fixes.sort(key=lambda f: f["seen_utc"])
 
-    # Speed and course from the step between neighbours, so the page still has both.
+    # Speed and course from the step between neighbours, so the page still has both. This is
+    # geometry, not something the ship said, and it is marked as such: a straight line
+    # between two fixes is the shortest path, so a ship sailing a curve always reads slower
+    # than she was going, while receiver error over a short step reads faster. Downstream
+    # must never let one of these set a speed record - see `derived` below.
+    derived = 0
     for i in range(1, len(fixes)):
         a, b = fixes[i - 1], fixes[i]
         try:
-            hours = (parse_iso(b["seen_utc"]) - parse_iso(a["seen_utc"])).total_seconds() / 3600
+            seconds = (parse_iso(b["seen_utc"]) - parse_iso(a["seen_utc"])).total_seconds()
         except Exception:
             continue
-        if not 0 < hours <= 3:
+        if not MIN_DERIVE_SEC <= seconds <= 3 * 3600:
             continue
         dist = nm_between((a["lat"], a["lon"]), (b["lat"], b["lon"]))
-        speed = dist / hours
-        if speed <= 25:
+        speed = dist / (seconds / 3600)
+        if speed < SOG_MAX_PLAUSIBLE:
             b["sog_kn"] = round(speed, 1)
             b["cog_deg"] = round(bearing((a["lat"], a["lon"]), (b["lat"], b["lon"])))
+            b["sog_derived"] = True
+            derived += 1
 
     if fixes:
-        print(f"  -> foundation feed: {len(fixes)} positions, newest {fixes[-1]['seen_utc']}")
+        print(f"  -> foundation feed: {len(fixes)} positions, newest {fixes[-1]['seen_utc']}"
+              f"; speed worked out for {derived} of them (marked as computed, not reported)")
     return fixes
 
 
@@ -283,7 +314,7 @@ def fetch_position_from_aisstream(api_key: str) -> tuple[dict | None, list[dict]
                 collected[seen] = {
                     "lat": round(float(lat), 5),
                     "lon": round(float(lon), 5),
-                    "sog_kn": body.get("Sog"),
+                    "sog_kn": clean_sog(body.get("Sog")),
                     "cog_deg": body.get("Cog"),
                     "heading_deg": None if body.get("TrueHeading") in (511, None) else body.get("TrueHeading"),
                     "nav_status": body.get("NavigationalStatus"),
@@ -352,7 +383,7 @@ def _bw_point(msg: dict) -> dict | None:
     return {
         "lat": round(float(lat), 5),
         "lon": round(float(lon), 5),
-        "sog_kn": msg.get("speedOverGround"),
+        "sog_kn": clean_sog(msg.get("speedOverGround")),
         "cog_deg": msg.get("courseOverGround"),
         "heading_deg": None if msg.get("trueHeading") in (511, None) else msg.get("trueHeading"),
         "nav_status": msg.get("navigationalStatus"),
@@ -1564,6 +1595,13 @@ def main() -> int:
             entry = {"t": iso(when), "lat": round(lat_i, 5), "lon": round(lon_i, 5),
                      "sog": None if sog_v is None else round(float(sog_v), 1),
                      "cog": None if cog_v is None else round(float(cog_v))}
+            # "d" means this speed was worked out from two positions rather than reported by
+            # the ship. Without it the page cannot tell the two apart, and a computed number
+            # ends up presented as a measurement - which is how the log came to claim a
+            # speed record the ship never transmitted. One letter, because every track point
+            # carries it.
+            if fix.get("sog_derived") and sog_v is not None:
+                entry["d"] = 1
             merged_pts.insert(k, (when, entry))
             stamps.insert(k, when)
             added += 1
@@ -1612,7 +1650,16 @@ def main() -> int:
         else:
             print(f"  -> no {kind} grid this run, keeping the previous one")
 
-    write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME, "points": points}, compact=True)
+    # Every point written from now on says whether its speed was reported by the ship or
+    # worked out here. Points written before that distinction existed cannot be classified
+    # after the fact - the source they came from was never stored - so the page is told the
+    # moment from which the answer is trustworthy, and refuses to call anything earlier a
+    # record. No record for a few days is better than the wrong one for a year.
+    old = read_json(TRACK, {}) or {}
+    sog_from = old.get("sog_provenance_from") or (
+        points[0]["t"] if points and any("d" in q for q in points) else iso(now_utc()))
+    write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME,
+                       "sog_provenance_from": sog_from, "points": points}, compact=True)
     write_json(
         LATEST,
         {
