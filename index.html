@@ -85,6 +85,12 @@
   .fc .ic{font-size:21px; line-height:1.5}
   footer{margin-top:22px; font-size:12.5px; color:var(--muted); line-height:1.7}
   footer a{color:var(--accent)}
+  /* The visitor count, at the very bottom. Hidden until it has a real number - a slot
+     saying "loading" forever, because the setting is off, is worse than no slot. */
+  #hits{margin:18px 0 4px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--muted); text-align:center}
+  #hits[hidden]{display:none}
+  #hits b{color:var(--ink); font-weight:650; font-variant-numeric:tabular-nums}
   .ship-marker{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
   .ghost-marker{opacity:.75}
   #rewind[hidden]{display:none}
@@ -122,20 +128,21 @@
   .log.scroll{max-height:290px; overflow-y:auto; overscroll-behavior:contain;
     scrollbar-width:thin; scrollbar-color:var(--line) transparent}
   .log.scroll li:last-child{border-bottom:none}
-  .orbit{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
-  .orbit figure{margin:0; position:relative}
-  .orbit img{width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:10px;
-    background:var(--bg); border:1px solid var(--line)}
-  .orbit figcaption{font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35}
-  .orbit figcaption b{color:var(--ink)}
-  /* Sits over cloud as often as over sea, so it carries its own dark outline. */
-  .orbit .xhair{position:absolute; left:50%; top:50%; width:46px; height:46px;
-    transform:translate(-50%,-50%); pointer-events:none}
-  .orbit .xhair::before, .orbit .xhair::after{content:""; position:absolute;
-    background:#ff5f4a; box-shadow:0 0 0 1.5px rgba(0,0,0,.75)}
-  .orbit .xhair::before{left:50%; top:0; width:2.5px; height:15px; margin-left:-1.25px}
-  .orbit .xhair::after{left:0; top:50%; width:15px; height:2.5px; margin-top:-1.25px}
   .album{display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  /* Port calls are the ones worth looking at, so they get bigger tiles. */
+  .album.wide{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  .albumh{font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+    margin:18px 0 6px; font-weight:650}
+  .albumh:first-of-type{margin-top:0}
+  /* titiler is a public demo with no promises. If the crop does not arrive, the tile says
+     so and keeps the link, rather than sitting there as a broken image icon. */
+  .album .fallback{display:none}
+  .album figure.nocrop a{display:flex; align-items:center; justify-content:center;
+    aspect-ratio:1; background:var(--bg); border:1px dashed var(--line)}
+  .album figure.nocrop .xhair{display:none}
+  .album figure.nocrop a::after{display:none}
+  .album figure.nocrop .fallback{display:block; text-align:center; font-size:12px;
+    color:var(--muted); line-height:1.5; padding:0 10px}
   .album figure{margin:0; position:relative}
   .album a{display:block; position:relative; border-radius:10px; overflow:hidden}
   .album img{width:100%; aspect-ratio:1; object-fit:cover; display:block;
@@ -150,10 +157,6 @@
   .album a::after{content:""; position:absolute; left:50%; top:50%; width:34px; height:34px;
     transform:translate(-50%,-50%); border:2px solid #ff5f4a; border-radius:50%;
     box-shadow:0 0 0 1.5px rgba(0,0,0,.55), inset 0 0 0 1.5px rgba(0,0,0,.55)}
-  .orbit figure::after{content:""; position:absolute; left:50%; top:50%; width:46px;
-    height:46px; transform:translate(-50%,-50%); border:2.5px solid #ff5f4a;
-    border-radius:50%; box-shadow:0 0 0 1.5px rgba(0,0,0,.55),
-    inset 0 0 0 1.5px rgba(0,0,0,.55); pointer-events:none}
   .log li:last-child{border-bottom:0}
   .log time{color:var(--muted); flex:0 0 74px; font-variant-numeric:tabular-nums}
   .log .ic{flex:0 0 20px; text-align:center}
@@ -181,6 +184,9 @@
     box-shadow:0 6px 28px rgba(0,0,0,.22); padding:11px 13px; font-size:13.5px;
   }
   .hint b{color:var(--accent)}
+  /* The tip floats over the bottom of the page, so give the page room to be scrolled
+     clear of it - otherwise the last line, which is now the visitor count, sits under it. */
+  body.hinting .wrap{padding-bottom:132px}
   .hint button{background:none;border:0;color:var(--muted);font:inherit;cursor:pointer;float:right;padding:0 2px}
 </style>
 </head>
@@ -234,14 +240,16 @@
     map by OpenStreetMap · satellite imagery from
     <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS/Worldview</a> · voyage plan from the A+ World Academy 2026–2027 plan, which is tentative and
     subject to change.
-    <br>The wind arrows and wave chevrons are a forecast for a 360 x 360 nautical mile box around the
-    ship, not measurements from on board. Both point the way they are travelling, and the slider steps
-    forward in 3-hour intervals.
+    <br>The wind arrows and wave chevrons are a forecast, not measurements from on board. Both point the
+    way they are travelling. The grid follows the map, so it covers whatever is on screen; when it cannot
+    be fetched it falls back to a 360 x 360 nautical mile box around the ship. The slider steps one hour
+    at a time, from two days back to three days ahead.
     <br>AIS is picked up by shore-based receivers. Far from land there can be days between positions, and
     the page then shows the last known one. This is a private family project, not an official source from
     the ship or the school.
     <span id="stamp"></span>
   </footer>
+  <p id="hits" hidden></p>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
@@ -440,10 +448,58 @@ function barChart(rows, unit, decimals, colorVar) {
 
 // ------------------------------------------------------------- staying up to date
 // GitHub Pages serves this file with Cache-Control: max-age=600, and a page added to a
+// ---------------------------------------------------------------- how many people look
+// GitHub Pages keeps no logs, so a count has to come from outside the page. GoatCounter is
+// the least invasive thing that answers "is anyone reading this": no cookies, no
+// localStorage, nothing stored in the browser at all. A visit is counted server-side by
+// hashing site + IP + User-Agent in memory for eight hours and writing only a random UUID
+// to the database - the IP and User-Agent never reach its disk.
+//
+// It is OFF until COUNTER_CODE is filled in, deliberately. This page gets shared with
+// other families, and a beacon nobody asked for should not start firing just because a
+// file was copied somewhere.
+const COUNTER_CODE = "";        // <-- your goatcounter code, e.g. "sorlandet". Empty = off.
+
+// And the count, shown at the bottom of the page for everyone. GoatCounter serves a
+// public total from the same site once "Allow adding visitor counts on your website" is
+// switched on in its settings; it is off by default there, so nothing leaks by accident.
+// The number it returns is cached for up to four hours at their end, which the caption
+// says rather than pretending it is live.
+async function showVisitorCount() {
+  if (!COUNTER_CODE) return;
+  const el = document.getElementById("hits");
+  if (!el) return;
+  try {
+    const r = await fetch(
+      `https://${COUNTER_CODE}.goatcounter.com/counter/TOTAL.json`, { cache: "no-store" });
+    if (!r.ok) return;                          // setting off, or nothing counted yet
+    const { count } = await r.json();
+    if (!count) return;
+    el.innerHTML = `<b>${count}</b> visits to this page · counted without cookies, ` +
+      `and nothing is stored in your browser · the total updates every few hours`;
+    el.hidden = false;
+  } catch { /* offline, or blocked: the page is fine without it */ }
+}
+
+(function countVisit() {
+  if (!COUNTER_CODE) return;
+  // Anyone who has asked not to be counted, isn't. Two different signals mean that.
+  if (navigator.doNotTrack === "1" || navigator.globalPrivacyControl === true) return;
+  // The stale-page check below reloads once with a ?v= on the end. Left alone, that would
+  // land as a second, different path and read as a second visitor - so pin the counted
+  // path to the page itself and let the query string be nobody's business.
+  window.goatcounter = { path: location.pathname };
+  const tag = document.createElement("script");
+  tag.async = true;
+  tag.dataset.goatcounter = `https://${COUNTER_CODE}.goatcounter.com/count`;
+  tag.src = "https://gc.zgo.at/count.js";
+  document.head.appendChild(tag);
+})();
+
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "2d0722adab";
+const BUILD = "0ceebf5932";
 
 async function checkForNewBuild() {
   try {
@@ -1446,6 +1502,7 @@ async function load() {
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   drawCourse();
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
+  showVisitorCount();
 }
 
 function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile, courseFile, orbitFile) {
@@ -1780,124 +1837,117 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`) : "";
 
-  // ---- from orbit
-  // Two things, and the first matters every day: a picture of the weather she is actually
-  // in, taken this morning, with a cross where she is. Cloud hiding the sea does not spoil
-  // it - the cloud IS the thing worth seeing, and knowing she is underneath it is the
-  // point. The third panel appears only when a satellite came close enough to show her.
-  const GIBS_WMS = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
-  function wmsPanel(lat, lon, spanDeg, date, px) {
-    const dLat = spanDeg / 2, dLon = spanDeg / 2 / Math.cos(lat * Math.PI / 180);
-    const q = new URLSearchParams({
-      SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetMap",
-      LAYERS: "VIIRS_NOAA20_CorrectedReflectance_TrueColor,Coastlines",
-      CRS: "EPSG:4326",
-      BBOX: [lat - dLat, lon - dLon, lat + dLat, lon + dLon].map(v => v.toFixed(4)).join(","),
-      WIDTH: String(px), HEIGHT: String(px), FORMAT: "image/png", TIME: date
-    });
-    return GIBS_WMS + "?" + q.toString();
-  }
+  // Sentinel-2 true colour, 10 m per pixel, cropped to a square around where she was at
+  // that scene's own timestamp. titiler does the crop and the brightness stretch
+  // server-side: over water the useful range is a sliver at the bottom of the histogram,
+  // and stretching it in the browser amplified JPEG artefacts into coloured mush.
   function cropPanel(cog, lat, lon, metres, px) {
     const dLat = metres / 2 / 111320, dLon = dLat / Math.cos(lat * Math.PI / 180);
     const bbox = [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map(v => v.toFixed(5)).join(",");
     return `https://titiler.xyz/cog/bbox/${bbox}/${px}x${px}.png` +
            `?url=${encodeURIComponent(cog)}&coord-crs=epsg:4326&rescale=4,46&resampling=nearest`;
   }
-  // Today's pass is published a few hours after the satellite crosses - measured at
-  // roughly mid-afternoon UTC for her longitude - so ask for today and let the image fall
-  // back a day if it is not there yet. Nothing is gained by assuming the worst.
-  const orbitDay = new Date().toISOString().slice(0, 10);
-  const dayBefore = d0 => new Date(new Date(d0 + "T12:00:00Z") - 864e5).toISOString().slice(0, 10);
-  window.__orbitBack = 0;
-  window.orbitFallback = img => {
-    if ((window.__orbitBack = (window.__orbitBack || 0) + 1) > 3) return;
-    const day = img.dataset.day || orbitDay;
-    const prev = dayBefore(day);
-    img.dataset.day = prev;
-    img.src = img.src.replace(/TIME=\d{4}-\d{2}-\d{2}/, "TIME=" + prev);
-    const cap = img.parentElement.querySelector("figcaption .daylabel");
-    if (cap) cap.textContent = new Date(prev + "T12:00:00Z")
-      .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+  // titiler.xyz is a public demo instance with nobody promising it will be up. If a crop
+  // fails, the tile must not sit there as a broken image: the scene is real and ESA's own
+  // viewer can still show it, so fall back to saying so and keep the link.
+  window.cropFailed = img => {
+    const fig = img.closest("figure");
+    if (!fig) return;
+    fig.classList.add("nocrop");
+    img.remove();
   };
-  const kmOf = deg => Math.round(deg * 111 / 50) * 50;
 
-  const orbitHits = (orbitFile?.hits || []).filter(h => h.cog);
-  const shot = orbitHits[0];
-  let orbitCard = "";
-  if (p.lat !== undefined && !waiting) {
-    // The job measured how far out the view has to reach to contain a coastline; without a
-    // hit on record, fall back to something sensible for where she is.
-    const wide = shot?.wide_span_deg || (Math.abs(p.lon) > 25 ? 26 : 9);
-    const near = Math.max(1.2, wide / 6.5);
-    const dayLabel = new Date(orbitDay + "T12:00:00Z")
-      .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  // ---- seen from space: every pass that photographed the patch of sea she was in
+  // Port calls are the good ones and they get their own row. Alongside she is stationary,
+  // the quay gives the eye something to measure her against, and she arrives somewhere
+  // every ten days. Out at sea she is a bright streak on empty water, which is a different
+  // and lesser pleasure - so the two are not mixed into one grid any more.
+  //
+  // When nothing has been caught, the card still appears and says so. A section that
+  // simply vanishes reads as broken; one that explains that ESA does not photograph the
+  // mid-Atlantic reads as working.
+  // Only the passes that carry a picture we can actually render. A scene whose pixels sit
+  // in a requester-pays bucket is not a row.
+  // Newest first. The job already writes them that way, but the page should not depend on
+  // the order of a file it did not write this minute.
+  const orbitHits = (orbitFile?.hits || []).filter(h => h.cog)
+    .slice().sort((a, b) => (a.t < b.t ? 1 : a.t > b.t ? -1 : 0));
 
-    let panels = `
-      <figure><img loading="lazy" alt="Her sea area from orbit" data-day="${orbitDay}"
-          onerror="orbitFallback(this)"
-          src="${wmsPanel(p.lat, p.lon, wide, orbitDay, 640)}">
-        <span class="xhair"></span>
-        <figcaption><b>${kmOf(wide).toLocaleString("en-GB")} km</b> ·
-          <span class="daylabel">${dayLabel}</span> ·
-          she is at the cross, under whatever weather you can see</figcaption></figure>
-      <figure><img loading="lazy" alt="Closer in on her position" data-day="${orbitDay}"
-          onerror="orbitFallback(this)"
-          src="${wmsPanel(p.lat, p.lon, near, orbitDay, 640)}">
-        <span class="xhair"></span>
-        <figcaption><b>${kmOf(near)} km</b> · <span class="daylabel">${dayLabel}</span> ·
-          VIIRS, 375 m per pixel — cloud, not sea, is usually what this shows</figcaption></figure>`;
+  const portAt = iso => {
+    const day = iso.slice(0, 10);
+    return (plan.ports || []).find(q => q.arrive && q.depart && q.arrive <= day && day <= q.depart);
+  };
 
-    orbitCard = wideCard("From orbit", `
-      <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
-        Today's view of the weather she is in, from NASA, with a cross on her position —
-        a single pass with its real cloud, not a cloud-free mosaic. Cloud hiding the sea
-        does not spoil it: the cloud is the thing worth seeing.
-      </div>
-      <div class="orbit">${panels}</div>`);
+  function albumTile(h, span, alt) {
+    const when = new Date(h.t);
+    const port = portAt(h.t);
+    const link = `https://browser.dataspace.copernicus.eu/?zoom=15&lat=${h.lat}&lng=${h.lon}` +
+      `&datasetId=S2_L2A_CDAS&fromTime=${h.t.slice(0, 10)}T00:00:00.000Z` +
+      `&toTime=${h.t.slice(0, 10)}T23:59:59.999Z&layerId=1_TRUE_COLOR`;
+    return `
+      <figure>
+        <a href="${link}" target="_blank" rel="noopener" title="Open it in ESA's own viewer">
+          <img loading="lazy" alt="${alt}" onerror="cropFailed(this)"
+               src="${cropPanel(h.cog, h.lat, h.lon, span, 520)}">
+          <span class="xhair"></span>
+          <span class="fallback">Crop unavailable —<br>open it at ESA</span>
+        </a>
+        <figcaption>
+          <b>${when.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</b>
+          ${when.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ·
+          ${port ? `alongside in ${port.name}` : "at sea"}<br>
+          <span style="color:var(--muted)">${span} m across · 10 m per pixel${
+            h.cloud_pct != null ? ` · ${Math.round(h.cloud_pct)} % cloud` : ""}</span>
+        </figcaption>
+      </figure>`;
   }
 
-  // ---- the album: every time a satellite was close enough to show the ship
-  // Port calls are the good ones. Alongside she is stationary, the quay gives the eye
-  // something to measure her against, and she arrives somewhere every ten days.
   let albumCard = "";
-  if (orbitHits.length) {
-    const portAt = iso => {
-      const day = iso.slice(0, 10);
-      return (plan.ports || []).find(q => q.arrive && q.depart && q.arrive <= day && day <= q.depart);
-    };
-    const tiles = orbitHits.slice(0, 24).map(h => {
-      const port = portAt(h.t);
-      // Alongside she is not going anywhere, so a tighter crop shows the berth too.
-      const span = port ? 500 : 800;
-      const when = new Date(h.t);
-      const link = `https://browser.dataspace.copernicus.eu/?zoom=15&lat=${h.lat}&lng=${h.lon}` +
-        `&datasetId=S2_L2A_CDAS&fromTime=${h.t.slice(0,10)}T00:00:00.000Z` +
-        `&toTime=${h.t.slice(0,10)}T23:59:59.999Z&layerId=1_TRUE_COLOR`;
-      return `
-        <figure>
-          <a href="${link}" target="_blank" rel="noopener" title="Open it in ESA's own viewer">
-            <img loading="lazy" alt="Satellite view of her position on ${h.t.slice(0,10)}"
-                 src="${cropPanel(h.cog, h.lat, h.lon, span, 520)}">
-            <span class="xhair"></span>
-          </a>
-          <figcaption>
-            <b>${when.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</b>
-            ${when.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ·
-            ${port ? `alongside in ${port.name}` : "at sea"}<br>
-            <span style="color:var(--muted)">${span} m across · 10 m per pixel${
-              h.cloud_pct != null ? ` · ${Math.round(h.cloud_pct)} % cloud` : ""}</span>
-          </figcaption>
-        </figure>`;
-    }).join("");
-    const ports = orbitHits.filter(h => portAt(h.t)).length;
-    albumCard = wideCard(`Seen from space · ${orbitHits.length}`, `
-      <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
-        Every pass that photographed the patch of sea she was in, at the moment she was in
-        it. She is about six pixels long, at the cross${ports ? `. ${ports} of these are port
-        calls, where she is lying still and the quay gives you something to measure her
-        against` : ""}. Tap one to open it in ESA's own viewer and zoom in yourself.
+  if (!waiting) {
+    const alongside = orbitHits.filter(h => portAt(h.t)).slice(0, 12);
+    const atSea = orbitHits.filter(h => !portAt(h.t)).slice(0, 12);
+
+    // Where the next chance is, so an empty card is a "not yet" and not a "never".
+    const nextPort = (plan.ports || []).find(q => q.arrive && q.arrive >= todayISO);
+    const nextWhen = nextPort
+      ? new Date(nextPort.arrive + "T12:00:00Z")
+          .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+      : null;
+
+    const sections = [];
+    if (alongside.length) sections.push(`
+      <h3 class="albumh">Alongside · ${alongside.length}</h3>
+      <div style="font-size:13px;color:var(--muted);margin:0 0 10px">
+        The good ones. She is lying still, and the quay beside her is a known length, so you
+        have something to measure her against.
       </div>
-      <div class="album">${tiles}</div>`);
+      <div class="album wide">${alongside.map(h =>
+        albumTile(h, 500, `Sentinel-2 view of her berth on ${h.t.slice(0, 10)}`)).join("")}</div>`);
+    if (atSea.length) sections.push(`
+      <h3 class="albumh">At sea · ${atSea.length}</h3>
+      <div style="font-size:13px;color:var(--muted);margin:0 0 10px">
+        Under way, on open water. She is the only thing out there, which is the whole
+        pleasure of it — but she is six pixels, so look for a bright streak, not a ship.
+      </div>
+      <div class="album">${atSea.map(h =>
+        albumTile(h, 800, `Sentinel-2 view of her position on ${h.t.slice(0, 10)}`)).join("")}</div>`);
+
+    const intro = sections.length
+      ? `Sentinel-2 true colour, 10 m per pixel — the finest free imagery there is, and 37
+         times finer than the weather satellites. She is about six pixels long, at the
+         cross. Tap one to open it in ESA's own viewer and zoom in yourself.`
+      : `Nothing yet. ESA photographs coasts, not the middle of the ocean, so a crossing
+         produces no passes at all — and a pass only counts here if its footprint contained
+         her at the moment the shutter opened.${nextWhen && nextPort
+           ? ` The next real chance is ${nextPort.name}, due ${nextWhen}, where she will be
+             alongside and the quay gives her scale.` : ""}`;
+
+    albumCard = wideCard(
+      sections.length ? `Seen from space · ${alongside.length + atSea.length}`
+                      : "Seen from space",
+      `<div style="font-size:13px;color:var(--muted);margin:-4px 0 ${
+        sections.length ? 14 : 0}px">${intro}</div>${sections.join("")}`);
   }
 
   // ---- event log, derived from the ship's own AIS fields
@@ -1974,7 +2024,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     progressCard,
     logCard,
     eventCard,
-    orbitCard,
     albumCard,
     chartsCard,
     aheadCard,
@@ -2017,8 +2066,14 @@ function wireSharing() {
   const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   if (standalone || window.innerWidth > 620) return;
   const hint = document.getElementById("hint");
-  setTimeout(() => { hint.style.display = "block"; }, 2500);
-  document.getElementById("hintclose").addEventListener("click", () => { hint.style.display = "none"; });
+  setTimeout(() => {
+    hint.style.display = "block";
+    document.body.classList.add("hinting");
+  }, 2500);
+  document.getElementById("hintclose").addEventListener("click", () => {
+    hint.style.display = "none";
+    document.body.classList.remove("hinting");
+  });
 })();
 
 load().catch(e => {

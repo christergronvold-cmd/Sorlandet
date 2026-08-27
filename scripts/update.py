@@ -1438,29 +1438,11 @@ def build_orbit(points: list) -> None:
                     return
             except Exception:
                 pass
-        # The wide panel must contain a coastline, or it is a square of blue. Widen it
-        # until the land mask finds land, capped: mid-Atlantic the nearest coast is a
-        # thousand miles off, and a panel that wide still says "she is between these two
-        # continents", which is the point.
-        sea_grid()
-
-        def land_span(lat: float, lon: float) -> float:
-            for span in (9.0, 16.0, 26.0, 40.0):
-                half = span / 2
-                step = span / 14
-                y = lat - half
-                while y <= lat + half:
-                    x = lon - half / max(0.25, math.cos(math.radians(lat)))
-                    while x <= lon + half / max(0.25, math.cos(math.radians(lat))):
-                        cell = _cell(y, x)
-                        if cell and not _is_sea(*cell):
-                            return span
-                        x += step
-                    y += step
-            return 40.0
-
+        # There used to be a land_span() walk here, widening a panel until the land mask
+        # found a coastline. It served the wide NASA weather panel, which is gone - the
+        # Satellite button on the map showed the same data - so the walk went with it.
         hits = orbithunter.hunt(points, position_at, iso, parse_iso,
-                                known=stored.get("hits") or [], land_span=land_span)
+                                known=stored.get("hits") or [])
         write_json(ORBIT, {"generated_utc": iso(now_utc()), "hits": hits})
         shot = [h for h in hits if h.get("cog")]
         print(f"  -> orbit: {len(hits)} passes on record, {len(shot)} with a picture we can show")

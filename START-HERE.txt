@@ -80,6 +80,48 @@ Actions -> Update position -> Run workflow -> Run workflow.
 That is the last time you have to touch it.
 
 
+STEP 5 - the visitor counter (optional, 2 minutes)
+-------------------------------------------------
+The page can show how many people have looked at it, at the very bottom. It is
+switched OFF in the file you just uploaded, and stays off until you do this -
+nothing is sent anywhere before that.
+
+  1. Go to goatcounter.com and sign up. Pick a code; say you choose
+     "sorlandet", your dashboard is then at sorlandet.goatcounter.com
+  2. In its Settings, tick "Allow adding visitor counts on your website".
+     That is what lets the number appear on your page. It is off by default
+     there so nothing leaks by accident.
+  3. In your repository open index.html, press the pencil, and find this line
+     near the top of the script (search for COUNTER_CODE):
+
+         const COUNTER_CODE = "";
+
+     Put your code between the quotes:
+
+         const COUNTER_CODE = "sorlandet";
+
+     Commit changes.
+
+That is it. Within a few minutes the bottom of the page reads something like
+"37 visits to this page". Your own dashboard at sorlandet.goatcounter.com
+shows more - which days, which countries, which pages.
+
+WHAT IT DOES AND DOES NOT DO
+It uses no cookies and stores nothing in anyone's browser. A visit is counted
+on their server by hashing site + IP + browser in memory for eight hours and
+saving only a random number - the IP and the browser string never reach their
+disk. Anyone who has "Do Not Track" switched on is not counted at all.
+
+Read the number honestly, though. "Visits" means unique browsers over an
+eight-hour window, not people. You on your phone and you on your laptop is
+two. A parent who checks in the morning and again at night is two. And the
+total on the page is cached for up to four hours at their end, so it lags a
+little; your own dashboard is current.
+
+If you would rather not have it at all, do nothing. Leaving COUNTER_CODE
+empty is a complete answer.
+
+
 HOW TO CHECK THAT IT IS RUNNING
 -------------------------------
 Actions. You should see a new "Update position" run appear every ~5 hours,
@@ -121,26 +163,46 @@ Then the round recalculates the weather and waves along the route she is
 actually likely to sail, and pushes it all to the repository. The page picks it
 up on its own.
 
-FROM ORBIT
----------
-Two things in one card, and the first is there every day:
+THE NASA CARD IS GONE
+--------------------
+There was a "From orbit" card with two NASA pictures of her weather. It is
+removed. Those images are 375 m per pixel and Sorlandet is 64 m, so she is a
+fifth of one pixel - and they will never get better, because that would have
+to come from the satellite. It was also the same data as the Satellite button
+on the map, which you can at least zoom and wind back in time.
 
-  Yesterday's picture of the weather she is in, from NASA, with a red ring
-  and cross on her position. Clouds hiding the sea do not spoil it - the
-  cloud is what is worth seeing, and knowing she is under it is the point.
-  Works anywhere on earth, every day.
+The Satellite button stays. The pictures where she is actually IN the image
+are Sentinel-2, and they have their own card below.
 
 SEEN FROM SPACE
 --------------
-A second new card: an album. Every pass that photographed the patch of sea she
-was in gets a tile, newest first, with the count in the title so you can watch
-it grow. Tap a tile to open that scene in ESA's own viewer and zoom in.
+An album, and the only section where the ship itself is in the picture:
+Sentinel-2 at 10 m per pixel, 37 times finer than the weather satellites.
+Every pass that photographed the patch of sea she was in gets a tile. Tap one
+to open that scene in ESA's own viewer and zoom in yourself.
 
-Port calls are marked as such and cropped tighter - 500 m instead of 800 -
-because alongside she is standing still and the quay gives you something to
-measure her against. Those will be most of the album: every port on the voyage
-has coverage, the ocean crossings have none, and she arrives somewhere every
-ten days.
+Two rows, and the first is the good one:
+
+  ALONGSIDE  Port calls, bigger tiles, cropped to 500 m. She is standing
+             still and the quay next to her is a known length, so you have
+             something to measure her against.
+
+  AT SEA     Under way, 800 m across. She is the only thing out there, which
+             is the whole pleasure - but she is six pixels, so look for a
+             bright streak, not a ship.
+
+Those port calls will be most of the album: every port on the voyage has
+coverage, the ocean crossings have none, and she arrives somewhere every ten
+days.
+
+If nothing has been caught yet the card still shows up and says so, and names
+the next port where there is a real chance. A card that just disappears looks
+broken; one that explains itself does not. And if the crop server is having a
+bad day, each tile says "Crop unavailable - open it at ESA" and keeps its
+link, instead of leaving you a row of broken image icons.
+
+The pictures only download when you scroll down to them, so they cost a phone
+nothing until you look.
 
 Measured, not guessed: every port on the voyage has Sentinel-2 coverage, so
 the close passes come at departures and arrivals. The ocean crossings have

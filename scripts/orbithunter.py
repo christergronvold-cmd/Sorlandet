@@ -91,7 +91,7 @@ def _tci_href(item: dict) -> str | None:
 
 
 def hunt(points: list, position_at, iso, parse_iso, days: int = 10,
-         known: list | None = None, land_span=None) -> list:
+         known: list | None = None) -> list:
     """Return the passes that covered her, newest first.
 
     position_at(points, when) must give her interpolated position or None; passing it in
@@ -163,12 +163,6 @@ def hunt(points: list, position_at, iso, parse_iso, days: int = 10,
             if not href:
                 continue                          # nothing we can show; not worth listing
             hit["cog"] = href
-
-            # How far out the wide panel has to reach before it contains a coastline. A
-            # picture of empty water tells the reader nothing about where she is; a
-            # picture with Norway and Denmark in it tells them everything.
-            if land_span:
-                hit["wide_span_deg"] = land_span(where["lat"], where["lon"])
             hits.append(hit)
             seen.add(fid)
             added += 1

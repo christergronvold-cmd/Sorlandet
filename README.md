@@ -513,36 +513,53 @@ Latencies measured against the services, not taken from their marketing:
 The newest Sentinel-2 scene near her is usually a day or so old, and that is the *revisit*
 rather than the latency: the satellite simply has not been back yet.
 
-Because today's VIIRS pass is often published by mid-afternoon, the card asks for **today**
-first and lets the image fall back a day on its own error, up to three days, relabelling
-the caption as it goes. There is nothing to gain from assuming the worst.
+## The NASA weather card was removed
 
-## From orbit
+There used to be a **From orbit** card here: two NASA panels, VIIRS at 375 m per pixel,
+centred on her with a cross on the spot. It was cut, and the reason is worth recording,
+because it was a fair question to ask of it: *does this ever get better?*
 
-Two different things share this card, and the first one matters every single day.
+It does not, and it never could. She is 64 m long. At 375 m to a pixel she is a fifth of
+one pixel - not a hard image to improve but an impossible one, because the improvement
+would have to come from the satellite. And the card was showing the same NASA data as the
+**Satellite** button already on the map, which at least you can zoom and wind back in time.
+Two sections saying the same thing, one of them worse.
 
-**Yesterday's view of her weather.** A true-colour image from NASA centred on her position,
-with a red ring and cross on it. Cloud hiding the sea does not spoil this - the cloud *is*
-the thing worth seeing, and knowing she is underneath it is the point. Two panels: the wide
-one, widened until a coastline is in frame, and a sixth of it. This works everywhere on
-earth, every day, with no dependence on anyone's acquisition plan. The marker carries its
-own dark outline because it sits over white cloud as often as over dark sea.
+What survives the question is Sentinel-2 at 10 m - 37 times finer, and the only free source
+in which the ship is present at all. So that is the only imagery section left.
 
 ## Seen from space - the album
 
-Every pass that photographed the patch of sea she was in gets a tile, newest first, and the
-count sits in the card's title so it reads as something that grows over the year. Each tile
-links to ESA's own viewer so the reader can zoom in themselves rather than trusting a crop.
+Every pass that photographed the patch of sea she was in gets a tile, and the count sits in
+the card's title so it reads as something that grows over the year. Each tile links to ESA's
+own viewer so the reader can zoom in themselves rather than trusting a crop.
 
-**Port calls are the good ones**, and the card says which are which. Alongside she is not
-going anywhere, the quay gives the eye something to measure her against, and she arrives
-somewhere every ten days or so - which, given that every port on the voyage has Sentinel-2
-coverage while the ocean crossings have none, is where most of the album will come from. A
-tile for a port call is cropped tighter, 500 m instead of 800, because a stationary ship
-against a harbour wall is worth a closer look than one somewhere in open water.
+**Port calls are the good ones, and they get their own row** - first, and with bigger
+tiles. Alongside she is not going anywhere, the quay gives the eye something to measure her
+against, and she arrives somewhere every ten days or so. Given that every port on the
+voyage has Sentinel-2 coverage while the ocean crossings have none, that row is where most
+of the album will come from over the year. A port tile is cropped tighter, 500 m instead of
+800, because a stationary ship against a harbour wall is worth a closer look. Under way she
+gets the second row and the honest warning: look for a bright streak, not a ship.
 
 Whether she is alongside is worked out in the page from the voyage plan's own arrive and
-depart dates, so it costs nothing and stays right if the plan changes.
+depart dates, so it costs nothing and stays right if the plan changes. Tiles are sorted
+newest-first in the page rather than trusting the file's order.
+
+Two failure modes are handled, because both of them look like a bug otherwise:
+
+* **Nothing caught yet.** The card still appears and explains itself - that ESA does not
+  photograph the middle of the ocean, that a pass only counts if its footprint contained
+  her at the moment the shutter opened, and when the next real chance is (the next port,
+  by name and date). A section that simply vanishes reads as broken. One that explains
+  reads as working.
+* **The crop server is down.** Every tile is cropped by `titiler.xyz`, a public demo
+  instance with nobody promising it will be up. If a crop fails the tile drops the broken
+  image, says "Crop unavailable - open it at ESA", and keeps its caption and its link. The
+  scene is still real and ESA's viewer can still show it.
+
+The tiles are `loading="lazy"`, so a phone downloads none of them until you scroll down to
+the card.
 
 ## Passes that actually looked at her
 
@@ -599,15 +616,47 @@ course and speed put her at the exposure, 3° off her heading, and it is the onl
 thing in 100 km² of sea. Three Sentinel-1 passes covered her the same two days, which is how we know radar would
 work if its pixels were reachable.
 
-The **From orbit** card shows three panels, widest first, because a blue square with a
-white speck in it means nothing without somewhere to be: the land-bearing wide view, then
-a sixth of it, then her 800 m. Each panel is a single image request - two to NASA's WMS, one to a titiler instance
-that crops the Sentinel-2 COG - so nothing is composited in the job or stored in the
-repository. A cross marks where AIS put her; she will have moved a little from it, and the
-caption says so.
+Each tile is a single image request to a titiler instance that crops the Sentinel-2 COG on
+the fly, so nothing is composited in the job or stored in the repository. The brightness
+stretch (`rescale=4,46`) happens server-side too: over water the useful range is a sliver
+at the bottom of the histogram, and stretching it in the browser amplified JPEG artefacts
+into coloured mush. A cross marks where AIS put her; she will have moved a little from it in
+the seconds either side of the shutter, and the caption gives that gap.
 
 What the card claims is careful: a satellite photographed the patch of sea she was in, at
 the moment she was in it. Whether there is a ship in those pixels, the reader can see.
+
+## Counting who looks at it
+
+GitHub Pages keeps no logs, so a visitor count has to come from outside the page. It uses
+[GoatCounter](https://www.goatcounter.com): one script tag, free, open source.
+
+**It ships switched off.** `COUNTER_CODE` is an empty string in `index.html`, and while it is
+empty the page sends nothing, injects nothing and sets no globals - not even a request that
+404s. A page that gets shared with other families should not begin beaconing because a file
+was copied somewhere, so switching it on is a deliberate one-line edit.
+
+Why this one, out of everything that counts visitors:
+
+* **No cookies, and nothing stored in the reader's browser at all** - no `localStorage`
+  either. The visit is identified server-side by hashing site + IP + User-Agent, held in
+  memory for eight hours and mapped to a random UUID. Only the UUID is written to their
+  database; the IP and the User-Agent never reach their disk.
+* **Do Not Track and Global Privacy Control are honoured** in the page itself, before the
+  script is even fetched, rather than being left to the vendor.
+* The counted path is pinned to `location.pathname`. The stale-page check reloads once with
+  a `?v=` on the end, and left alone that would land as a second, different path and read
+  as a second visitor.
+
+The number at the bottom of the page comes from GoatCounter's own public counter endpoint,
+`/counter/TOTAL.json`, which needs "Allow adding visitor counts on your website" enabled in
+its settings - off by default there. If it is off, or the answer is malformed, or the reader
+is offline, the line stays hidden rather than showing a blank or an error.
+
+**Read the number for what it is.** "Visits" means unique browsers over an eight-hour
+window, not people: one parent on a phone and a laptop is two, and a parent who looks in the
+morning and again at night is two. The on-page total is cached up to four hours their end,
+which the caption says rather than implying it is live.
 
 ## Actual satellite pictures
 
