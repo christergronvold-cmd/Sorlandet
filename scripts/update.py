@@ -77,6 +77,10 @@ def iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def today_iso() -> str:
+    return now_utc().strftime("%Y-%m-%d")
+
+
 def parse_iso(s: str) -> datetime:
     s = s.strip().replace("Z", "+00:00")
     # aisstream sometimes sends nanoseconds: 2026-08-26 10:11:12.123456789 +0000 UTC
@@ -761,7 +765,12 @@ SEAGRID_BIN = DATA / "seagrid.bin"
 SEAGRID_META = DATA / "seagrid.json"
 AHEAD = DATA / "ahead.json"
 WAKE = DATA / "wake.json"
-AHEAD_HOURS = [int(h) for h in os.environ.get("AHEAD_HOURS", "6,12,24,36,48,72").split(",")]
+# Forecast points along the projected route. The ladder is trimmed to the leg, so a
+# two-day hop shows only the near steps and a two-week ocean crossing reaches as far as
+# the models do. Open-Meteo's marine model stops at 8 days, so 168 h is the ceiling.
+AHEAD_LADDER = [int(h) for h in os.environ.get(
+    "AHEAD_HOURS", "0,6,12,24,36,48,72,96,120,144,168").split(",")]
+AHEAD_MAX_HOURS = int(os.environ.get("AHEAD_MAX_HOURS", "168"))
 CRUISE_KN = float(os.environ.get("CRUISE_KN", "5.5"))     # used when she is lying still
 
 _grid = None
@@ -885,13 +894,17 @@ def _thin_route(points: list) -> list:
     return out
 
 
-def positions_ahead(route: list, speed_kn: float, hours: list) -> list:
-    """Walks along the route at the given speed and notes where she will be."""
+def positions_ahead(route: list, speed_kn: float, hours: list, wait_h: float = 0.0) -> list:
+    """Walks along the route at the given speed and notes where she will be.
+
+    wait_h holds her at the start until she is due to sail, so a leg that begins after a
+    stay in port does not have her creeping out of the harbour on day one.
+    """
     legs = [nm_between(route[i - 1], route[i]) for i in range(1, len(route))]
     total = sum(legs)
     out = []
     for h in hours:
-        want = speed_kn * h
+        want = speed_kn * max(0.0, h - wait_h)
         if want > total:                       # she arrives before this hour
             break
         run = 0.0
@@ -914,15 +927,17 @@ def fetch_ahead(points: list) -> list:
     lats = ",".join(f"{p['lat']:.4f}" for p in points)
     lons = ",".join(f"{p['lon']:.4f}" for p in points)
     base_hour = now_utc().replace(minute=0, second=0, microsecond=0)
+    furthest = max(p["hours"] for p in points)
+    days_needed = max(2, min(16, furthest // 24 + 2))
 
     air = get_json("https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
         "latitude": lats, "longitude": lons,
         "hourly": "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,weather_code",
-        "wind_speed_unit": "ms", "forecast_days": "5", "timezone": "UTC"}), timeout=45)
+        "wind_speed_unit": "ms", "forecast_days": str(days_needed), "timezone": "UTC"}), timeout=45)
     sea = get_json("https://marine-api.open-meteo.com/v1/marine?" + urllib.parse.urlencode({
         "latitude": lats, "longitude": lons,
         "hourly": "wave_height,wave_direction,wave_period",
-        "forecast_days": "5", "timezone": "UTC"}), timeout=45)
+        "forecast_days": str(min(8, days_needed)), "timezone": "UTC"}), timeout=45)
 
     def block(data, k):
         if not data:
@@ -1107,20 +1122,63 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
         if not route or len(route) < 2:
             print("  ! could not route to the next port", file=sys.stderr)
             return
-        speed = max(3.0, speed_kn or CRUISE_KN)
         legs = sum(nm_between(route[i - 1], route[i]) for i in range(1, len(route)))
-        points = positions_ahead(route, speed, AHEAD_HOURS)
+
+        # How fast to assume she covers the route. Her speed through the water is the
+        # wrong basis: a square rigger beats to windward and runs sail drills, so at
+        # 5.5 knots she would "arrive" at Lerwick in two days when the plan says eleven.
+        # The plan is the better predictor of when she is due, so pace her to it - and
+        # never faster than she can actually sail.
+        cruise = max(3.0, speed_kn or CRUISE_KN)
+        speed, basis, due_utc, sails_at = cruise, "speed", None, now_utc()
+
+        # If she is alongside somewhere, the passage has not begun: the clock starts when
+        # she sails, not now. Otherwise pacing a leg that starts in three weeks would
+        # spread it over the weeks in port too and creep along at half a knot.
+        in_port = None
+        for q in (plan.get("ports") or []):
+            if q.get("arrive") and q.get("depart") and q["arrive"] <= today_iso() <= q["depart"]:
+                in_port = q
+                break
+        if in_port:
+            try:
+                sails_at = max(now_utc(), parse_iso(in_port["depart"] + "T12:00:00Z"))
+            except Exception:
+                pass
+
+        if port.get("arrive"):
+            try:
+                due = parse_iso(port["arrive"] + "T12:00:00Z")
+                passage_h = (due - sails_at).total_seconds() / 3600
+                if passage_h > 1:
+                    plan_kn = legs / passage_h
+                    if plan_kn < cruise:
+                        speed, basis, due_utc = max(0.2, plan_kn), "plan", iso(due)
+            except Exception:
+                pass
+        wait_h = max(0.0, (sails_at - now_utc()).total_seconds() / 3600)
+        # Trim the ladder to this leg: to her own arrival at cruising speed, and never
+        # past the day the plan says she is due, nor past what the models will answer.
+        eta_h = legs / speed
+        limit = min(AHEAD_MAX_HOURS, eta_h + 12)
+        hours = [h for h in AHEAD_LADDER if h <= limit]
+        if not hours:
+            hours = [AHEAD_LADDER[0]]
+        points = positions_ahead(route, speed, hours, wait_h)
         ahead = fetch_ahead(points)
         write_json(AHEAD, {
             "generated_utc": iso(now_utc()),
             "to": port["name"], "country": port.get("country"),
             "distance_nm": round(legs, 1),
             "speed_kn": round(speed, 1),
+            "pace_basis": basis,          # "plan" = spread across the days until she is due
+            "due_utc": due_utc,
             "eta_utc": iso(now_utc() + timedelta(hours=legs / speed)),
             "route": [[round(a, 4), round(b, 4)] for a, b in route],
             "points": ahead,
         })
-        print(f"  -> route to {port['name']}: {legs:.0f} nm at {speed:.1f} kn, "
+        print(f"  -> route to {port['name']}: {legs:.0f} nm at {speed:.2f} kn "
+              f"({'paced to the plan' if basis == 'plan' else 'at cruising speed'}), "
               f"{len(ahead)} forecast points on the way")
     except Exception as exc:
         print(f"  ! weather ahead failed: {exc}", file=sys.stderr)

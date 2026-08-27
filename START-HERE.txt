@@ -115,6 +115,17 @@ Then the round recalculates the weather and waves along the route she is
 actually likely to sail, and pushes it all to the repository. The page picks it
 up on its own.
 
+IF THE PAGE LOOKS OLD
+--------------------
+GitHub serves the page with a 10-minute cache, and a page added to a phone's
+home screen can hold on to it far longer. So the page now checks its own
+source for a newer build and reloads itself once, quietly. If it still cannot
+get a fresh copy it says so at the top instead of leaving you looking at last
+week's version.
+
+Run scripts/stamp_build.py after editing index.html by hand - it writes the
+build id the check compares against.
+
 WINDING TIME BACK
 -----------------
 The slider under the map now starts 48 hours ago, not at now. Drag it left

@@ -282,6 +282,33 @@ anemometer on deck will read differently, especially in gusts. Grid size and hor
 be changed with the environment variables `GRID_CELLS`, `GRID_SPAN_NM`, `GRID_HOURS` and
 `GRID_STEP`.
 
+## How far ahead she is assumed to have got
+
+Her speed through the water is the wrong basis for guessing where she will be. A square
+rigger beats to windward and runs sail drills: at the 5.5 knots showing on her log she
+would "arrive" at Lerwick in two days, when the plan says eleven. The page used to state
+that as an arrival date, which read as a prediction and was not one.
+
+So the projection is paced to the **plan** instead:
+
+* the passage clock runs from when she sails to the date the plan says she is due - if she
+  is alongside somewhere, it starts at her departure, not today, or a leg beginning in
+  three weeks would be spread across the weeks in port as well
+* the implied pace is the route length over that passage, and never more than she can
+  actually sail - if she is behind schedule, cruising speed is the ceiling
+* `ahead.json` records which basis was used, so the card can say so rather than leaving
+  the reader to guess
+
+For the leg to Lerwick that works out at about 0.9 knots along the route: not her speed
+through the water, but the rate at which she is actually closing on Shetland while sailing
+back and forth. The forecast ladder reaches 6, 12, 24, 36, 48, 72, 96, 120, 144 and 168
+hours out, trimmed to the leg, and stops at seven days because Open-Meteo's marine model
+does.
+
+Two things were removed for the same reason: **At current speed** in the Voyage plan card,
+and the exact predicted arrival hour in the rewind panel. The distance still to run is
+honest. A date derived from this minute's speed is not.
+
 ## Winding time back
 
 The slider under the map does not start at now - it starts **48 hours ago**. Drag it left
@@ -354,8 +381,13 @@ from your clock, sunrise, sunset, length of the day, and the moon phase for the 
 watches. The time zone comes from Open-Meteo; the moon is computed locally from the
 synodic month, no API needed.
 
+**Voyage so far** and **Voyage progress** no longer count AIS fixes. The number said more
+about receiver coverage than about the voyage: it jumps by a thousand when she passes a
+busy shore station and stops entirely mid-ocean.
+
 **Voyage progress** measures how far along the planned route she has come, in nautical
-miles and percent, next to the distance actually logged. The whole route is 14,848
+miles and percent, next to the distance actually logged. The raw number of AIS fixes is
+deliberately not shown: it says more about receiver coverage than about the voyage. The whole route is 14,848
 nautical miles.
 
 It works by projecting her position onto the current leg's own polyline and measuring to
