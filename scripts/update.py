@@ -29,7 +29,14 @@ from pathlib import Path
 # ------------------------------------------------------------------- settings
 
 MMSI = os.environ.get("MMSI", "257165000")          # Sørlandet
+IMO = os.environ.get("IMO", "5334561")              # Sørlandet
 SHIP_NAME = os.environ.get("SHIP_NAME", "Sørlandet")
+
+# The foundation runs its own position page, linked from fullriggeren.no under
+# "Follow the ship". It serves a plain public JSON list of the last ~500 fixes -
+# no key, and whitelisted to this ship's IMO. Set FOUNDATION_URL="" to switch off.
+FOUNDATION_URL = os.environ.get(
+    "FOUNDATION_URL", f"https://raptor.warrisk.tech/position/{IMO}")
 
 # How long to listen to the AIS stream per run (seconds).
 LISTEN_SECONDS = int(os.environ.get("LISTEN_SECONDS", "240"))
@@ -88,6 +95,15 @@ def nm_between(a: tuple[float, float], b: tuple[float, float]) -> float:
     return 2 * 6371.0088 * math.asin(math.sqrt(h)) / 1.852
 
 
+def bearing(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Initial great-circle course from a to b, in degrees true."""
+    lat1, lon1, lat2, lon2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    dlon = lon2 - lon1
+    y = math.sin(dlon) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
 def get_json(url: str, timeout: int = 30) -> dict | None:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     try:
@@ -108,6 +124,61 @@ def read_json(path: Path, fallback):
 def write_json(path: Path, payload) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+# --------------------------------------------------- the foundation's own feed
+
+
+def fetch_from_foundation() -> list[dict]:
+    """Read the foundation's own position list.
+
+    It answers with an array of [timestamp, GeoJSON Point] pairs - roughly 500 fixes,
+    about one every seven minutes, a rolling window of the last two to three days.
+    Speed and course are not published, so they are computed from consecutive fixes.
+    """
+    if not FOUNDATION_URL:
+        return []
+
+    raw = get_json(FOUNDATION_URL, timeout=30)
+    if raw is not None and not isinstance(raw, list):
+        print("  ! the foundation's feed did not answer with a list of positions")
+        return []
+    if not raw:
+        return []
+
+    fixes: list[dict] = []
+    for row in raw:
+        try:
+            when, geom = row[0], row[1]
+            lon, lat = float(geom["coordinates"][0]), float(geom["coordinates"][1])
+            stamp = iso(parse_iso(when))
+        except (TypeError, ValueError, KeyError, IndexError):
+            continue
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            continue
+        fixes.append({"lat": lat, "lon": lon, "sog_kn": None, "cog_deg": None,
+                      "heading_deg": None, "seen_utc": stamp, "source": "foundation"})
+
+    fixes.sort(key=lambda f: f["seen_utc"])
+
+    # Speed and course from the step between neighbours, so the page still has both.
+    for i in range(1, len(fixes)):
+        a, b = fixes[i - 1], fixes[i]
+        try:
+            hours = (parse_iso(b["seen_utc"]) - parse_iso(a["seen_utc"])).total_seconds() / 3600
+        except Exception:
+            continue
+        if not 0 < hours <= 3:
+            continue
+        dist = nm_between((a["lat"], a["lon"]), (b["lat"], b["lon"]))
+        speed = dist / hours
+        if speed <= 25:
+            b["sog_kn"] = round(speed, 1)
+            b["cog_deg"] = round(bearing((a["lat"], a["lon"]), (b["lat"], b["lon"])))
+
+    if fixes:
+        print(f"  -> foundation feed: {len(fixes)} positions, newest {fixes[-1]['seen_utc']}")
+    return fixes
 
 
 # -------------------------------------------------------------- AIS position
@@ -933,6 +1004,13 @@ def main() -> int:
                 pot.setdefault(pt["seen_utc"], pt)
             merged = [pot[t] for t in sorted(pot)]
 
+        # Third source: the foundation's own page. It is a rolling window of the last
+        # few days rather than a live stream, so it also repairs anything the two
+        # streams missed while nobody was listening - including whole hours between runs.
+        for pt in fetch_from_foundation():
+            pot.setdefault(pt["seen_utc"], pt)
+        merged = [pot[t] for t in sorted(pot)]
+
         if not merged:
             fallback = bw_latest_position()
             if fallback:
@@ -966,26 +1044,48 @@ def main() -> int:
             print("  -> no weather data, keeping the previous reading")
 
     if fresh_fix and collected:
+        # The foundation's feed reaches days back, so a fix can belong anywhere in the
+        # track, not only at the end. Merge by time instead of appending, and drop a fix
+        # that lands within MIN_GAP_MIN of one we already have unless it has moved.
+        import bisect
+
+        merged_pts = []
+        for pt in points:
+            try:
+                merged_pts.append((parse_iso(pt["t"]), pt))
+            except Exception:
+                continue
+        merged_pts.sort(key=lambda x: x[0])
+        stamps = [t for t, _ in merged_pts]
+
         added = 0
         for fix in collected:
+            try:
+                when = parse_iso(fix["seen_utc"])
+            except Exception:
+                continue
             lat_i, lon_i = float(fix["lat"]), float(fix["lon"])
-            if points:
-                last = points[-1]
-                moved = nm_between((last["lat"], last["lon"]), (lat_i, lon_i))
-                try:
-                    gap = (parse_iso(fix["seen_utc"]) - parse_iso(last["t"])).total_seconds() / 60
-                except Exception:
-                    gap = MIN_GAP_MIN + 1
-                if gap <= 0 or (moved < MIN_MOVE_NM and gap < MIN_GAP_MIN):
-                    continue
-            points.append({
-                "t": fix["seen_utc"],
-                "lat": lat_i,
-                "lon": lon_i,
-                "sog": fix.get("sog_kn"),
-                "cog": fix.get("cog_deg"),
-            })
+
+            k = bisect.bisect_left(stamps, when)
+            crowded = False
+            for j in (k - 1, k):
+                if 0 <= j < len(merged_pts):
+                    t_j, pt_j = merged_pts[j]
+                    gap = abs((when - t_j).total_seconds()) / 60
+                    moved = nm_between((pt_j["lat"], pt_j["lon"]), (lat_i, lon_i))
+                    if gap < 0.5 or (moved < MIN_MOVE_NM and gap < MIN_GAP_MIN):
+                        crowded = True
+                        break
+            if crowded:
+                continue
+
+            entry = {"t": iso(when), "lat": lat_i, "lon": lon_i,
+                     "sog": fix.get("sog_kn"), "cog": fix.get("cog_deg")}
+            merged_pts.insert(k, (when, entry))
+            stamps.insert(k, when)
             added += 1
+
+        points = [pt for _, pt in merged_pts]
         print(f"  -> added {added} of {len(collected)} collected positions to the track")
         points = thin_track(points)
 

@@ -152,7 +152,10 @@
   <div class="grid" id="cards"></div>
 
   <footer>
-    Position from AIS via <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a> ·
+    Positions from three sources at once: the ship's own position page at
+    <a href="https://en.fullriggeren.no/" target="_blank" rel="noopener">fullriggeren.no</a>, the
+    Norwegian Coastal Administration via <a href="https://www.barentswatch.no/" target="_blank" rel="noopener">BarentsWatch</a>,
+    and <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a> ·
     weather and sea state from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
     map by OpenStreetMap · voyage plan from the A+ World Academy 2026–2027 plan, which is tentative and
     subject to change.
@@ -635,6 +638,14 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     : (d.stats || { points: 0, distance_nm: 0, first_point_utc: null });
 
   // No real AIS position yet? Say so, rather than presenting sample data as real.
+  const SOURCES = {
+    aisstream: "aisstream.io (volunteer receivers)",
+    barentswatch: "Norwegian Coastal Administration",
+    foundation: "the ship's own position page",
+    track: "the logged track",
+    demo: "sample data",
+  };
+
   const waiting = !d.demo && (p.lat === undefined || p.source === "demo");
   const hours = p.seen_utc ? (Date.now() - new Date(p.seen_utc).getTime()) / 36e5 : 999;
 
@@ -914,6 +925,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ${row("Last seen", fmtTime(p.seen_utc))}
       ${row("Speed", `${N(p.sog_kn)} knots`)}
       ${row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`)}
+      ${row("Heard by", SOURCES[p.source] || p.source || "unknown")}
       ${p.destination ? row("Reported destination", p.destination) : ""}`),
 
     planCard,

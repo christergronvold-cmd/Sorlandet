@@ -95,7 +95,11 @@ The ship transmits a position every few minutes while she is within reach of a s
 receiver. The limit was never her - it was us: the job used to listen for a couple of
 minutes every twenty, and threw the rest away.
 
-It now runs **once an hour and listens for 55 minutes**, keeping every distinct position.
+GitHub's `schedule` trigger never fired once for this repository, so the run does not
+rely on it: each run works for about five hours and then starts its successor through the
+API, using a fine-grained token stored as the `DISPATCH_TOKEN` secret. See `START-HERE.txt`.
+
+Each run does eleven rounds of 29 minutes, keeping every distinct position.
 Coverage in home waters is therefore close to continuous, and one delayed or dropped
 scheduled run costs an hour rather than a whole afternoon. GitHub Actions is free for
 public repositories, so the long window costs nothing.
@@ -104,6 +108,62 @@ Because the track gets dense, `update.py` thins it as it ages: everything from t
 week at full detail, then one point per 30 minutes for the first month, one per 2 hours
 up to four months, one per 6 hours beyond that. A nine-month voyage stays a file a phone
 can download in a moment.
+
+### The ship's own feed - the best of the three
+
+The foundation runs its own position page, linked from
+[fullriggeren.no](https://en.fullriggeren.no/) under *Follow the ship*. Behind it sits a
+plain public JSON endpoint:
+
+```
+https://raptor.warrisk.tech/position/5334561      <- the IMO number, not the MMSI
+```
+
+It answers with an array of `[timestamp, GeoJSON Point]` pairs: the last **500 fixes**,
+about **one every seven minutes**, a rolling window of roughly the last two and a half
+days. No key, no rate limit, and no CORS header - so the updater reads it server-side,
+not the page.
+
+It is whitelisted to this one ship. Asking for a different vessel answers
+`401 {"error":"IMO:… not authorized"}`, which is a good sign: the foundation publishes it
+deliberately, for people following Sørlandet.
+
+Two things follow from the rolling window, and they matter more than the density:
+
+* **Nothing is lost between runs.** A run that starts within two days of the last one
+  picks up every fix in between. A missed night, a broken chain, a GitHub outage - the
+  next run repairs the hole rather than leaving a straight line across it.
+* **A fix can belong anywhere in the track**, not only at the end. `update.py` therefore
+  merges by timestamp instead of appending, and drops a fix that lands within
+  `MIN_GAP_MIN` of one already stored unless the ship has moved.
+
+Speed and course are not published, so they are computed from the step between
+neighbouring fixes - which is also how the page can show a course arrow at all when this
+is the source that heard her.
+
+Set `FOUNDATION_URL=""` to switch it off.
+
+### Three live sources at once
+
+While the ship is in Norwegian waters the Coastal Administration's own feed is far
+denser than a volunteer network. `update.py` therefore listens to **both** for the same
+window: BarentsWatch's live SSE stream on a background thread, aisstream on the main one.
+At the end of the window it also reads the foundation's rolling list. All three land in
+the same pot, keyed by timestamp, so duplicates fold together and whichever source heard
+her most wins on its own merit. The page's Position card names the one that supplied the
+fix on screen.
+
+BarentsWatch goes quiet the moment she leaves the Norwegian economic zone, and aisstream
+carries on alone - no configuration change needed. Add `BW_CLIENT_ID` and
+`BW_CLIENT_SECRET` as repository secrets to switch it on; without them the script says so
+once and uses aisstream only.
+
+Endpoints used, from the Live AIS API at `https://live.ais.barentswatch.no/live`:
+
+| Path | Used for |
+|---|---|
+| `/v1/sse/combined` | the 55-minute listening window, filtered to our MMSI |
+| `/v1/latest/combined` | one-shot fallback when the window heard nothing |
 
 ### Denser history for Norwegian waters
 
@@ -202,6 +262,19 @@ on a blue-to-purple scale. Both point the way they are travelling, and the two s
 either side of their grid point so they stay readable together. The slider under the map
 steps through the forecast; the two buttons turn each layer on and off. Waves start off.
 
+### The grid follows the map
+
+The files above are a fixed box around the ship: dense when you look at the whole North
+Sea, sparse when you zoom in on her. So the page also asks Open-Meteo directly, in the
+browser, for a 6 x 6 grid covering **what is actually on screen**, whenever the map is
+moved or zoomed. Zoom in and the arrows tighten to a few nautical miles apart; zoom out
+and they spread again. A small "live grid" mark appears in the bar when that is what you
+are looking at.
+
+The files stay the fallback: they render instantly on load, work when Open-Meteo is
+unreachable, and are what the page shows if a viewport request fails. Results are cached
+per view, and requests are debounced by 0.7 seconds so panning does not hammer the API.
+
 These are forecasts for the surrounding sea, not measurements from on board - the
 anemometer on deck will read differently, especially in gusts. Grid size and horizon can
 be changed with the environment variables `GRID_CELLS`, `GRID_SPAN_NM`, `GRID_HOURS` and
@@ -232,7 +305,9 @@ parents' group. If the address changes, run `python3 scripts/make_qr.py <new-url
 
 | What | Where | Key |
 |---|---|---|
-| Position, speed, course | [aisstream.io](https://aisstream.io) (WebSocket) | free key |
+| Position (about every 7 min, last ~2.5 days) | the ship's own page, `raptor.warrisk.tech/position/5334561` | none |
+| Position, speed, course (Norwegian waters) | [BarentsWatch](https://developer.barentswatch.no/docs/category/ais/) Live AIS | free client |
+| Position, speed, course (worldwide) | [aisstream.io](https://aisstream.io) (WebSocket) | free key |
 | Waves, swell, sea temperature | [Open-Meteo Marine](https://open-meteo.com/en/docs/marine-weather-api) | none |
 | Wind, temperature, pressure, forecast | [Open-Meteo Forecast](https://open-meteo.com) | none |
 | Wind grid for the map | [Open-Meteo Forecast](https://open-meteo.com), multi-location | none |

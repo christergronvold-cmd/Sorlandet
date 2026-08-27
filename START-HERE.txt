@@ -96,14 +96,37 @@ repository.
 
 WHAT EACH RUN DOES
 ------------------
-Eleven rounds of 29 minutes. Every round listens to both AIS sources at once -
-BarentsWatch (dense, Norwegian waters) and aisstream (worldwide, thinner) -
-saves every new position, recalculates the weather and waves along the route
-she is actually likely to sail, and pushes it to the repository. The page you
-share picks it up on its own.
+Eleven rounds of 29 minutes. Every round now reads THREE position sources
+instead of two:
 
-So the track keeps growing while she is within reach of a receiver, whether or
-not anyone is looking at the page.
+  1. The ship's own position page (new). The foundation publishes a plain
+     public JSON list of the last 500 fixes, about one every seven minutes -
+     a rolling window of the last two and a half days. This is the densest
+     and most reliable of the three, and it needs no key at all.
+  2. BarentsWatch - the Norwegian Coastal Administration, very dense, but
+     only inside the Norwegian economic zone.
+  3. aisstream.io - volunteer receivers, worldwide, thin.
+
+Everything lands in the same pot keyed by timestamp, so the same fix heard by
+two sources folds into one point. The Position card on the page now says which
+source supplied the position you are looking at.
+
+Then the round recalculates the weather and waves along the route she is
+actually likely to sail, and pushes it all to the repository. The page picks it
+up on its own.
+
+WHY SOURCE 1 CHANGES THINGS
+---------------------------
+It is a rolling window, not a live stream. So a run that starts within two days
+of the last one collects every fix in between - including the hours when nothing
+was listening.
+
+In practice that means missed runs no longer cost you anything. A broken chain,
+a GitHub outage, a night where nothing fired: the next run fills the hole rather
+than drawing a straight line across it. The track repairs itself.
+
+It also means a fix can belong in the middle of the track, not only at the end,
+so the script now merges positions by time instead of appending them.
 
 
 IF THE CHAIN EVER BREAKS
