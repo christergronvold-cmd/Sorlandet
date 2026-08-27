@@ -71,6 +71,7 @@
     padding:9px 4px; font-size:13px; background:var(--bg);
   }
   .fc b{display:block; font-size:12px; color:var(--muted); font-weight:600; text-transform:capitalize}
+  .fc b.plain{text-transform:none}
   .fc .ic{font-size:21px; line-height:1.5}
   footer{margin-top:22px; font-size:12.5px; color:var(--muted); line-height:1.7}
   footer a{color:var(--accent)}
@@ -585,20 +586,21 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
     fetch("data/wind.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/waves.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] }))
+    fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] })),
+    fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history);
+  render(latest, track, plan, history, ahead);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -714,6 +716,22 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }) {
     });
   }
 
+  // The route she is actually expected to sail from here to the next port, worked out
+  // by the job across a sea grid - not the drawn port-to-port line.
+  if (ahead?.route?.length > 1) {
+    layers.push(L.polyline(ahead.route, {
+      color: "#0b6ea8", weight: 2, opacity: .55, dashArray: "7,5"
+    }).bindTooltip(`Expected route to ${ahead.to}: ${Math.round(ahead.distance_nm)} nm`).addTo(map));
+    (ahead.points || []).forEach(pt => {
+      layers.push(L.circleMarker([pt.lat, pt.lon], {
+        radius: 4, color: "#0b6ea8", weight: 2, fillColor: "var(--panel)", fillOpacity: 1
+      }).bindTooltip(
+        `<b>in ${pt.hours} h</b><br>${N(pt.wind_ms)} m/s from ${compass(pt.wind_dir)}` +
+        `${pt.wave_m != null ? `<br>${N(pt.wave_m)} m waves` : ""}`,
+        { direction: "top" }).addTo(map));
+    });
+  }
+
   const nextPort = ports.find(q => q.arrive > todayISO);
   if (p.lat !== undefined && !waiting) {
     layers.push(L.marker([p.lat, p.lon], { icon: shipIcon(p.heading_deg ?? p.cog_deg) })
@@ -771,6 +789,20 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }) {
       <b>${q.name}</b><div class="ic">${here ? "⚓" : isNext ? "🧭" : passed ? "✓" : "·"}</div>
       ${dayName(q.arrive)}<br><span style="color:var(--muted)">${q.country}</span></div>`;
   }).join("");
+
+  const aheadStrip = (ahead?.points || []).map(pt => `
+    <div><b class="plain">in ${pt.hours} h</b>
+      <div class="ic">${WMO[pt.weather_code] || "🧭"}</div>
+      <b class="plain" style="font-size:13px;color:var(--ink)">${N(pt.wind_ms, 0)}<span style="font-weight:400"> m/s</span></b>
+      ${compass(pt.wind_dir)}<br>
+      <span style="color:var(--muted)">${pt.wave_m != null ? `${N(pt.wave_m)} m` : "–"}</span></div>`).join("");
+
+  const aheadCard = aheadStrip ? wideCard(
+    `On the way to ${ahead.to}`,
+    `<div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
+       ${Math.round(ahead.distance_nm)} nm to run at ${N(ahead.speed_kn)} knots ·
+       forecast for where she will be, not where she is
+     </div><div class="fc">${aheadStrip}</div>`) : "";
 
   const seaFc = (w.sea_forecast || []).slice(0, 6).map(f =>
     `<div><b>${new Date(f.time_utc + "Z").toLocaleString("en-GB", { weekday: "short", hour: "2-digit" })}</b>
@@ -915,9 +947,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }) {
     progressCard,
     logCard,
     chartsCard,
+    aheadCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
-    seaFc ? wideCard("Waves next 36 hours", `<div class="fc">${seaFc}</div>`) : "",
-    airFc ? wideCard("Weather ahead", `<div class="fc">${airFc}</div>`) : "",
+    seaFc ? wideCard("Waves where she is now", `<div class="fc">${seaFc}</div>`) : "",
+    airFc ? wideCard("Weather where she is now", `<div class="fc">${airFc}</div>`) : "",
     shareCard
   ].join("");
 

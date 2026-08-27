@@ -1,23 +1,114 @@
-START HERE
-==========
+WHERE IS SORLANDET - automatic updating
+=======================================
 
-1. aisstream.io -> sign in with GitHub -> Account -> create API key.
+GitHub's own scheduler has never started a single run in your repository
+("0 workflow run results" for event:schedule). That is a known GitHub weakness
+on free repositories and there is nothing in the repository we can fix to make
+it reliable.
 
-2. GitHub -> new repository, Public.
+So we stop relying on it. From now on each run works for about 5 hours and then
+starts the next one itself. A chain that keeps going without you.
 
-3. Add file -> Upload files -> drag in the CONTENTS of this folder (all files and
-   the folders data, scripts, vendor). One commit.
+Do these three things, in this order. Ten minutes.
 
-4. Two files are hidden by Finder/Explorer and must be typed in the browser:
-     Add file -> Create new file -> name it   .nojekyll                      -> leave empty
-     Add file -> Create new file -> name it   .github/workflows/update.yml   -> paste from
-                                                                                this folder
-5. Settings -> Secrets and variables -> Actions -> New repository secret
-     Name:  AISSTREAM_API_KEY
-     Value: the key from step 1
 
-6. Settings -> Pages -> Deploy from a branch -> main -> / (root) -> Save
+STEP 1 - upload the files
+-------------------------
+In your repository: Add file -> Upload files.
+Drag in the CONTENTS of this folder (not the folder itself):
 
-7. Actions -> Update position -> Run workflow
+    index.html
+    scripts/   (folder)
+    data/      (folder)
 
-Full details in README.md.
+Write "Automatic updating" as the commit message and press
+"Commit changes".
+
+Note: the .github folder will not come along - Finder hides names that start
+with a dot. Step 2 handles it.
+
+
+STEP 2 - replace the workflow
+-----------------------------
+In your repository, open:  .github/workflows/update.yml
+Press the pencil (Edit this file) at the top right.
+
+Select everything in the editor (Cmd+A) and delete it.
+Then open the file "update.yml.txt" from this folder, copy everything,
+and paste it in.
+
+Press "Commit changes" -> "Commit changes".
+
+
+STEP 3 - the key that lets a run start the next one
+---------------------------------------------------
+A run is not allowed to start another run with GitHub's built-in token. That is
+a deliberate GitHub rule against infinite loops. We therefore give it a key of
+its own, limited to exactly this one repository.
+
+3a. Create the key
+
+    Open:  https://github.com/settings/personal-access-tokens/new
+
+    Token name .......... sorlandet-chain
+    Expiration .......... Custom -> 30 June 2027   (after graduation)
+    Resource owner ...... your own user
+    Repository access ... Only select repositories -> Sorlandet
+    Permissions ......... Repository permissions -> find "Actions"
+                          -> set it to "Read and write"
+                          (leave everything else at "No access")
+
+    Press "Generate token" at the bottom.
+    The key appears once, starting with github_pat_. Copy it now.
+    Do not paste it into our chat - I do not need it.
+
+3b. Store it in the repository
+
+    Your repository -> Settings -> Secrets and variables -> Actions
+    -> New repository secret
+
+    Name .... DISPATCH_TOKEN
+    Secret .. paste the key
+
+    Press "Add secret".
+
+
+STEP 4 - start the chain once
+-----------------------------
+Actions -> Update position -> Run workflow -> Run workflow.
+
+That is the last time you have to touch it.
+
+
+HOW TO CHECK THAT IT IS RUNNING
+-------------------------------
+Actions. You should see a new "Update position" run appear every ~5 hours,
+each one started by the previous one. Open the newest run and look at the last
+step, "Start the next run". It should say:
+
+    Next run requested - the chain continues.
+
+If it says "No DISPATCH_TOKEN secret" the secret name is misspelled.
+If it says "Could not start the next run (HTTP 403)" the token is missing
+the Actions: Read and write permission, or was not given access to this
+repository.
+
+
+WHAT EACH RUN DOES
+------------------
+Eleven rounds of 29 minutes. Every round listens to both AIS sources at once -
+BarentsWatch (dense, Norwegian waters) and aisstream (worldwide, thinner) -
+saves every new position, recalculates the weather and waves along the route
+she is actually likely to sail, and pushes it to the repository. The page you
+share picks it up on its own.
+
+So the track keeps growing while she is within reach of a receiver, whether or
+not anyone is looking at the page.
+
+
+IF THE CHAIN EVER BREAKS
+------------------------
+It can only break if a run dies so hard that even the final step does not run,
+or if the token expires. The hourly cron is still in the file as a backstop for
+the day GitHub's scheduler decides to work. Restarting it by hand is
+Actions -> Update position -> Run workflow, exactly as in step 4.

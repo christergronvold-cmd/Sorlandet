@@ -663,6 +663,241 @@ def thin_track(points: list) -> list:
     return kept
 
 
+# ------------------------------------------------- routing and weather ahead
+# A 107 KB bitmap of the Atlantic marks open sea at 0.1 degrees with about 6 km
+# clearance from land, built from Natural Earth 1:10m coastlines. With it the script
+# can work out the sea route from wherever she actually is to the next port, and ask
+# for the forecast at the places she will be, at the times she will be there.
+
+SEAGRID_BIN = DATA / "seagrid.bin"
+SEAGRID_META = DATA / "seagrid.json"
+AHEAD = DATA / "ahead.json"
+AHEAD_HOURS = [int(h) for h in os.environ.get("AHEAD_HOURS", "6,12,24,36,48,72").split(",")]
+CRUISE_KN = float(os.environ.get("CRUISE_KN", "5.5"))     # used when she is lying still
+
+_grid = None
+
+
+def sea_grid():
+    """Loads the bitmap once. Returns None if the files are missing."""
+    global _grid
+    if _grid is None:
+        try:
+            meta = json.loads(SEAGRID_META.read_text(encoding="utf-8"))
+            _grid = (meta, SEAGRID_BIN.read_bytes())
+        except Exception as exc:
+            print(f"  ! no sea grid ({exc}) - routing ahead is skipped", file=sys.stderr)
+            _grid = (None, None)
+    return _grid if _grid[0] else None
+
+
+def _is_sea(i: int, j: int) -> bool:
+    meta, bits = _grid
+    if not (0 <= i < meta["nlat"] and 0 <= j < meta["nlon"]):
+        return False
+    k = i * meta["nlon"] + j
+    return bool(bits[k >> 3] & (1 << (k & 7)))
+
+
+def _cell(lat: float, lon: float):
+    meta = _grid[0]
+    return (round((lat - meta["lat0"]) / meta["step"]),
+            round((lon - meta["lon0"]) / meta["step"]))
+
+
+def _coord(i: int, j: int):
+    meta = _grid[0]
+    return (meta["lat0"] + i * meta["step"], meta["lon0"] + j * meta["step"])
+
+
+def _nearest_sea(lat: float, lon: float, radius: int = 25):
+    ci, cj = _cell(lat, lon)
+    if _is_sea(ci, cj):
+        return (ci, cj)
+    for r in range(1, radius + 1):
+        best = None
+        for di in range(-r, r + 1):
+            for dj in range(-r, r + 1):
+                if max(abs(di), abs(dj)) != r:
+                    continue
+                if _is_sea(ci + di, cj + dj):
+                    d = di * di + dj * dj
+                    if best is None or d < best[0]:
+                        best = (d, ci + di, cj + dj)
+        if best:
+            return (best[1], best[2])
+    return None
+
+
+def sea_route(start: tuple, goal: tuple) -> list | None:
+    """A* across the sea bitmap. Returns a list of (lat, lon) including both ends."""
+    import heapq
+
+    if not sea_grid():
+        return None
+    a, b = _nearest_sea(*start), _nearest_sea(*goal)
+    if not a or not b:
+        return None
+
+    neigh = [(di, dj) for di in (-1, 0, 1) for dj in (-1, 0, 1) if (di, dj) != (0, 0)]
+    g = {a: 0.0}
+    came: dict = {}
+    heap = [(nm_between(_coord(*a), _coord(*b)), a)]
+    seen = set()
+    guard = 0
+    while heap:
+        guard += 1
+        if guard > 400000:                     # never let one run stall the job
+            print("  ! routing gave up after 400k nodes", file=sys.stderr)
+            return None
+        _, cur = heapq.heappop(heap)
+        if cur == b:
+            path = [cur]
+            while cur in came:
+                cur = came[cur]
+                path.append(cur)
+            path.reverse()
+            pts = [start] + [_coord(*c) for c in path] + [goal]
+            return _thin_route(pts)
+        if cur in seen:
+            continue
+        seen.add(cur)
+        for di, dj in neigh:
+            n = (cur[0] + di, cur[1] + dj)
+            if not _is_sea(*n):
+                continue
+            ng = g[cur] + nm_between(_coord(*cur), _coord(*n))
+            if ng < g.get(n, 1e18):
+                g[n] = ng
+                came[n] = cur
+                heapq.heappush(heap, (ng + nm_between(_coord(*n), _coord(*b)), n))
+    return None
+
+
+def _clear(a: tuple, b: tuple) -> bool:
+    steps = max(2, int(nm_between(a, b) / 3))
+    for k in range(steps + 1):
+        la = a[0] + (b[0] - a[0]) * k / steps
+        lo = a[1] + (b[1] - a[1]) * k / steps
+        if not _is_sea(*_cell(la, lo)):
+            return False
+    return True
+
+
+def _thin_route(points: list) -> list:
+    out = [points[0]]
+    i = 0
+    while i < len(points) - 1:
+        j = len(points) - 1
+        while j > i + 1 and not _clear(points[i], points[j]):
+            j -= 1
+        out.append(points[j])
+        i = j
+    return out
+
+
+def positions_ahead(route: list, speed_kn: float, hours: list) -> list:
+    """Walks along the route at the given speed and notes where she will be."""
+    legs = [nm_between(route[i - 1], route[i]) for i in range(1, len(route))]
+    total = sum(legs)
+    out = []
+    for h in hours:
+        want = speed_kn * h
+        if want > total:                       # she arrives before this hour
+            break
+        run = 0.0
+        for i, leg in enumerate(legs):
+            if run + leg >= want:
+                f = (want - run) / leg if leg else 0
+                a, b = route[i], route[i + 1]
+                out.append({"hours": h,
+                            "lat": round(a[0] + (b[0] - a[0]) * f, 4),
+                            "lon": round(a[1] + (b[1] - a[1]) * f, 4)})
+                break
+            run += leg
+    return out
+
+
+def fetch_ahead(points: list) -> list:
+    """Wind and sea state at each projected position, at the hour she gets there."""
+    if not points:
+        return []
+    lats = ",".join(f"{p['lat']:.4f}" for p in points)
+    lons = ",".join(f"{p['lon']:.4f}" for p in points)
+    base_hour = now_utc().replace(minute=0, second=0, microsecond=0)
+
+    air = get_json("https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
+        "latitude": lats, "longitude": lons,
+        "hourly": "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,weather_code",
+        "wind_speed_unit": "ms", "forecast_days": "5", "timezone": "UTC"}), timeout=45)
+    sea = get_json("https://marine-api.open-meteo.com/v1/marine?" + urllib.parse.urlencode({
+        "latitude": lats, "longitude": lons,
+        "hourly": "wave_height,wave_direction,wave_period",
+        "forecast_days": "5", "timezone": "UTC"}), timeout=45)
+
+    def block(data, k):
+        if not data:
+            return {}
+        blocks = data if isinstance(data, list) else [data]
+        return (blocks[k].get("hourly") or {}) if k < len(blocks) else {}
+
+    out = []
+    for k, p in enumerate(points):
+        when = base_hour + timedelta(hours=p["hours"])
+        stamp = when.strftime("%Y-%m-%dT%H:00")
+        a, s = block(air, k), block(sea, k)
+        ai = a.get("time", []).index(stamp) if stamp in (a.get("time") or []) else None
+        si = s.get("time", []).index(stamp) if stamp in (s.get("time") or []) else None
+        pick = lambda d, key, i: (d.get(key) or [None])[i] if i is not None and d.get(key) else None
+        out.append({
+            "hours": p["hours"], "time_utc": iso(when), "lat": p["lat"], "lon": p["lon"],
+            "wind_ms": pick(a, "wind_speed_10m", ai),
+            "wind_dir": pick(a, "wind_direction_10m", ai),
+            "gust_ms": pick(a, "wind_gusts_10m", ai),
+            "temp_c": pick(a, "temperature_2m", ai),
+            "weather_code": pick(a, "weather_code", ai),
+            "wave_m": pick(s, "wave_height", si),
+            "wave_dir": pick(s, "wave_direction", si),
+            "wave_period_s": pick(s, "wave_period", si),
+        })
+    return out
+
+
+def next_port(ports: list) -> dict | None:
+    today = now_utc().strftime("%Y-%m-%d")
+    return next((q for q in ports if q.get("arrive", "") > today), None)
+
+
+def build_ahead(lat: float, lon: float, speed_kn: float | None) -> None:
+    """The whole chain: route from here to the next port, then the weather on the way."""
+    try:
+        plan = read_json(DATA / "ports.json", {})
+        port = next_port(plan.get("ports") or [])
+        if not port:
+            return
+        route = sea_route((lat, lon), (port["lat"], port["lon"]))
+        if not route or len(route) < 2:
+            print("  ! could not route to the next port", file=sys.stderr)
+            return
+        speed = max(3.0, speed_kn or CRUISE_KN)
+        legs = sum(nm_between(route[i - 1], route[i]) for i in range(1, len(route)))
+        points = positions_ahead(route, speed, AHEAD_HOURS)
+        ahead = fetch_ahead(points)
+        write_json(AHEAD, {
+            "generated_utc": iso(now_utc()),
+            "to": port["name"], "country": port.get("country"),
+            "distance_nm": round(legs, 1),
+            "speed_kn": round(speed, 1),
+            "eta_utc": iso(now_utc() + timedelta(hours=legs / speed)),
+            "route": [[round(a, 4), round(b, 4)] for a, b in route],
+            "points": ahead,
+        })
+        print(f"  -> route to {port['name']}: {legs:.0f} nm at {speed:.1f} kn, "
+              f"{len(ahead)} forecast points on the way")
+    except Exception as exc:
+        print(f"  ! weather ahead failed: {exc}", file=sys.stderr)
+
+
 # ----------------------------------------------------------------------- main
 
 
@@ -805,6 +1040,7 @@ def main() -> int:
             },
         },
     )
+    build_ahead(lat, lon, position.get("sog_kn"))
     update_history(weather, points)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
