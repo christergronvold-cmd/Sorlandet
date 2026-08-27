@@ -1794,8 +1794,13 @@ def main() -> int:
     # moment from which the answer is trustworthy, and refuses to call anything earlier a
     # record. No record for a few days is better than the wrong one for a year.
     old = read_json(TRACK, {}) or {}
-    sog_from = old.get("sog_provenance_from") or (
-        points[0]["t"] if points and any("d" in q for q in points) else iso(now_utc()))
+    # Stamped once, on the first run that knows about the distinction, and never moved
+    # afterwards. The obvious-looking refinement - "if some points already carry the flag,
+    # date it from the start of the track" - is wrong, and wrong in the worst direction:
+    # on that very first run the newly merged fixes DO carry the flag while every older
+    # point does not, so it dated the stamp to the beginning of the voyage and quietly let
+    # the unknown numbers back in as records.
+    sog_from = old.get("sog_provenance_from") or iso(now_utc())
     write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME,
                        "sog_provenance_from": sog_from, "points": points}, compact=True)
     write_json(
