@@ -2,140 +2,140 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-08-26T19:35:16Z",
- "fresh_fix": false,
+ "updated_utc": "2026-08-27T07:13:31Z",
+ "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 57.60469,
-  "lon": 8.06244,
-  "sog_kn": 4.4,
-  "cog_deg": 355,
-  "heading_deg": 0,
+  "lat": 58.39745,
+  "lon": 5.65186,
+  "sog_kn": 5.8,
+  "cog_deg": 301,
+  "heading_deg": 292,
   "nav_status": 8,
-  "seen_utc": "2026-08-26T16:18:23Z",
-  "source": "aisstream.io"
+  "seen_utc": "2026-08-27T07:12:54Z",
+  "source": "barentswatch"
  },
  "weather": {
-  "fetched_utc": "2026-08-26T19:35:12Z",
+  "fetched_utc": "2026-08-27T07:13:28Z",
   "sea": {
-   "wave_height_m": 0.52,
-   "wave_direction_deg": 63,
-   "wave_period_s": 3.8,
+   "wave_height_m": 0.82,
+   "wave_direction_deg": 124,
+   "wave_period_s": 4.0,
    "swell_height_m": 0.3,
-   "swell_period_s": 5.1,
-   "wind_wave_height_m": 0.38,
-   "sea_temp_c": 16.7,
-   "time_utc": "2026-08-26T19:30"
+   "swell_period_s": 4.05,
+   "wind_wave_height_m": 0.72,
+   "sea_temp_c": 16.1,
+   "time_utc": "2026-08-27T07:00"
   },
   "sea_forecast": [
    {
-    "time_utc": "2026-08-26T00:00",
-    "wave_height_m": 0.6
-   },
-   {
-    "time_utc": "2026-08-26T06:00",
-    "wave_height_m": 0.48
-   },
-   {
-    "time_utc": "2026-08-26T12:00",
-    "wave_height_m": 0.42
-   },
-   {
-    "time_utc": "2026-08-26T18:00",
-    "wave_height_m": 0.56
-   },
-   {
     "time_utc": "2026-08-27T00:00",
-    "wave_height_m": 0.48
+    "wave_height_m": 0.7
    },
    {
     "time_utc": "2026-08-27T06:00",
-    "wave_height_m": 0.44
+    "wave_height_m": 0.8
    },
    {
     "time_utc": "2026-08-27T12:00",
-    "wave_height_m": 0.64
+    "wave_height_m": 1.04
    },
    {
     "time_utc": "2026-08-27T18:00",
-    "wave_height_m": 0.92
+    "wave_height_m": 1.22
    },
    {
     "time_utc": "2026-08-28T00:00",
-    "wave_height_m": 1.2
+    "wave_height_m": 1.38
    },
    {
     "time_utc": "2026-08-28T06:00",
-    "wave_height_m": 1.48
+    "wave_height_m": 2.04
    },
    {
     "time_utc": "2026-08-28T12:00",
-    "wave_height_m": 1.74
+    "wave_height_m": 2.98
    },
    {
     "time_utc": "2026-08-28T18:00",
-    "wave_height_m": 1.42
+    "wave_height_m": 1.88
+   },
+   {
+    "time_utc": "2026-08-29T00:00",
+    "wave_height_m": 1.34
+   },
+   {
+    "time_utc": "2026-08-29T06:00",
+    "wave_height_m": 1.5
+   },
+   {
+    "time_utc": "2026-08-29T12:00",
+    "wave_height_m": 1.68
+   },
+   {
+    "time_utc": "2026-08-29T18:00",
+    "wave_height_m": 1.92
    }
   ],
   "air": {
-   "temp_c": 17.6,
-   "feels_c": 16.9,
-   "wind_ms": 4.7,
-   "gust_ms": 6.9,
-   "wind_direction_deg": 81,
-   "pressure_hpa": 1024.1,
-   "cloud_pct": 84,
+   "temp_c": 17.1,
+   "feels_c": 13.8,
+   "wind_ms": 7.9,
+   "gust_ms": 9.7,
+   "wind_direction_deg": 106,
+   "pressure_hpa": 1022.5,
+   "cloud_pct": 21,
    "precip_mm": 0.0,
-   "weather_code": 3,
-   "time_utc": "2026-08-26T19:30"
+   "weather_code": 1,
+   "time_utc": "2026-08-27T07:00"
   },
   "air_forecast": [
    {
-    "date": "2026-08-26",
-    "weather_code": 3,
-    "temp_max_c": 18.0,
-    "temp_min_c": 17.0,
-    "wind_max_ms": 6.7
-   },
-   {
     "date": "2026-08-27",
     "weather_code": 3,
-    "temp_max_c": 17.7,
-    "temp_min_c": 16.6,
-    "wind_max_ms": 11.4
+    "temp_max_c": 18.5,
+    "temp_min_c": 16.7,
+    "wind_max_ms": 12.9
    },
    {
     "date": "2026-08-28",
-    "weather_code": 65,
-    "temp_max_c": 17.1,
-    "temp_min_c": 16.5,
-    "wind_max_ms": 16.2
+    "weather_code": 61,
+    "temp_max_c": 17.5,
+    "temp_min_c": 16.6,
+    "wind_max_ms": 17.5
    },
    {
     "date": "2026-08-29",
-    "weather_code": 80,
-    "temp_max_c": 16.9,
-    "temp_min_c": 16.2,
-    "wind_max_ms": 12.49
+    "weather_code": 53,
+    "temp_max_c": 16.6,
+    "temp_min_c": 15.9,
+    "wind_max_ms": 10.1
+   },
+   {
+    "date": "2026-08-30",
+    "weather_code": 53,
+    "temp_max_c": 16.2,
+    "temp_min_c": 15.4,
+    "wind_max_ms": 7.99
    }
   ]
  },
  "sun": {
   "moon": {
-   "age_days": 13.5,
-   "illumination": 0.98,
+   "age_days": 14.0,
+   "illumination": 0.99,
    "phase": "full moon"
   },
-  "timezone": "Etc/GMT-1",
-  "timezone_abbreviation": "GMT+1",
-  "utc_offset_seconds": 3600,
-  "sunrise_local": "2026-08-26T05:16",
-  "sunset_local": "2026-08-26T19:42",
+  "timezone": "Europe/Oslo",
+  "timezone_abbreviation": "GMT+2",
+  "utc_offset_seconds": 7200,
+  "sunrise_local": "2026-08-27T06:25",
+  "sunset_local": "2026-08-27T20:51",
   "daylight_hours": 14.4
  },
  "stats": {
-  "points": 1,
-  "distance_nm": 0,
-  "first_point_utc": "2026-08-26T16:18:23Z"
+  "points": 11047,
+  "distance_nm": 140.4,
+  "first_point_utc": "2026-08-26T03:35:03Z"
  }
 }
