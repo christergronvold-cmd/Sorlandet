@@ -43,7 +43,7 @@ LISTEN_SECONDS = int(os.environ.get("LISTEN_SECONDS", "240"))
 
 # Track thinning: full detail while it is fresh, coarser as it ages, so the
 # file the page downloads stays small over a nine-month voyage.
-THIN_RULES = [(7, 0), (30, 30), (120, 120), (10000, 360)]  # (days old, minutes between)
+THIN_RULES = [(7, 2), (30, 30), (120, 120), (10000, 360)]  # (days old, minutes between)
 
 # A new track point is stored only if the ship has moved at least this many nautical
 # miles, or at least this many minutes have passed since the previous point.
@@ -125,9 +125,15 @@ def read_json(path: Path, fallback):
         return fallback
 
 
-def write_json(path: Path, payload) -> None:
+def write_json(path: Path, payload, compact: bool = False) -> None:
+    """Write JSON. compact=True drops the indentation, which is 28 % of track.json -
+    worth it for the one file every phone downloads and nobody reads by hand."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    if compact:
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    else:
+        body = json.dumps(payload, ensure_ascii=False, indent=1)
+    path.write_text(body + "\n", encoding="utf-8")
 
 
 # --------------------------------------------------- the foundation's own feed
@@ -525,7 +531,7 @@ def fetch_weather(lat: float, lon: float) -> dict:
 GRID_CELLS = int(os.environ.get("GRID_CELLS", "5"))        # 5 x 5 points
 GRID_SPAN_NM = float(os.environ.get("GRID_SPAN_NM", "360"))  # box side in nautical miles
 GRID_HOURS = int(os.environ.get("GRID_HOURS", "72"))       # how far ahead
-GRID_STEP = int(os.environ.get("GRID_STEP", "3"))          # hours between steps
+GRID_STEP = int(os.environ.get("GRID_STEP", "1"))          # hours between steps
 
 
 def grid_around(lat: float, lon: float) -> tuple[list[str], list[str]]:
@@ -1230,8 +1236,10 @@ def main() -> int:
             if crowded:
                 continue
 
-            entry = {"t": iso(when), "lat": lat_i, "lon": lon_i,
-                     "sog": fix.get("sog_kn"), "cog": fix.get("cog_deg")}
+            sog_v, cog_v = fix.get("sog_kn"), fix.get("cog_deg")
+            entry = {"t": iso(when), "lat": round(lat_i, 5), "lon": round(lon_i, 5),
+                     "sog": None if sog_v is None else round(float(sog_v), 1),
+                     "cog": None if cog_v is None else round(float(cog_v))}
             merged_pts.insert(k, (when, entry))
             stamps.insert(k, when)
             added += 1
@@ -1253,6 +1261,15 @@ def main() -> int:
         except Exception:
             pass
 
+    # Older points were stored with full float precision - up to sixteen digits of noise
+    # on a position an AIS receiver knows to a few metres. Round the lot on the way out.
+    for q in points:
+        q["lat"], q["lon"] = round(float(q["lat"]), 5), round(float(q["lon"]), 5)
+        if q.get("sog") is not None:
+            q["sog"] = round(float(q["sog"]), 1)
+        if q.get("cog") is not None:
+            q["cog"] = round(float(q["cog"]))
+
     # Steps under 0.02 nm are receiver jitter while she lies still, not distance sailed.
     distance_nm = sum(
         step for step in (
@@ -1271,7 +1288,7 @@ def main() -> int:
         else:
             print(f"  -> no {kind} grid this run, keeping the previous one")
 
-    write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME, "points": points})
+    write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME, "points": points}, compact=True)
     write_json(
         LATEST,
         {

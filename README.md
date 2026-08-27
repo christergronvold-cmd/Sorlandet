@@ -250,7 +250,7 @@ Coordinates are approximate port positions — good enough for distance and esti
 
 Each run also fetches two forecast grids around the ship's position: wind speed and
 direction, and wave height, direction and period. Each grid is 5 x 5 points covering a
-box of 360 x 360 nautical miles, from 48 hours back to 72 hours ahead in 3-hour steps, and
+box of 360 x 360 nautical miles, from 48 hours back to 72 hours ahead in 1-hour steps, and
 each is a single API call. They are stored in `data/wind.json` and `data/waves.json`.
 
 The box is measured in nautical miles rather than degrees, so the longitude span widens
@@ -261,7 +261,8 @@ On the map, **wind** is a single arrow, coloured pale blue through green and amb
 red as it strengthens. **Waves** are a double chevron with the height in metres beside it,
 on a blue-to-purple scale. Both point the way they are travelling, and the two sit on
 either side of their grid point so they stay readable together. The slider under the map
-steps through the forecast; the two buttons turn each layer on and off. Both start on.
+steps through the forecast; the two buttons turn each layer on and off. Both start on. It opens on **now**, which
+with the axis above puts the handle a little under half way along.
 
 ### The grid follows the map
 
@@ -298,10 +299,10 @@ estimated arrival it says she is alongside rather than clamping to the last fore
 and claiming she is still 59 nm out three days after docking.
 
 The panel reads out the hour, her position, and the wind and sea - what she was in, or
-what she is heading for. **▶** plays the whole span through at 500 ms a step; **Now**
+what she is heading for. **▶** plays the whole span through at 150 ms an hour; **Now**
 jumps back to the present.
 
-The slider therefore covers **-48 h to +72 h** in 3-hour steps: two days of what happened
+The slider therefore covers **-48 h to +72 h** in 1-hour steps: two days of what happened
 and three of what is coming, on one control. `_time_index` in `update.py` and `pickTimes`
 in the page both span exactly that, which is why one slider can carry both. `GRID_HOURS`
 and `WAKE_HOURS` move the two ends.
@@ -325,6 +326,26 @@ than three hours - drawing a line through a two-day gap mid-Atlantic would be an
 not a position, so those hours are simply absent and the panel says so. And it does not
 claim to be a measurement: it is the best reanalysis of the sea she was in, not the log
 from her own instruments.
+
+## Keeping it quick on a phone
+
+Measured on the live page rather than guessed at: the whole thing is about 80 kB over the
+wire and the document is ready in a fifth of a second. The network was never the problem.
+What costs time on a phone is what happens after the bytes arrive, so that is what was
+changed:
+
+| Change | Why |
+|---|---|
+| `track.json` written compact | 28 % of it was indentation - 347 kB of whitespace the phone had to parse |
+| Coordinates rounded to 5 decimals | some fixes carried 15 digits of float noise; 5 decimals is about a metre, and the ship is 64 m long |
+| One track point per 2 minutes for the last week | the dense sources gave one a minute - 0.1 nm apart at cruising speed, invisible at any zoom |
+| `preferCanvas: true` on the map | the track and route were hundreds of SVG nodes the browser re-laid-out on every pan; now one canvas |
+| Arrow grid scales to the screen | each arrow is a DOM node with an inline SVG. 6 x 6 on a desktop, 3 x 3 on a phone: 51 markers down to 19 |
+| The weather bar wraps | at 390 px the time and the Now button ran off the right edge |
+
+Gzip already squeezed the whitespace out on the wire, so those first two changes barely
+move the download - the win is parse time and memory, which is what a three-year-old phone
+actually runs out of.
 
 ## What else is on the page
 
