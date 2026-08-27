@@ -2,74 +2,75 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-08-27T09:40:07Z",
+ "updated_utc": "2026-08-27T10:09:16Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 58.528875,
-  "lon": 5.606936666666667,
-  "sog_kn": 5.8,
-  "cog_deg": 240,
-  "heading_deg": null,
-  "seen_utc": "2026-08-27T09:39:26Z",
-  "source": "foundation"
+  "lat": 58.50881,
+  "lon": 5.51534,
+  "sog_kn": 7.6,
+  "cog_deg": 243.5,
+  "heading_deg": 229,
+  "nav_status": 8,
+  "seen_utc": "2026-08-27T10:08:04Z",
+  "source": "barentswatch"
  },
  "weather": {
-  "fetched_utc": "2026-08-27T09:40:04Z",
+  "fetched_utc": "2026-08-27T10:09:14Z",
   "sea": {
-   "wave_height_m": 0.68,
-   "wave_direction_deg": 146,
+   "wave_height_m": 0.78,
+   "wave_direction_deg": 145,
    "wave_period_s": 3.95,
-   "swell_height_m": 0.26,
-   "swell_period_s": 4.35,
-   "wind_wave_height_m": 0.58,
-   "sea_temp_c": 17.9,
-   "time_utc": "2026-08-27T09:30"
+   "swell_height_m": 0.24,
+   "swell_period_s": 4.75,
+   "wind_wave_height_m": 0.7,
+   "sea_temp_c": 17.6,
+   "time_utc": "2026-08-27T10:00"
   },
   "sea_forecast": [
    {
     "time_utc": "2026-08-27T00:00",
-    "wave_height_m": 0.48
+    "wave_height_m": 0.52
    },
    {
     "time_utc": "2026-08-27T06:00",
-    "wave_height_m": 0.58
+    "wave_height_m": 0.66
    },
    {
     "time_utc": "2026-08-27T12:00",
-    "wave_height_m": 0.82
+    "wave_height_m": 0.9
    },
    {
     "time_utc": "2026-08-27T18:00",
-    "wave_height_m": 1.06
+    "wave_height_m": 1.16
    },
    {
     "time_utc": "2026-08-28T00:00",
-    "wave_height_m": 1.02
+    "wave_height_m": 1.12
    },
    {
     "time_utc": "2026-08-28T06:00",
-    "wave_height_m": 1.5
+    "wave_height_m": 1.66
    },
    {
     "time_utc": "2026-08-28T12:00",
-    "wave_height_m": 2.42
+    "wave_height_m": 2.7
    },
    {
     "time_utc": "2026-08-28T18:00",
-    "wave_height_m": 1.6
+    "wave_height_m": 1.78
    },
    {
     "time_utc": "2026-08-29T00:00",
-    "wave_height_m": 1.18
+    "wave_height_m": 1.3
    },
    {
     "time_utc": "2026-08-29T06:00",
-    "wave_height_m": 1.46
+    "wave_height_m": 1.56
    },
    {
     "time_utc": "2026-08-29T12:00",
-    "wave_height_m": 1.48
+    "wave_height_m": 1.5
    },
    {
     "time_utc": "2026-08-29T18:00",
@@ -77,38 +78,38 @@
    }
   ],
   "air": {
-   "temp_c": 17.8,
-   "feels_c": 15.0,
-   "wind_ms": 7.4,
-   "gust_ms": 8.9,
-   "wind_direction_deg": 142,
-   "pressure_hpa": 1022.3,
-   "cloud_pct": 11,
+   "temp_c": 17.7,
+   "feels_c": 14.7,
+   "wind_ms": 7.9,
+   "gust_ms": 9.5,
+   "wind_direction_deg": 141,
+   "pressure_hpa": 1021.7,
+   "cloud_pct": 5,
    "precip_mm": 0.0,
    "weather_code": 0,
-   "time_utc": "2026-08-27T09:30"
+   "time_utc": "2026-08-27T10:00"
   },
   "air_forecast": [
    {
     "date": "2026-08-27",
     "weather_code": 3,
-    "temp_max_c": 18.7,
-    "temp_min_c": 16.2,
-    "wind_max_ms": 12.3
+    "temp_max_c": 18.5,
+    "temp_min_c": 16.4,
+    "wind_max_ms": 12.8
    },
    {
     "date": "2026-08-28",
-    "weather_code": 61,
-    "temp_max_c": 17.7,
-    "temp_min_c": 16.6,
-    "wind_max_ms": 16.0
+    "weather_code": 63,
+    "temp_max_c": 17.5,
+    "temp_min_c": 16.4,
+    "wind_max_ms": 16.5
    },
    {
     "date": "2026-08-29",
-    "weather_code": 51,
-    "temp_max_c": 16.8,
+    "weather_code": 61,
+    "temp_max_c": 16.4,
     "temp_min_c": 14.6,
-    "wind_max_ms": 11.2
+    "wind_max_ms": 11.0
    },
    {
     "date": "2026-08-30",
@@ -128,13 +129,13 @@
   "timezone": "Europe/Oslo",
   "timezone_abbreviation": "GMT+2",
   "utc_offset_seconds": 7200,
-  "sunrise_local": "2026-08-27T06:25",
+  "sunrise_local": "2026-08-27T06:26",
   "sunset_local": "2026-08-27T20:52",
   "daylight_hours": 14.5
  },
  "stats": {
-  "points": 11392,
-  "distance_nm": 237.7,
+  "points": 11405,
+  "distance_nm": 240.7,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
