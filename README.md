@@ -631,10 +631,16 @@ the moment she was in it. Whether there is a ship in those pixels, the reader ca
 GitHub Pages keeps no logs, so a visitor count has to come from outside the page. It uses
 [GoatCounter](https://www.goatcounter.com): one script tag, free, open source.
 
-**It ships switched off.** `COUNTER_CODE` is an empty string in `index.html`, and while it is
-empty the page sends nothing, injects nothing and sets no globals - not even a request that
-404s. A page that gets shared with other families should not begin beaconing because a file
-was copied somewhere, so switching it on is a deliberate one-line edit.
+**It has an off switch, and the off state is the real default.** `COUNTER_CODE` in
+`index.html` is now `"christer-cmd"`, the site Christer registered; set it back to an empty
+string and the page sends nothing, injects nothing and sets no globals - not even a request
+that 404s. The first build shipped empty deliberately: a page that gets shared with other
+families should not begin beaconing because a file was copied somewhere, and the code cannot
+be filled in before the account exists, because the code *is* the account's subdomain.
+
+Showing the total on the page additionally needs "Allow adding visitor counts on your
+website" ticked in GoatCounter's own settings, which is off by default there. Until it is
+ticked, visits are counted and the dashboard fills, but the on-page line stays hidden.
 
 Why this one, out of everything that counts visitors:
 

@@ -458,7 +458,7 @@ function barChart(rows, unit, decimals, colorVar) {
 // It is OFF until COUNTER_CODE is filled in, deliberately. This page gets shared with
 // other families, and a beacon nobody asked for should not start firing just because a
 // file was copied somewhere.
-const COUNTER_CODE = "";        // <-- your goatcounter code, e.g. "sorlandet". Empty = off.
+const COUNTER_CODE = "christer-cmd";   // the goatcounter site. Empty string switches it off.
 
 // And the count, shown at the bottom of the page for everyone. GoatCounter serves a
 // public total from the same site once "Allow adding visitor counts on your website" is
@@ -499,7 +499,7 @@ async function showVisitorCount() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "0ceebf5932";
+const BUILD = "c7c5b46834";
 
 async function checkForNewBuild() {
   try {

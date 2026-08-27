@@ -80,31 +80,32 @@ Actions -> Update position -> Run workflow -> Run workflow.
 That is the last time you have to touch it.
 
 
-STEP 5 - the visitor counter (optional, 2 minutes)
--------------------------------------------------
-The page can show how many people have looked at it, at the very bottom. It is
-switched OFF in the file you just uploaded, and stays off until you do this -
-nothing is sent anywhere before that.
+STEP 5 - the visitor counter: ONE CLICK LEFT
+-------------------------------------------
+The bottom of the page shows how many people have looked at it. Your account
+is made and your code, christer-cmd, is already filled into the index.html in
+this folder - so uploading it is all that is needed on this side.
 
-  1. Go to goatcounter.com and sign up. Pick a code; say you choose
-     "sorlandet", your dashboard is then at sorlandet.goatcounter.com
-  2. In its Settings, tick "Allow adding visitor counts on your website".
-     That is what lets the number appear on your page. It is off by default
-     there so nothing leaks by accident.
-  3. In your repository open index.html, press the pencil, and find this line
-     near the top of the script (search for COUNTER_CODE):
+ONE thing remains, and it is on goatcounter.com, not here:
 
-         const COUNTER_CODE = "";
+  Go to christer-cmd.goatcounter.com -> Settings, and tick
+  "Allow adding visitor counts on your website".
 
-     Put your code between the quotes:
+That switch is what lets the total appear on YOUR page. It is off by default
+there, so that nobody's numbers leak by accident. Until you tick it, visits
+are still counted and your dashboard still fills up - but the line at the
+bottom of the page stays hidden rather than showing you a blank or an error.
 
-         const COUNTER_CODE = "sorlandet";
+"No data received" on the dashboard right now is correct and expected: the
+version of the page that is live has an empty code, so nothing has been sent
+yet. Upload this folder and it starts.
 
-     Commit changes.
+Within a few minutes the bottom of the page reads something like "37 visits to
+this page". Your dashboard at christer-cmd.goatcounter.com shows more - which
+days, which countries, which pages.
 
-That is it. Within a few minutes the bottom of the page reads something like
-"37 visits to this page". Your own dashboard at sorlandet.goatcounter.com
-shows more - which days, which countries, which pages.
+If you ever want it off again, set COUNTER_CODE back to an empty string in
+index.html. The page then sends nothing and shows nothing.
 
 WHAT IT DOES AND DOES NOT DO
 It uses no cookies and stores nothing in anyone's browser. A visit is counted
