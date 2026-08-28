@@ -637,7 +637,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "584bf006b4";
+const BUILD = "ea0730a307";
 
 async function checkForNewBuild() {
   try {
@@ -875,10 +875,21 @@ function atPoint(map, lat, lon) { return map.latLngToContainerPoint([lat, lon]);
 // left, waves to the right. The arrow is also shorter than the SVG one was - at six cells
 // across a phone there is about 60 px between neighbours, and a 30 px arrow reached into
 // the next cell's wave.
+//
+// These offsets are also what the readout hit-tests against, so they live in one place. The
+// first version tested a 40 px radius from the CELL centre, which on a grid whose cells are
+// 55 px apart meant almost every pixel of the map was "over" something and the box never
+// went away. A box round each glyph's own ink is what "over the symbol" actually means.
+const GLYPH_AT = {
+  wind:  { dx: -10, dy:   6, w: 11, up: 13, down: 13 },
+  waves: { dx:  10, dy:   5, w: 11, up: 11, down: 22 },  // down covers the height beneath
+  sky:   { dx:   0, dy: -22, w: 14, up: 13, down: 18 },  // up covers the symbol, down the °C
+};
+
 function drawWind(ctx, x, y, ws, wd) {
   const len = Math.min(21, 9 + ws * 0.95);
   ctx.save();
-  ctx.translate(x - 10, y + 6);
+  ctx.translate(x + GLYPH_AT.wind.dx, y + GLYPH_AT.wind.dy);
   ctx.rotate(((wd + 180) % 360) * Math.PI / 180);
   ctx.strokeStyle = ctx.fillStyle = scaleColor(ws, WIND_COLORS);
   ctx.globalAlpha = 0.95;
@@ -901,7 +912,7 @@ function drawWave(ctx, x, y, hs, wd) {
   const col = scaleColor(hs, WAVE_COLORS);
   const w = Math.min(8, 4.2 + hs);
   ctx.save();
-  ctx.translate(x + 10, y + 5);
+  ctx.translate(x + GLYPH_AT.waves.dx, y + GLYPH_AT.waves.dy);
   ctx.rotate(((wd + 180) % 360) * Math.PI / 180);
   ctx.strokeStyle = col;
   ctx.lineWidth = 2.5;
@@ -923,7 +934,7 @@ function drawWave(ctx, x, y, hs, wd) {
   ctx.fillStyle = col;
   ctx.font = "700 9.5px system-ui, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(hs.toFixed(1), x + 10, y + 23);
+  ctx.fillText(hs.toFixed(1), x + GLYPH_AT.waves.dx, y + 23);
   ctx.restore();
 }
 
@@ -954,7 +965,7 @@ function drawSky(ctx, x, y, code, temp) {
   ctx.globalAlpha = 1;
   ctx.textAlign = "center";
   ctx.font = "13px system-ui, sans-serif";
-  ctx.fillText(WMO[code] || "\u{1F321}\uFE0F", x, y - 22);
+  ctx.fillText(WMO[code] || "\u{1F321}\uFE0F", x + GLYPH_AT.sky.dx, y + GLYPH_AT.sky.dy);
   if (temp != null) {
     ctx.font = "700 10px system-ui, sans-serif";
     ctx.lineWidth = 3;
@@ -1022,29 +1033,46 @@ glyphTip.id = "glyphtip";
 document.getElementById("map").appendChild(glyphTip);
 let tipTimer = null;
 
-function nearest(list, pt, reach) {
-  let best = null, bestD = reach * reach;
+// Which glyph the pointer is actually on. A box around that glyph's own ink, not a radius
+// from the cell it belongs to: the three glyphs sit in different corners of a cell, and the
+// cells are only about 55 px apart, so a radius wide enough to catch one caught all of them
+// and half the neighbours too. The readout was permanently on screen.
+function hitGlyph(list, kind, pt) {
+  const g = GLYPH_AT[kind];
+  let best = null, bestD = Infinity;
   for (const item of list) {
-    const dx = item.pt.x - pt.x, dy = item.pt.y - pt.y, d = dx * dx + dy * dy;
-    if (d < bestD) { bestD = d; best = item; }
+    const cx = item.pt.x + g.dx, cy = item.pt.y + g.dy;
+    const dx = pt.x - cx, dy = pt.y - cy;
+    if (Math.abs(dx) > g.w || dy < -g.up || dy > g.down) continue;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = { ...item, at: { x: cx, y: cy } }; }
   }
   return best;
 }
 
 function showGlyphTip(pt) {
+  // Only what the pointer is genuinely over, and only those layers. Hovering an arrow used
+  // to report the waves and the sky as well, from a cell the pointer was nowhere near.
   const lines = [];
-  const w = nearest(drawn.wind, pt, 40);
-  if (w) lines.push(`<b>Wind</b> ${w.ws.toFixed(1)} m/s from ${compass(w.wd)} · ${beaufort(w.ws)}`);
-  const v = nearest(drawn.waves, pt, 40);
-  if (v) lines.push(`<b>Waves</b> ${v.hs.toFixed(1)} m from ${compass(v.wd)}`
-    + (v.tp != null ? `, ${Math.round(v.tp)} s apart` : ""));
-  const s = nearest(drawn.sky, pt, 46);
+  let anchor = null;
+  const w = hitGlyph(drawn.wind, "wind", pt);
+  if (w) {
+    lines.push(`<b>Wind</b> ${w.ws.toFixed(1)} m/s from ${compass(w.wd)} · ${beaufort(w.ws)}`);
+    anchor = w.at;
+  }
+  const v = hitGlyph(drawn.waves, "waves", pt);
+  if (v) {
+    lines.push(`<b>Waves</b> ${v.hs.toFixed(1)} m from ${compass(v.wd)}`
+      + (v.tp != null ? `, ${Math.round(v.tp)} s apart` : ""));
+    anchor = anchor || v.at;
+  }
+  const s = hitGlyph(drawn.sky, "sky", pt);
   if (s && (s.wc != null || s.t2 != null)) {
     lines.push(`<b>Sky</b> ${WMO_TEXT[s.wc] || "–"}`
       + (s.t2 != null ? ` · ${Math.round(s.t2)}°C` : ""));
+    anchor = anchor || s.at;
   }
-  if (!lines.length) { glyphTip.classList.remove("show"); return; }
-  const anchor = (w || v || s).pt;
+  if (!lines.length || !anchor) { glyphTip.classList.remove("show"); return; }
   glyphTip.innerHTML = lines.join("<br>");
   glyphTip.style.left = anchor.x + "px";
   glyphTip.style.top = (anchor.y - 16) + "px";
