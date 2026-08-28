@@ -2,42 +2,45 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-08-28T17:22:19Z",
+ "updated_utc": "2026-08-28T17:51:39Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 60.130375,
-  "lon": 4.237776666666667,
-  "sog_kn": 3.8,
-  "cog_deg": 342,
-  "heading_deg": null,
-  "seen_utc": "2026-08-28T17:22:06Z",
-  "source": "foundation",
-  "sog_derived": true
+  "lat": 60.15785,
+  "lon": 4.21941,
+  "sog_kn": 3.7,
+  "cog_deg": 342.9,
+  "heading_deg": 355,
+  "nav_status": 8,
+  "seen_utc": "2026-08-28T17:51:04Z",
+  "source": "aisstream.io",
+  "destination": "GB LER",
+  "draught_m": 4.1,
+  "eta_text": "06.09 09:00"
  },
  "weather": {
-  "fetched_utc": "2026-08-28T17:22:15Z",
+  "fetched_utc": "2026-08-28T17:51:35Z",
   "sea": {
-   "wave_height_m": 1.12,
-   "wave_direction_deg": 143,
-   "wave_period_s": 6.35,
-   "swell_height_m": 0.94,
-   "swell_period_s": 6.05,
+   "wave_height_m": 1.14,
+   "wave_direction_deg": 144,
+   "wave_period_s": 6.45,
+   "swell_height_m": 0.96,
+   "swell_period_s": 6.15,
    "wind_wave_height_m": 0.48,
    "sea_temp_c": 15.0,
-   "time_utc": "2026-08-28T17:15"
+   "time_utc": "2026-08-28T17:45"
   },
   "air": {
-   "temp_c": 15.6,
-   "feels_c": 13.1,
-   "wind_ms": 7.3,
+   "temp_c": 15.3,
+   "feels_c": 12.7,
+   "wind_ms": 7.4,
    "gust_ms": 9.1,
-   "wind_direction_deg": 43,
-   "pressure_hpa": 1002.6,
+   "wind_direction_deg": 42,
+   "pressure_hpa": 1002.3,
    "cloud_pct": 100,
-   "precip_mm": 1.1,
+   "precip_mm": 1.0,
    "weather_code": 63,
-   "time_utc": "2026-08-28T17:15"
+   "time_utc": "2026-08-28T17:45"
   }
  },
  "sun": {
@@ -50,12 +53,12 @@
   "civil_place": "Lerwick",
   "civil_country": "United Kingdom",
   "sunrise_utc": "2026-08-28T04:28",
-  "sunset_utc": "2026-08-28T18:59",
+  "sunset_utc": "2026-08-28T19:00",
   "daylight_hours": 14.5
  },
  "stats": {
-  "points": 1359,
-  "distance_nm": 387.1,
+  "points": 1368,
+  "distance_nm": 388.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
