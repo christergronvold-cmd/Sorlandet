@@ -15,14 +15,14 @@
     --bg:#f4f6f8; --panel:#ffffff; --ink:#12222e; --muted:#5d7385;
     --line:#e2e8ee; --accent:#0b6ea8; --warn:#a8580b; --warn-bg:#fff5e6;
     --shadow:0 1px 2px rgba(18,34,46,.06), 0 8px 24px rgba(18,34,46,.06);
-    --chart-a:#0b6ea8; --chart-b:#b58a1b; --chart-c:#a8437a;
+    --chart-a:#0b6ea8; --chart-b:#b58a1b; --chart-c:#a8437a; --chart-d:#2e7d32;
   }
   @media (prefers-color-scheme: dark){
     :root{
       --bg:#0d1520; --panel:#131f2c; --ink:#e8eef4; --muted:#93a6b6;
       --line:#22323f; --accent:#5fb6e6; --warn:#f0b45c; --warn-bg:#2a2113;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-      --chart-a:#2f8fc4; --chart-b:#b6862c; --chart-c:#c9628f;
+      --chart-a:#2f8fc4; --chart-b:#b6862c; --chart-c:#c9628f; --chart-d:#4aa356;
     }
   }
   *{box-sizing:border-box}
@@ -209,7 +209,6 @@
     <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
     <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
     <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
-    <button id="coursetoggle" title="The course the wind would make fastest, and where she would tack">Course</button>
     <button id="sattoggle" title="Swap the map for the actual satellite picture of her weather">Satellite</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
@@ -479,36 +478,70 @@ function barChart(rows, unit, decimals, colorVar) {
 // file was copied somewhere.
 const COUNTER_CODE = "christer-cmd";   // the goatcounter site. Empty string switches it off.
 
-// And the count, shown at the bottom of the page for everyone. GoatCounter serves a
-// public total from the same site once "Allow adding visitor counts on your website" is
-// switched on in its settings; it is off by default there, so nothing leaks by accident.
-// The number it returns is cached for up to four hours at their end, which the caption
-// says rather than pretending it is live.
+// Which URL gives the total. NOT the documented special path "TOTAL" - that answers 0 for
+// this site, because GoatCounter appears to treat an unrecognised path as a page with no
+// hits rather than as an error, so it fails silently and looks exactly like a broken
+// counter. The page's own path does work: measured, /counter//Sorlandet.json returns the
+// figure the dashboard shows while /counter/TOTAL.json returns 0.
+//
+// The path has to match what GoatCounter recorded, which is the pathname without its
+// trailing slash: the site is served from /Sorlandet/ and stored as /Sorlandet. The `|| "/"`
+// keeps a root-hosted copy working, where stripping the slash would leave nothing.
+function counterUrl() {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  // Note the slash before ${path}: the format is /counter/ followed by the path WITH its
+  // own leading slash, so a real URL has two - /counter//Sorlandet.json. Getting this wrong
+  // produces /counter/Sorlandet.json, which answers 0 without erroring, exactly like the
+  // TOTAL path did.
+  return `https://${COUNTER_CODE}.goatcounter.com/counter/${path}.json`;
+}
+
+// Our own counter, on Cloudflare. See worker/counter.js and CLOUDFLARE-COUNTER.txt.
+// This is what the number at the bottom comes from when it is filled in, because the hosted
+// alternative could not answer the question being asked: it caches its public figure for up
+// to four hours and counts one visit per browser per eight hours, so refreshing the page
+// changed nothing and the number was always stale. This one counts every load and answers
+// at once. It stores a single integer - no addresses, no identifiers, nothing per visitor.
+const COUNTER_URL = "";   // e.g. "https://sorlandet-counter.yourname.workers.dev" - empty = off
+
+function tally(el, views, live) {
+  el.innerHTML = `<b>${views.toLocaleString("en-GB")}</b> ${views === 1 ? "time" : "times"} ` +
+    `this page has been opened · nothing about you is stored, only the number` +
+    (live ? "" : " · the total updates every few hours");
+  el.hidden = false;
+}
+
+// The count, shown at the bottom of the page for everyone. Our own counter first; the
+// hosted one is the fallback while the Worker is not set up yet.
 async function showVisitorCount() {
-  if (!COUNTER_CODE) return;
   const el = document.getElementById("hits");
   if (!el) return;
+
+  if (COUNTER_URL) {
+    try {
+      // One request per page load: it increments and answers with the new total, so there
+      // is nothing to fetch twice and nothing to go stale between the two.
+      const r = await fetch(COUNTER_URL.replace(/\/+$/, "") + "/count",
+                            { cache: "no-store" });
+      if (r.ok) {
+        const { views } = await r.json();
+        if (Number.isFinite(views) && views >= 1) { tally(el, views, true); return; }
+      }
+    } catch { /* fall through to the hosted counter */ }
+  }
+
+  if (!COUNTER_CODE) return;
   try {
-    const r = await fetch(
-      `https://${COUNTER_CODE}.goatcounter.com/counter/TOTAL.json`, { cache: "no-store" });
+    const r = await fetch(counterUrl(), { cache: "no-store" });
     if (!r.ok) return;                          // setting off, or nothing counted yet
     const { count } = await r.json();
-    // "0 visits to this page", read by somebody who is on the page, is a contradiction -
-    // it reads as broken rather than as new. GoatCounter caches this total for up to four
-    // hours, so a zero is exactly what the first few hours after switching it on look
-    // like. Say nothing until there is something true to say. Note that "0" is a truthy
-    // string, so this has to be parsed, not just checked for emptiness.
+    // "0 times opened", read by somebody who is on the page, is a contradiction - it reads
+    // as broken rather than as new, and a zero is exactly what the hosted counter's
+    // four-hour cache looks like for the first few hours. Note that "0" is a truthy string,
+    // so this has to be parsed, not just checked for emptiness.
     const total = parseInt(String(count == null ? "" : count).replace(/[^\d]/g, ""), 10);
     if (!Number.isFinite(total) || total < 1) return;
-    // Sessions are switched off in GoatCounter's own settings, so this is every time the
-    // page was opened, not how many different people opened it. The link goes to about a
-    // hundred and forty families; "times opened" is the number that says whether they keep
-    // coming back, which is the interesting question. So the wording has to say that, and
-    // not "visitors", which would be a different and smaller number.
-    el.innerHTML = `<b>${count}</b> ${total === 1 ? "time" : "times"} this page has been ` +
-      `opened · counted without cookies, and nothing is stored in your browser · ` +
-      `the total updates every few hours`;
-    el.hidden = false;
+    tally(el, total, false);
   } catch { /* offline, or blocked: the page is fine without it */ }
 }
 
@@ -526,10 +559,12 @@ async function countCheck() {
   // those are theirs to change, and "did the file arrive" is the question anyway.
   const loaded = window.__gcState || "not started";
   let total = "(not asked)";
-  if (COUNTER_CODE) {
+  // /views rather than /count, so looking at the diagnostics does not add to the number.
+  const probe = COUNTER_URL ? COUNTER_URL.replace(/\/+$/, "") + "/views"
+              : COUNTER_CODE ? counterUrl() : null;
+  if (probe) {
     try {
-      const r = await fetch(
-        `https://${COUNTER_CODE}.goatcounter.com/counter/TOTAL.json`, { cache: "no-store" });
+      const r = await fetch(probe, { cache: "no-store" });
       total = r.ok ? JSON.stringify(await r.json()) : `HTTP ${r.status}`;
     } catch (e) { total = "request failed or blocked"; }
   }
@@ -545,6 +580,11 @@ async function countCheck() {
     line("Global Privacy Control", gpc ? "on — you are not counted" : "off", gpc) +
     line("counting script", loaded, loaded !== "loaded") +
     line("you excluded yourself (skipgc)", skip ? String(skip) : "no", !!skip) +
+    line("our own counter", COUNTER_URL || "(not set up - using the hosted one)",
+         !COUNTER_URL) +
+    line("asked", COUNTER_URL
+      ? COUNTER_URL.replace(/^https:\/\//, "").replace(/\/+$/, "") + "/count"
+      : (COUNTER_CODE ? counterUrl().replace(/^https:\/\//, "") : "(nothing)"), false) +
     line("public total says", total, /HTTP|failed/.test(total)) +
     `<div style="margin-top:8px;line-height:1.6">If everything above is fine and the total ` +
     `is still 0: GoatCounter caches this number for up to four hours. Your own dashboard ` +
@@ -593,7 +633,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "b6db228a93";
+const BUILD = "830946312d";
 
 async function checkForNewBuild() {
   try {
@@ -676,7 +716,7 @@ const scaleColor = (v, table) => {
 };
 
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true, weather: false, course: false, sat: false };
+let gridIndex = 0, show = { wind: true, waves: true, weather: false, sat: false };
 
 // ---------------------------------------------------------------- satellite imagery
 // NASA's Global Imagery Browse Services serves the actual pictures, free and without a
@@ -782,36 +822,6 @@ function drawSatellite() {
   badge.hidden = false;
   badge.textContent = `${src.label} · ${age}`;
   badge.title = src.res + (satBackoff ? ` (stepped back ${satBackoff} to the newest published)` : "");
-}
-
-let courseLayers = [];
-
-function drawCourse() {
-  courseLayers.forEach(l => map.removeLayer(l));
-  courseLayers = [];
-  const c = window.__course;
-  if (!show.course || !c || !(c.points || []).length) return;
-
-  const line = c.points.map(p => [p.lat, p.lon]);
-  courseLayers.push(L.polyline(line, {
-    color: "#7a3fb8", weight: 3, opacity: .9
-  }).bindTooltip(
-    `<b>Fastest sailing course to ${c.to}</b><br>` +
-    `${Math.round(c.hours)} h · ${Math.round(c.sailed_nm)} nm through the water · ` +
-    `${(c.tacks || []).length} tacks` +
-    (c.plan_hours ? `<br>The plan allows ${Math.round(c.plan_hours / 24 * 10) / 10} days, ` +
-      `so about ${Math.round((c.plan_hours - c.hours) / 24 * 10) / 10} in hand` : ""),
-    { sticky: true }).addTo(map));
-
-  (c.tacks || []).forEach(i => {
-    const p = c.points[i];
-    if (!p) return;
-    courseLayers.push(L.circleMarker([p.lat, p.lon], {
-      radius: 5, color: "#7a3fb8", weight: 2.5, fillColor: "var(--panel)", fillOpacity: 1
-    }).bindTooltip(
-      `Tack after ${Math.round(p.hours)} h<br>${N(p.tws, 0)} kn at ${Math.abs(p.twa)}° ` +
-      `${p.twa < 0 ? "to port" : "to starboard"}`, { direction: "top" }).addTo(map));
-  });
 }
 
 // --------------------------------------------------- the glyph layer, on one canvas
@@ -1090,13 +1100,11 @@ document.getElementById("windtime").addEventListener("input", e => {
 });
 [["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"],
  ["weathertoggle", "weather", "Weather"],
- ["coursetoggle", "course", "Course"],
  ["sattoggle", "sat", "Satellite"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
     show[key] = !show[key];
     e.target.classList.toggle("on", show[key]);
     e.target.textContent = show[key] ? `${label} ✓` : label;
-    if (key === "course") { drawCourse(); return; }
     if (key === "sat") { drawSatellite(); return; }
     drawGrids();
     if (show[key]) refreshViewportGrids();
@@ -1605,7 +1613,6 @@ async function load() {
   render(latest, track, plan, history, ahead, wakeFile, eventFile, courseFile, orbitFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
-  drawCourse();
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
   // ?countcheck swaps the count for a diagnosis of why it is what it is.
   if (/(^|[?&])countcheck($|[=&])/.test(location.search)) setTimeout(countCheck, 1200);
@@ -1742,12 +1749,34 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     });
   }
 
-  // The route she is actually expected to sail from here to the next port, worked out
-  // by the job across a sea grid - not the drawn port-to-port line.
+  // The course she is expected to sail from here to the next port. This is the isochrone
+  // route - the one the wind and her own polar allow, with the tacks in it - and it
+  // replaced a near-straight line drawn to the port. Two forward routes on one map
+  // disagreed with each other, and the straight one was never a course she could steer:
+  // she cannot point within about 58 degrees of the wind.
   if (ahead?.route?.length > 1) {
+    const sailed = ahead.route_basis === "course";
     layers.push(L.polyline(ahead.route, {
-      color: "#0b6ea8", weight: 2, opacity: .55, dashArray: "7,5"
-    }).bindTooltip(`Expected route to ${ahead.to}: ${Math.round(ahead.distance_nm)} nm`).addTo(map));
+      color: "#0b6ea8", weight: sailed ? 2.5 : 2, opacity: sailed ? .75 : .55,
+      dashArray: "7,5"
+    }).bindTooltip(
+      `<b>${sailed ? "Expected sailing course" : "Expected route"} to ${ahead.to}</b><br>` +
+      `${Math.round(ahead.distance_nm)} nm through the water` +
+      (sailed && ahead.direct_nm
+        ? ` · ${Math.round(ahead.direct_nm)} nm direct, so ${
+            Math.round((ahead.winding - 1) * 100)}% further for the tacks` : ""),
+      { sticky: true }).addTo(map));
+
+    // Where she would come about. Worth marking: it is the difference between a line on a
+    // chart and a course a square rigger can actually steer.
+    (ahead.tacks || []).forEach(i => {
+      const at = ahead.route[i];
+      if (!at) return;
+      layers.push(L.circleMarker(at, {
+        radius: 5, color: "#7a3fb8", weight: 2.5, fillColor: "var(--panel)", fillOpacity: 1
+      }).bindTooltip("She would come about here", { direction: "top" }).addTo(map));
+    });
+
     (ahead.points || []).forEach(pt => {
       layers.push(L.circleMarker([pt.lat, pt.lon], {
         radius: 4, color: "#0b6ea8", weight: 2, fillColor: "var(--panel)", fillOpacity: 1
@@ -1787,12 +1816,22 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     if (nextPort) {
       const days = Math.max(0, Math.round((new Date(nextPort.arrive + "T12:00:00Z") - Date.now()) / 864e5));
       rows += row("Scheduled arrival", `${dayName(nextPort.arrive)} (in ${days} days)`);
-      if (p.lat !== undefined && !waiting) {
-        // Distance along the route via the leg's waypoints, not as the crow flies.
-        const legPts = [[p.lat, p.lon], ...(nextPort.waypoints || []), [nextPort.lat, nextPort.lon]];
-        let dist = 0;
-        for (let i = 1; i < legPts.length; i++) dist += nm(legPts[i - 1], legPts[i]);
-        rows += row("Distance", `${N(dist, 0)} nm`);
+      // The port the leg starts at, taken by index exactly as the progress card takes it -
+      // not "the last port she has departed from", which is a second definition that could
+      // drift from the first and put two disagreeing numbers on the screen again.
+      const legStart = ports[Math.max(0, ports.indexOf(nextPort) - 1)];
+      if (p.lat !== undefined && !waiting && legStart && legStart !== nextPort) {
+        // What is left of the leg, measured the same way the progress card measures it:
+        // project her onto the leg's own polyline and take the rest of it.
+        //
+        // This used to walk from her position through EVERY waypoint of the leg, which
+        // sends her backwards to the ones she rounded days ago. On 27 August that read
+        // 440 nm to Lerwick when the whole leg is 338 and she was 126 along it - 239 nm of
+        // pure doubling back. It is the identical mistake the progress bar had, fixed there
+        // and left here, and the two numbers sat on the same screen disagreeing.
+        const leg = alongLeg([[legStart.lat, legStart.lon], ...(nextPort.waypoints || []),
+                              [nextPort.lat, nextPort.lon]], [p.lat, p.lon]);
+        rows += row("Distance", `${N(Math.max(0, leg.legLength - leg.covered), 0)} nm to run`);
       }
       if (nextPort.events) rows += row("Programme", nextPort.events.join("<br>"));
     } else {
@@ -1855,37 +1894,51 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
            ? " · beyond five days it is an outlook, not a forecast" : ""}
      </div><div class="fc">${aheadStrip}</div>`) : "";
 
-  // ---- the clock ashore, sun and moon
-  // A city clock, not a ship's zone clock: the time in the port she is lying in, or the
-  // one she is heading for. That is the number that answers "can I call him now".
+  // ---- the clock on board, sun and moon
+  // Ship's time, worked out the way ships do it: nautical zones, fifteen degrees of
+  // longitude each, zone 0 running 7.5 W to 7.5 E. So the offset is simply the longitude
+  // divided by fifteen and rounded.
+  //
+  // This is an estimate, and the card says so. A master may hold a zone through a passage
+  // or shift the clocks at a convenient hour rather than the moment a meridian goes by. But
+  // it is the convention, and it is demonstrably what the AIS trackers use too: on 27 August
+  // MarineTraffic logged "Vessel Changed Time Zone, from UTC+1 to UTC+0" at 10:21, which is
+  // exactly when she crossed 7.5 E going west. Same rule, same answer.
+  //
+  // Sunrise and sunset are computed at HER position, so putting them in her own clock is
+  // more use than putting them in a port's: this is the daylight the crew actually gets.
   const sun = d.sun || {}, moon = sun.moon || {};
   let boardCard = "";
-  if (sun.civil_timezone) {
-    const TZ = sun.civil_timezone;
-    const inTZ = (date, opts) =>
-      new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour12: false, ...opts }).format(date);
-    const offsetH = date => {
-      // the zone's offset on that date, taken from the browser's own zone data
-      const asUTC = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
-      const asTZ = new Date(date.toLocaleString("en-US", { timeZone: TZ }));
-      return Math.round((asTZ - asUTC) / 36e5);
+  if (p.lon !== undefined && !waiting) {
+    const zone = Math.round(p.lon / 15);            // hours ahead of UTC
+    const label = `UTC${zone >= 0 ? "+" : ""}${zone}`;
+    const inZone = (date, withSeconds) => {
+      const t = new Date(date.getTime() + zone * 36e5);
+      const pad = n => String(n).padStart(2, "0");
+      return `${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}` +
+             (withSeconds ? `:${pad(t.getUTCSeconds())}` : "");
     };
-    const off = offsetH(new Date());
     const youOff = -new Date().getTimezoneOffset() / 60;
-    const diff = Math.round(off - youOff);
+    const diff = Math.round(zone - youOff);
     const vsYou = diff === 0 ? "same as your clock"
       : `${Math.abs(diff)} ${Math.abs(diff) === 1 ? "hour" : "hours"} ${diff < 0 ? "behind" : "ahead of"} you`;
     const fromUTC = stamp => {
       if (!stamp) return "–";
       const dt = new Date(stamp.endsWith("Z") ? stamp : stamp + "Z");
-      return isNaN(dt) ? "–" : inTZ(dt, { hour: "2-digit", minute: "2-digit" });
+      return isNaN(dt) ? "–" : inZone(dt, false);
     };
+    // Where the next change falls, which is the fun part: it is a line on the chart.
+    const nextMeridian = 15 * (zone + (p.cog_deg > 180 ? -0.5 : 0.5));
+    const dms = Math.abs(nextMeridian);
+    const goingWest = p.cog_deg > 180;
 
-    boardCard = card(`Clock in ${sun.civil_place || "port"}`, `
+    boardCard = card("Ship's clock", `
       <div class="big" id="shipclock">--:--</div>
       <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">
-        ${sun.civil_place || ""}${sun.civil_country ? ", " + sun.civil_country : ""} ·
-        UTC${off >= 0 ? "+" : ""}${off} · ${vsYou}</div>
+        nautical zone ${label} · ${vsYou} · an estimate from her longitude, the way ships
+        set clocks — the master may hold a zone longer</div>
+      ${row("Changes at", `${dms.toFixed(1)}° ${nextMeridian >= 0 ? "E" : "W"}` +
+        `<span style="color:var(--muted)"> · ${goingWest ? "one hour back" : "one hour on"}</span>`)}
       ${row("Sunrise", fromUTC(sun.sunrise_utc))}
       ${row("Sunset", fromUTC(sun.sunset_utc))}
       ${row("Daylight", sun.daylight_hours ? `${sun.daylight_hours} h` : "–")}
@@ -1895,8 +1948,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     const tick = () => {
       const el = document.getElementById("shipclock");
       if (!el) return;
-      el.textContent = inTZ(new Date(),
-        { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      el.textContent = inZone(new Date(), true);
     };
     window.__clock = setInterval(tick, 1000);
     setTimeout(tick, 0);
@@ -1957,7 +2009,15 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     v: r.max_wave_m, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
     short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
   }));
-  const chartsCard = (distRows.length > 1 || windRows.length > 1 || waveRows.length > 1)
+  // Fastest she REPORTED each day. Speeds the job worked out from the step between two
+  // positions are excluded at source, so this cannot become the 11.1-knot bug once a day.
+  const sogDays = (history.days || []).filter(r => r.max_sog_kn != null).slice(-14);
+  const sogRows = sogDays.map(r => ({
+    v: r.max_sog_kn, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  }));
+  const chartsCard = (distRows.length > 1 || windRows.length > 1 || waveRows.length > 1
+                      || sogRows.length > 1)
     ? wideCard("Day by day", `
     <div class="charts">
       <div class="chart"><h3>Distance sailed</h3><p>nautical miles per day, last ${distRows.length} days</p>
@@ -1966,6 +2026,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${barChart(windRows, "m/s", 1, "--chart-b") || '<p style="margin:0">Builds up from today.</p>'}</div>
       <div class="chart"><h3>Highest wave</h3><p>highest reading each day, metres</p>
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
+      <div class="chart"><h3>Highest speed</h3><p>fastest she reported each day, knots</p>
+        ${barChart(sogRows, "kn", 1, "--chart-d") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`) : "";
 
   // Sentinel-2 true colour, 10 m per pixel, cropped to a square around where she was at

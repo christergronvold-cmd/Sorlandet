@@ -747,8 +747,8 @@ def moon_phase(when: datetime | None = None) -> dict:
     return {"age_days": round(age, 1), "illumination": round(illum, 2), "phase": name}
 
 
-def update_history(weather: dict, points: list) -> None:
-    """Keeps one row per day: strongest wind and highest wave we have observed.
+def update_history(weather: dict, points: list, fixes: list | None = None) -> None:
+    """Keeps one row per day: strongest wind, highest wave, fastest she reported.
 
     The daily distance is not stored - the page works that out from the track, so
     there is only one source of truth for it.
@@ -764,6 +764,21 @@ def update_history(weather: dict, points: list) -> None:
     for key, value in (("max_wind_ms", wind), ("max_gust_ms", gust), ("max_wave_m", wave)):
         if value is not None:
             row[key] = max(value, row.get(key) or 0)
+
+    # Fastest she REPORTED that day, and only that. A speed worked out from the step
+    # between two positions is not a measurement - it reads low through a tack and high
+    # over a short step - and letting those into a daily maximum would be the 11.1-knot
+    # bug again, once per day. Every fix heard this run is considered, not just the last
+    # one, so a peak in the middle of the window is not missed.
+    for fix in (fixes or []):
+        if fix.get("sog_derived"):
+            continue
+        v = clean_sog(fix.get("sog_kn"))
+        if v is None or v <= 0:
+            continue
+        day = str(fix.get("seen_utc") or "")[:10] or today
+        r = by_date.setdefault(day, {"date": day})
+        r["max_sog_kn"] = round(max(v, r.get("max_sog_kn") or 0), 1)
 
     if points:
         row["last_position_utc"] = points[-1]["t"]
@@ -1288,7 +1303,28 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
         port = next_port(plan.get("ports") or [])
         if not port:
             return
-        route = sea_route((lat, lon), (port["lat"], port["lon"]))
+        # The route she is drawn along is the SAILING COURSE, not a line ruled to the port.
+        # A square rigger cannot point within about 58 degrees of the wind, so the straight
+        # line was never a route she could take, and having both on the map meant two
+        # forward projections disagreeing with each other. build_course runs first and
+        # writes the isochrone route; this walks along it. sea_route stays as the fallback
+        # for when the router has no wind field or cannot find a way through.
+        course = read_json(COURSE, {}) or {}
+        cpts = course.get("points") or []
+        route, route_basis = None, "direct"
+        if (course.get("to") == port["name"] and len(cpts) >= 2
+                and course.get("generated_utc")):
+            try:
+                age_h = (now_utc() - parse_iso(course["generated_utc"])).total_seconds() / 3600
+            except Exception:
+                age_h = 999
+            if age_h < 6:
+                route = [(float(q["lat"]), float(q["lon"])) for q in cpts]
+                # It starts where she was when the router ran; pin it to where she is now.
+                route[0] = (lat, lon)
+                route_basis = "course"
+        if route is None:
+            route = sea_route((lat, lon), (port["lat"], port["lon"]))
         if not route or len(route) < 2:
             print("  ! could not route to the next port", file=sys.stderr)
             return
@@ -1351,7 +1387,15 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
 
         # The rate is held for exactly the span it was measured over, so "her last day"
         # really becomes "her next day".
-        distance_at, basis, near_kn = pace_along(legs, vmg, plan_h, cruise,
+        # Made good is progress towards the PORT. The route she is drawn along is longer
+        # than that, because she tacks: closing 338 nm of gap can mean sailing 410 nm of
+        # water. Pacing a 410 nm route at a 3.6 kn made-good rate would creep. Scale it by
+        # how much longer the route is than the gap it closes, and the two agree again.
+        direct_nm = nm_between((lat, lon), target)
+        winding = max(1.0, min(3.0, legs / direct_nm)) if direct_nm > 1 else 1.0
+        vmg_route = None if vmg is None else vmg * winding
+
+        distance_at, basis, near_kn = pace_along(legs, vmg_route, plan_h, cruise * winding,
                                                 hold_h=float(vmg_window or 24))
         wait_h = max(0.0, (sails_at - now_utc()).total_seconds() / 3600)
 
@@ -1377,6 +1421,10 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
             "generated_utc": iso(now_utc()),
             "to": port["name"], "country": port.get("country"),
             "distance_nm": round(legs, 1),
+            "direct_nm": round(direct_nm, 1),
+            "route_basis": route_basis,           # "course" = the sailing course, not a line
+            "winding": round(winding, 2),         # route length / the gap it closes
+            "tacks": course.get("tacks") if route_basis == "course" else None,
             "speed_kn": round(near_kn, 1),        # the rate the next few hours are drawn at
             "vmg_kn": None if vmg is None else round(vmg, 2),
             "vmg_window_h": vmg_window,           # measured over her last N hours
@@ -1389,7 +1437,8 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
         })
         vmg_note = (f"making good {vmg:.2f} kn on it over her last {vmg_window} h"
                     if vmg is not None else "no usable made-good rate in the track")
-        print(f"  -> route to {port['name']}: {legs:.0f} nm, {vmg_note}; "
+        print(f"  -> route to {port['name']} along the {route_basis}: {legs:.0f} nm "
+              f"({direct_nm:.0f} nm direct, {winding:.2f}x), {vmg_note}; "
               f"pace = {basis}; 6 h ahead is {distance_at(6):.1f} nm along, "
               f"24 h is {distance_at(24):.1f} nm; {len(ahead)} forecast points")
     except Exception as exc:
@@ -1848,14 +1897,16 @@ def main() -> int:
             },
         },
     )
+    # Course first: the forward projection now walks along the sailing course rather than
+    # along a near-straight line, so the course has to exist before it is paced.
+    build_course(lat, lon)
     build_ahead(lat, lon, position.get("sog_kn"), points)
     build_wake(points)
     # The voyage fields ride on the newest position, having been merged there from the
     # static messages, so pass them along rather than re-deriving them.
     build_events(collected, {k: position.get(k) for k in ("destination", "eta_text", "draught_m")})
-    build_course(lat, lon)
     build_orbit(points)
-    update_history(weather, points)
+    update_history(weather, points, collected)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
 
