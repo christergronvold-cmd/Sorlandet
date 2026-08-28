@@ -160,7 +160,11 @@
   .log li:last-child{border-bottom:0}
   .log time{color:var(--muted); flex:0 0 74px; font-variant-numeric:tabular-nums}
   .log .ic{flex:0 0 20px; text-align:center}
-  .charts{display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  /* Four charts, and they should sit in one row rather than three-plus-one. auto-fit
+     handles the narrow end - one column on a phone, two on a tablet - and above 900 px
+     the count is pinned to four so a slightly awkward width cannot orphan the last one. */
+  .charts{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  @media (min-width:900px){ .charts{grid-template-columns:repeat(4,1fr)} }
   .chart h3{font-size:13px; margin:0 0 2px; font-weight:600}
   .chart p{font-size:12px; color:var(--muted); margin:0 0 8px}
   .chart svg{width:100%; height:auto; display:block; overflow:visible}
@@ -440,7 +444,7 @@ function milestones(points, ports, todayISO, sogFrom) {
 // single pair of axes would misrepresent both.
 function barChart(rows, unit, decimals, colorVar) {
   if (!rows.length) return "";
-  const W = 300, H = 96, padB = 14, padT = 12;
+  const W = 210, H = 96, padB = 14, padT = 12;
   const max = Math.max(...rows.map(r => r.v)) || 1;
   const bw = Math.max(3, (W / rows.length) - 2);          // 2px surface gap
   const bars = rows.map((r, i) => {
@@ -453,7 +457,7 @@ function barChart(rows, unit, decimals, colorVar) {
   }).join("");
   const maxRow = rows.find(r => r.v === max);
   const maxX = rows.indexOf(maxRow) * (W / rows.length) + bw / 2;
-  const label = `<text class="val" x="${Math.min(W - 18, Math.max(14, maxX)).toFixed(1)}"
+  const label = `<text class="val" x="${Math.min(W - 13, Math.max(11, maxX)).toFixed(1)}"
       y="${(H - padB - (max / max) * (H - padB - padT) - 3).toFixed(1)}" text-anchor="middle"
       >${max.toFixed(decimals)}</text>`;
   const ticks = rows.map((r, i) => (i === 0 || i === rows.length - 1 || i === Math.floor(rows.length / 2))
@@ -633,7 +637,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "830946312d";
+const BUILD = "584bf006b4";
 
 async function checkForNewBuild() {
   try {
