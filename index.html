@@ -776,7 +776,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "718cf65f42";
+const BUILD = "82d49b8cb7";
 
 async function checkForNewBuild() {
   try {
@@ -918,27 +918,35 @@ const SAT_DAILY_SATS = [
 // fell through to a polar orbiter's picture from yesterday.
 //
 // EUMETView is the European equivalent, and it is open: no key, no fee, no access
-// constraints. Two layers matter here, both confirmed against its own capabilities
-// document rather than assumed:
+// constraints. Two layers matter here, both read out of its own capabilities document
+// rather than assumed:
 //
-//   mtg_fd:ir105_hrfi   MTG-I / FCI, 10.5 um, a new picture every 10 MINUTES
-//   msg_fes:ir108       MSG / SEVIRI, 10.8 um, every 15 minutes, a wider disc
+//   mtg_fd:rgb_geocolour   MTG-I / FCI GeoColour, a new picture every 10 MINUTES
+//   msg_fes:ir108          MSG / SEVIRI 10.8 um infrared, every 15 minutes, wider disc
 //
-// They are infrared, not true colour, and that is the right trade for what this layer is
-// for. Infrared shows cloud through the night, when half of any Atlantic gale happens;
-// true colour goes black at sunset and is only published once a day anyway.
+// GeoColour is the one to want, and it is the same product GOES-East is drawn with on the
+// other side of the ocean, so the map does not change character mid-voyage. It is true
+// colour while the sun is up and an infrared composite - with city lights - once it sets,
+// blended across the terminator rather than flipped over in one step, which is what a hard
+// day/night switch of my own would have done. Nothing here has to know where the sun is:
+// the product already does.
+//
+// The infrared fallback is deliberately not a prettier daytime layer. It only runs when
+// GeoColour has a gap, and a gap at three in the morning still has to show something.
 //
 // The time dimension is declared nearestValue="1", so the server answers with the closest
 // frame it holds rather than failing - which is why these are asked for with a deliberate
 // lag rather than at the very newest slot. The badge reports the slot that was asked for.
 const EUMETSAT = "https://view.eumetsat.int/geoserver/wms";
 const EUM = [
-  { layer: "mtg_fd:ir105_hrfi", style: "mtg_fd:mtg_fd_ir105_hrfi_grayscale",
-    everyMin: 10, lagMin: 20, west: -70, east: 70, label: "Meteosat MTG infrared",
-    res: "MTG-I infrared, about 1 km per pixel, a new picture every 10 minutes" },
+  { layer: "mtg_fd:rgb_geocolour", style: "raster",
+    everyMin: 10, lagMin: 25, west: -81, east: 81, label: "Meteosat GeoColour",
+    res: "MTG GeoColour - true colour by day, infrared and city lights at night; "
+       + "about 1 km per pixel, a new picture every 10 minutes" },
   { layer: "msg_fes:ir108", style: "raster",
     everyMin: 15, lagMin: 25, west: -77, east: 77, label: "Meteosat infrared",
-    res: "MSG SEVIRI infrared, about 3 km per pixel, a new picture every 15 minutes" },
+    res: "MSG SEVIRI infrared - cloud by day or night, about 3 km per pixel, "
+       + "a new picture every 15 minutes" },
 ];
 
 function satSources() {
@@ -991,10 +999,42 @@ function satSource() {
   return list[Math.min(satBackoff, list.length - 1)];
 }
 
+function satUrl(src) {
+  return `${GIBS}/${src.layer}/default/${src.stamp}` +
+         `/GoogleMapsCompatible_Level${src.level}/{z}/{y}/{x}.${src.ext}`;
+}
+
+// What is on screen, so a redraw can tell a new moment from a new source.
+let satShown = null, satTick = 0;
+
+// Follow the clock without rebuilding the layer. Play walks the whole span in 150 ms steps,
+// and tearing the tile layer down and building another one on every step both flashes the
+// map and asks for every tile again; swapping the timestamp on the layer that is already up
+// asks only for the tiles on screen. The throttle is for the same reason: a hundred and
+// twenty frames of satellite imagery in eighteen seconds is not a reasonable thing to ask
+// of a public service, so during play the picture changes at most a few times a second and
+// the wind and waves - which are already in memory - keep their own pace.
+function satFollow(minGapMs = 0) {
+  if (!show.sat) return;
+  const now = performance.now();
+  const src = satSource();
+  if (satShown && satShown.layer === src.layer && satShown.stamp === src.stamp) return;
+  if (minGapMs && now - satTick < minGapMs) return;
+  satTick = now;
+  if (satLayer && satShown && satShown.layer === src.layer) {
+    satShown = { layer: src.layer, stamp: src.stamp };
+    if (src.wms) satLayer.setParams({ time: src.stamp });
+    else satLayer.setUrl(satUrl(src));
+    satBadge(src);
+    return;
+  }
+  drawSatellite();
+}
+
 function drawSatellite() {
   const badge = document.getElementById("satwhen");
   [satLayer, satCoast].forEach(l => { if (l) map.removeLayer(l); });
-  satLayer = satCoast = null;
+  satLayer = satCoast = satShown = null;
 
   if (!show.sat) {
     if (!map.hasLayer(baseLayer)) baseLayer.addTo(map);
@@ -1015,12 +1055,10 @@ function drawSatellite() {
       attribution: 'Imagery: <a href="https://view.eumetsat.int" target="_blank" rel="noopener">EUMETSAT</a>'
     });
   } else {
-    satLayer = L.tileLayer(
-      `${GIBS}/${src.layer}/default/${src.stamp}` +
-      `/GoogleMapsCompatible_Level${src.level}/{z}/{y}/{x}.${src.ext}`, {
-        maxNativeZoom: src.maxNative, maxZoom: 18, minZoom: 1, opacity: 1,
-        attribution: 'Imagery: <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>'
-      });
+    satLayer = L.tileLayer(satUrl(src), {
+      maxNativeZoom: src.maxNative, maxZoom: 18, minZoom: 1, opacity: 1,
+      attribution: 'Imagery: <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>'
+    });
   }
 
   // Step back and try again if that slot has not been published: an hour for GOES,
@@ -1047,6 +1085,12 @@ function drawSatellite() {
     `/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`,
     { maxNativeZoom: 9, maxZoom: 18, opacity: .55 }).addTo(map);
 
+  satShown = { layer: src.layer, stamp: src.stamp };
+  satBadge(src);
+}
+
+function satBadge(src) {
+  const badge = document.getElementById("satwhen");
   const mins = Math.round((Date.now() - src.at.getTime()) / 6e4);
   const age = mins < 90 ? `${mins} min ago`
             : mins < 36 * 60 ? `${Math.round(mins / 60)} h ago`
@@ -1359,7 +1403,7 @@ document.getElementById("windtime").addEventListener("input", e => {
   gridIndex = +e.target.value;
   rememberTime();
   satBackoff = 0;
-  if (show.sat) drawSatellite();
+  satFollow();
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
   drawGrids();
   drawRewind();
@@ -1646,6 +1690,7 @@ function stopPlay() {
   const b = document.getElementById("playbtn");
   b.classList.remove("on");
   b.textContent = "▶";
+  satFollow();               // the throttle may have skipped the last frame; land on it
 }
 
 document.getElementById("playbtn").addEventListener("click", () => {
@@ -1664,6 +1709,7 @@ document.getElementById("playbtn").addEventListener("click", () => {
     document.getElementById("windwhen").textContent = gridLabel(gridIndex);
     drawGrids();
     drawRewind();
+    satFollow(420);          // the cloud follows too, at a pace a public service can bear
     if (gridIndex >= stop) { stopPlay(); return; }
     gridIndex++;
   };
@@ -1681,6 +1727,8 @@ document.getElementById("nowbtn").addEventListener("click", () => {
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
   drawGrids();
   drawRewind();
+  satBackoff = 0;
+  satFollow();
 });
 
 

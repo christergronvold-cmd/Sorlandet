@@ -491,8 +491,8 @@ Latencies measured against the services, not taken from their marketing:
 
 | Source | Cadence | Shutter to available | Resolution |
 |---|---|---|---|
-| Meteosat MTG (FCI) | a new image every **10 minutes** | ~20 minutes | ~1 km |
-| Meteosat MSG (SEVIRI) | every **15 minutes** | ~15 minutes | ~3 km |
+| Meteosat MTG GeoColour | a new image every **10 minutes** | ~20 minutes | ~1 km |
+| Meteosat MSG (SEVIRI) infrared | every **15 minutes** | ~15 minutes | ~3 km |
 | GOES-East | every **10 minutes** | **45-50 minutes** | ~2 km |
 | VIIRS true colour | one pass a day, ~13:30 local | a few hours - today's pass over her longitude appeared between 13:00 and 14:40 UTC | 375 m |
 | Sentinel-2 | every 2-5 days over a given spot | **4 h 40 min** (11:25 shutter, 16:05 in the catalogue) | 10 m |
@@ -505,7 +505,7 @@ hard-wired to a leg: the chain is evaluated from her longitude every time it dra
 
 | Where | What you get | How often |
 |---|---|---|
-| North Sea, Shetland, Ireland, Biscay | Meteosat MTG infrared | every 10 min |
+| North Sea, Shetland, Ireland, Biscay | Meteosat MTG GeoColour | every 10 min |
 | Funchal, the Canaries, the Atlantic, the Caribbean | GOES-East GeoColor | every 10 min |
 | anywhere either can see, if the first has a gap | Meteosat MSG infrared | every 15 min |
 | beyond both (nowhere on this voyage) | VIIRS / MODIS true colour | once a day |
@@ -521,13 +521,38 @@ It now comes from [EUMETView](https://view.eumetsat.int), Europe's equivalent, w
 - no key, no fee, `AccessConstraints: none`. Both layer names, both styles and both
 publishing cadences were read out of its own capabilities document rather than guessed:
 
-    mtg_fd:ir105_hrfi   MTG-I / FCI 10.5 um     PT10M   -70..70 deg
-    msg_fes:ir108       MSG / SEVIRI 10.8 um    PT15M   -77..77 deg
+    mtg_fd:rgb_geocolour   MTG-I / FCI GeoColour    PT10M   -81..81 deg
+    msg_fes:ir108          MSG / SEVIRI 10.8 um     PT15M   -77..77 deg
 
-They are **infrared, not true colour**, and for this purpose that is the better picture, not
-a compromise. Infrared shows cloud through the night, which is when half of any Atlantic
-gale happens; true colour goes black at sunset, and is published once a day regardless. If
-you want the 375 m true-colour view of the coast, that is what **Seen from space** is for.
+**GeoColour is true colour while the sun is up and an infrared composite, with city lights,
+once it sets** - and it blends across the terminator rather than flipping the whole disc
+over in one step, which is what a day/night switch written here would have done. It needs to
+know where the sun is; the product already does, so this page does not. It is also the same
+product GOES-East is drawn with on the other side of the ocean, so the map does not change
+character halfway through the voyage.
+
+The infrared fallback is deliberately not a prettier daytime layer. It only runs when
+GeoColour has a gap, and a gap at three in the morning still has to show something.
+
+Reading the capabilities took two attempts worth recording. The full document covers every
+workspace at once and is too large to be read reliably end to end - asked about it whole, it
+answered that no RGB layers existed, which is how the first version of this shipped with a
+grey infrared channel as the primary. The per-workspace endpoints, `/geoserver/mtg_fd/wms`
+and `/geoserver/msg_fes/wms`, are small enough to enumerate exactly, and they list thirteen
+and twenty-two layers respectively - GeoColour, true colour, dust, airmass, fog, convection
+and the rest. **Ask a service what it has one workspace at a time.**
+
+If you want the 375 m true-colour view of the coast, that is still what **Seen from space**
+is for: this layer is weather, that one is detail.
+
+The layer follows the time slider, and **▶** too. It did not at first: the play loop moved
+the clock, drew the wind and the waves and never told the imagery, so the cloud sat still
+through the whole animation while everything over it moved. It now follows by swapping the
+timestamp on the layer that is already up rather than building a new one - which asks only
+for the tiles on screen instead of all of them, and does not flash the map white forty times
+in a row - and it is throttled, because a hundred and twenty frames of satellite imagery in
+eighteen seconds is not a reasonable thing to ask of a public service. The wind and waves
+are already in memory and keep their own pace.
 
 The layer follows the time slider. Drag it back and you get the picture from that hour -
 the archive runs to 2020, so anywhere the slider reaches is covered. Drag it *forward* into
