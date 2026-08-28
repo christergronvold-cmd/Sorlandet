@@ -352,6 +352,22 @@ The panel reads out the hour, her position, and the wind and sea - what she was 
 what she is heading for. **▶** plays the whole span through at 150 ms an hour; **Now**
 jumps back to the present.
 
+That panel used to be shown only while the slider was away from now, and **Now** used to
+appear only once you had moved off it. Both were wrong in the same way. The panel sits above
+the cards, so every time the slider crossed the zero point the whole page jumped - and the
+zero point is precisely what you are aiming at when you drag it back, so the last inch of
+the drag flickered. The button, meanwhile, was hidden exactly when a reader had not yet
+discovered there was a way back.
+
+So: **Now** sits to the left of the slider, always visible, greyed out while it has nothing
+to do. The panel keeps its place and changes what it says, and its geometry is fixed rather
+than flowed - explicit grid areas, one line per field, an explicit line box - because the
+first two attempts at "fixed height" still breathed by a few pixels. Wrapping made the
+height depend on how long the words happened to be; `align-items: baseline` then sized each
+row from its items' baselines, and an empty field has none, so a row grew six pixels the
+moment it was filled. `test_slider.py` drags across the zero point at phone and desktop
+widths and asserts the cards below do not move by so much as a pixel.
+
 The slider therefore covers **-48 h to +72 h** in 1-hour steps: two days of what happened
 and three of what is coming, on one control. `_time_index` in `update.py` and `pickTimes`
 in the page both span exactly that, which is why one slider can carry both. `GRID_HOURS`
@@ -475,9 +491,51 @@ Latencies measured against the services, not taken from their marketing:
 
 | Source | Cadence | Shutter to available | Resolution |
 |---|---|---|---|
-| GOES-East | a new image every **10 minutes** | **45-50 minutes** | ~2 km |
+| Meteosat MTG (FCI) | a new image every **10 minutes** | ~20 minutes | ~1 km |
+| Meteosat MSG (SEVIRI) | every **15 minutes** | ~15 minutes | ~3 km |
+| GOES-East | every **10 minutes** | **45-50 minutes** | ~2 km |
 | VIIRS true colour | one pass a day, ~13:30 local | a few hours - today's pass over her longitude appeared between 13:00 and 14:40 UTC | 375 m |
 | Sentinel-2 | every 2-5 days over a given spot | **4 h 40 min** (11:25 shutter, 16:05 in the catalogue) | 10 m |
+
+### Which of them you get when you tick Satellite
+
+The **Satellite** box swaps the map for a real picture of her weather, and it picks whatever
+is freshest over the water she is on at the moment the slider is set to. Nothing here is
+hard-wired to a leg: the chain is evaluated from her longitude every time it draws.
+
+| Where | What you get | How often |
+|---|---|---|
+| North Sea, Shetland, Ireland, Biscay | Meteosat MTG infrared | every 10 min |
+| Funchal, the Canaries, the Atlantic, the Caribbean | GOES-East GeoColor | every 10 min |
+| anywhere either can see, if the first has a gap | Meteosat MSG infrared | every 15 min |
+| beyond both (nowhere on this voyage) | VIIRS / MODIS true colour | once a day |
+
+Until August 2026 the European half of that table was wrong. The page asked NASA's GIBS for
+three guessed Meteosat layer names, none of which exist - **GIBS carries GOES-East,
+GOES-West and Himawari, and the only parts of the world its geostationary imagery misses are
+Europe, Africa and the poles**, which is exactly where she is until Funchal. Those requests
+404'd and the chain fell through to a polar orbiter's picture from the day before. So the
+honest answer to "how often does the satellite view update" was: over her, **once a day**.
+
+It now comes from [EUMETView](https://view.eumetsat.int), Europe's equivalent, which is open
+- no key, no fee, `AccessConstraints: none`. Both layer names, both styles and both
+publishing cadences were read out of its own capabilities document rather than guessed:
+
+    mtg_fd:ir105_hrfi   MTG-I / FCI 10.5 um     PT10M   -70..70 deg
+    msg_fes:ir108       MSG / SEVIRI 10.8 um    PT15M   -77..77 deg
+
+They are **infrared, not true colour**, and for this purpose that is the better picture, not
+a compromise. Infrared shows cloud through the night, which is when half of any Atlantic
+gale happens; true colour goes black at sunset, and is published once a day regardless. If
+you want the 375 m true-colour view of the coast, that is what **Seen from space** is for.
+
+The layer follows the time slider. Drag it back and you get the picture from that hour -
+the archive runs to 2020, so anywhere the slider reaches is covered. Drag it *forward* into
+the forecast and there is nothing to show, because nobody has photographed Saturday: it
+holds the newest image there is and the badge says `newest` so the cloud on screen is not
+mistaken for a forecast. EUMETView declares its time dimension `nearestValue="1"`, so a slot
+that has not published yet is answered with the closest one it has rather than an error,
+which is why the page asks with a deliberate lag and reports the slot it asked for.
 
 The newest Sentinel-2 scene near her is usually a day or so old, and that is the *revisit*
 rather than the latency: the satellite simply has not been back yet.

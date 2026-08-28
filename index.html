@@ -94,9 +94,31 @@
   .ship-marker{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
   .ghost-marker{opacity:.75}
   #rewind[hidden]{display:none}
+  /* Once the time axis exists this panel stays put. It used to be shown only while the
+     slider was away from now, so every drag across the zero point made it appear and
+     vanish - and since it sits above the cards, the whole page jumped with it. Aiming at
+     "now" meant chasing a moving target. It now keeps its place and changes what it says. */
+  /* Explicit areas rather than wrapping flex, so the panel is the same height whatever it
+     says. Wrapping made its height depend on how long the words happened to be, which on a
+     phone was three heights across four adjacent slider steps - the same jump, one row
+     smaller. Each field is one line and ellipsises rather than pushing the box taller. */
   #rewind{background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:10px 14px;margin:0 0 14px;display:flex;flex-wrap:wrap;gap:6px 18px;
-    align-items:baseline;font-size:13.5px;color:var(--muted)}
+    padding:10px 14px;margin:0 0 14px;display:grid;gap:5px 18px;
+    grid-template-columns:1fr 1fr;
+    grid-template-areas:"when when" "pos sail" "wind wave";
+    align-items:center;font-size:13.5px;color:var(--muted)}
+  /* An explicit line box, the same whether the field has words in it or not: an empty span
+     was four pixels shorter than a full one, which is three panel heights across the four
+     slider steps around now. */
+  #rewind > *{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+    line-height:20px; min-height:20px}
+  #rewind b{line-height:22px; min-height:22px}
+  #rw-when{grid-area:when} #rw-pos{grid-area:pos} #rw-sail{grid-area:sail}
+  #rw-wind{grid-area:wind} #rw-wave{grid-area:wave}
+  @media (min-width:720px){
+    #rewind{grid-template-columns:repeat(5,auto); justify-content:start;
+      grid-template-areas:"when pos sail wind wave"}
+  }
   #rewind b{color:var(--text);font-size:14.5px}
   #playbtn{min-width:34px}
   #playbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -110,7 +132,7 @@
   @media (max-width:560px){
     .windbar input[type=range]{order:10; flex:1 0 100%; min-width:0}
     .windbar .when{order:11; min-width:0; text-align:left; flex:1}
-    .windbar #nowbtn{order:12}
+    .windbar #nowbtn{order:9}
   }
   .windbar label{color:var(--muted); font-weight:600; white-space:nowrap}
   .windbar input[type=range]{flex:1; min-width:90px; accent-color:var(--accent); height:26px}
@@ -120,6 +142,11 @@
     padding:4px 9px; font:inherit; font-size:12.5px; cursor:pointer;
   }
   .windbar button.on{color:var(--accent); border-color:var(--accent)}
+  /* Now sits to the LEFT of the slider and is always present. It used to appear only once
+     you had moved away from now, which both hid the way back and reflowed the whole bar at
+     the moment you were trying to aim at. */
+  .windbar #nowbtn:disabled{opacity:.4; cursor:default}
+  .windbar #nowbtn:not(:disabled){color:var(--accent); border-color:var(--accent)}
   .wind-arrow{pointer-events:none}
   .bar{height:9px; border-radius:99px; background:var(--bg); border:1px solid var(--line); overflow:hidden; margin:2px 0 9px}
   .bar>i{display:block; height:100%; background:var(--accent); border-radius:99px}
@@ -219,9 +246,9 @@
     <button id="sattoggle" title="Swap the map for the actual satellite picture of her weather">Satellite</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
+    <button id="nowbtn" title="Jump back to now" disabled>Now</button>
     <input type="range" id="windtime" min="0" max="0" value="0" step="1">
     <span class="when" id="windwhen">now</span>
-    <button id="nowbtn" title="Jump back to now" hidden>Now</button>
     <span id="satwhen" hidden style="color:#7a3fb8;font-size:11.5px;font-weight:650"></span>
     <span id="windlive" hidden title="The grid is being fetched for what you see"
           style="color:var(--accent);font-size:11.5px;font-weight:650">live grid</span>
@@ -749,7 +776,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "58f5f06e79";
+const BUILD = "718cf65f42";
 
 async function checkForNewBuild() {
   try {
@@ -866,12 +893,10 @@ function satTarget() {
 }
 
 // Every source that could show her weather, best first. The page walks down this list
-// whenever tiles fail, so a layer name that turns out not to exist costs a few 404s on
-// first load and nothing else - which is what makes it safe to include one I could not
-// verify from here (see METEOSAT below).
-//
-// The badge under the map names whichever one actually rendered, so what you are looking
-// at is never a guess.
+// whenever tiles fail, so a source that has nothing for a given moment costs a few 404s and
+// nothing else. Every layer name here has been checked against the service's own
+// capabilities document; the badge under the map names whichever one actually rendered, so
+// what you are looking at is never a guess.
 const SAT_DAILY_SATS = [
   { layer: "VIIRS_NOAA21_CorrectedReflectance_TrueColor", label: "VIIRS on NOAA-21",
     res: "375 m per pixel, one pass a day", level: 9 },
@@ -885,28 +910,48 @@ const SAT_DAILY_SATS = [
     res: "250 m per pixel, mid-morning pass", level: 9 },
 ];
 
-// Meteosat sits over 0 degrees longitude and images Europe, the eastern Atlantic and
-// Africa. NASA added it to GIBS at three-hourly intervals - eight pictures a day over
-// exactly the water she is in now, against one from the polar orbiters.
+// Over Europe and the eastern Atlantic the fresh pictures do not come from NASA at all.
+// GIBS carries GOES-East, GOES-West and Himawari, and NASA say so plainly: the only parts
+// of the world their geostationary imagery does not cover are Europe, Africa and the poles
+// - which is precisely where she is sailing until Funchal. The three Meteosat layer names
+// this page used to try were guesses at identifiers that do not exist, so they 404'd and
+// fell through to a polar orbiter's picture from yesterday.
 //
-// The identifiers below are UNVERIFIED. The GIBS capabilities document is too large to
-// read from here and its catalogue loads dynamically, so I could not confirm the exact
-// spelling. They are tried in order and cost nothing if wrong: the chain falls through to
-// the daily layers, which is exactly today's behaviour. If one of them works, the badge
-// will say "Meteosat" and the slider will move the clouds in three-hour steps.
-const METEOSAT = ["Meteosat-0deg_SEVIRI_Natural_Color",
-                  "MSG_SEVIRI_Natural_Color",
-                  "Meteosat_SEVIRI_Natural_Color"];
+// EUMETView is the European equivalent, and it is open: no key, no fee, no access
+// constraints. Two layers matter here, both confirmed against its own capabilities
+// document rather than assumed:
+//
+//   mtg_fd:ir105_hrfi   MTG-I / FCI, 10.5 um, a new picture every 10 MINUTES
+//   msg_fes:ir108       MSG / SEVIRI, 10.8 um, every 15 minutes, a wider disc
+//
+// They are infrared, not true colour, and that is the right trade for what this layer is
+// for. Infrared shows cloud through the night, when half of any Atlantic gale happens;
+// true colour goes black at sunset and is only published once a day anyway.
+//
+// The time dimension is declared nearestValue="1", so the server answers with the closest
+// frame it holds rather than failing - which is why these are asked for with a deliberate
+// lag rather than at the very newest slot. The badge reports the slot that was asked for.
+const EUMETSAT = "https://view.eumetsat.int/geoserver/wms";
+const EUM = [
+  { layer: "mtg_fd:ir105_hrfi", style: "mtg_fd:mtg_fd_ir105_hrfi_grayscale",
+    everyMin: 10, lagMin: 20, west: -70, east: 70, label: "Meteosat MTG infrared",
+    res: "MTG-I infrared, about 1 km per pixel, a new picture every 10 minutes" },
+  { layer: "msg_fes:ir108", style: "raster",
+    everyMin: 15, lagMin: 25, west: -77, east: 77, label: "Meteosat infrared",
+    res: "MSG SEVIRI infrared, about 3 km per pixel, a new picture every 15 minutes" },
+];
 
 function satSources() {
   const { when, lon } = satTarget();
   const ageMin = (Date.now() - when.getTime()) / 6e4;
   const out = [];
 
-  // GOES-East: a new picture every ten minutes, but it cannot see round the earth, so it
-  // is useless east of about 12 W. From Funchal in late October it covers the rest of the
-  // voyage. Measured: a slot 40 minutes old still 404s, 50 minutes old is there.
-  if (lon < -12 && ageMin > -60 && ageMin < 18 * 60) {
+  // GOES-East: a new picture every ten minutes, and in colour. It sits over 75 W and
+  // cannot see round the earth - useless east of about 12 W, and past the limb west of
+  // about 130 W, which is Meteosat's half of the world and nobody's respectively. From
+  // Funchal in late October it covers the rest of the voyage.
+  // Measured: a slot 40 minutes old still 404s, 50 minutes old is there.
+  if (lon < -12 && lon > -130 && ageMin > -60 && ageMin < 18 * 60) {
     const clamped = Math.min(Date.now() - 50 * 6e4, when.getTime());
     const slot = new Date(Math.floor(clamped / 6e5) * 6e5);
     out.push({ layer: "GOES-East_ABI_GeoColor", level: 7, maxNative: 7, ext: "jpg",
@@ -915,17 +960,16 @@ function satSources() {
                res: "about 2 km per pixel, a new picture every 10 minutes" });
   }
 
-  // Meteosat, three-hourly, for everywhere it can see - Europe, Africa, the eastern
-  // Atlantic. Allow two hours for the slot to be published.
-  if (lon > -65 && lon < 65 && ageMin > -60 && ageMin < 10 * 24 * 60) {
-    const clamped = Math.min(Date.now() - 2 * 36e5, when.getTime());
-    const slot = new Date(Math.floor(clamped / (3 * 36e5)) * 3 * 36e5);
-    for (const layer of METEOSAT) {
-      out.push({ layer, level: 7, maxNative: 7, ext: "jpg",
-                 stamp: slot.toISOString().replace(/\.\d+Z$/, "Z"), at: slot,
-                 label: "Meteosat",
-                 res: "about 3 km per pixel, a new picture every 3 hours" });
-    }
+  // Meteosat, for the half of the world GOES cannot see. The slider reaches two days back
+  // and the archive goes to 2020, so any moment it can land on is covered.
+  for (const e of EUM) {
+    if (lon <= e.west || lon >= e.east) continue;
+    if (ageMin > 2.5 * 24 * 60) continue;
+    const clamped = Math.min(Date.now() - e.lagMin * 6e4, when.getTime());
+    const step = e.everyMin * 6e4;
+    const slot = new Date(Math.floor(clamped / step) * step);
+    out.push({ wms: EUMETSAT, layer: e.layer, style: e.style, at: slot, label: e.label,
+               stamp: slot.toISOString().replace(/\.\d+Z$/, "Z"), res: e.res });
   }
 
   // The daily polar orbiters. Today's pass is not published yet, so never ask for it.
@@ -960,13 +1004,24 @@ function drawSatellite() {
   }
 
   const src = satSource();
-  const url = `${GIBS}/${src.layer}/default/${src.stamp}` +
-              `/GoogleMapsCompatible_Level${src.level}/{z}/{y}/{x}.${src.ext}`;
 
-  satLayer = L.tileLayer(url, {
-    maxNativeZoom: src.maxNative, maxZoom: 18, minZoom: 1, opacity: 1,
-    attribution: 'Imagery: <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>'
-  });
+  if (src.wms) {
+    // EUMETView speaks WMS rather than serving a fixed tile pyramid, so the tiles are cut
+    // on demand. EPSG:3857 is inherited from the root layer, which is what lets it sit
+    // under Leaflet without reprojection.
+    satLayer = L.tileLayer.wms(src.wms, {
+      layers: src.layer, styles: src.style, format: "image/png", transparent: true,
+      version: "1.3.0", time: src.stamp, maxZoom: 18, minZoom: 1, opacity: 1,
+      attribution: 'Imagery: <a href="https://view.eumetsat.int" target="_blank" rel="noopener">EUMETSAT</a>'
+    });
+  } else {
+    satLayer = L.tileLayer(
+      `${GIBS}/${src.layer}/default/${src.stamp}` +
+      `/GoogleMapsCompatible_Level${src.level}/{z}/{y}/{x}.${src.ext}`, {
+        maxNativeZoom: src.maxNative, maxZoom: 18, minZoom: 1, opacity: 1,
+        attribution: 'Imagery: <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>'
+      });
+  }
 
   // Step back and try again if that slot has not been published: an hour for GOES,
   // a day for the polar orbiter. Three tries, then say so rather than showing a void.
@@ -980,14 +1035,15 @@ function drawSatellite() {
       drawSatellite();
     }
   });
-  satLayer.on("load", () => { badge.title = src.res; });
+
 
   satLayer.addTo(map);
   if (map.hasLayer(baseLayer)) map.removeLayer(baseLayer);
 
-  // Coastlines, or true colour over open water is impossible to place.
+  // Coastlines, or a cloud picture over open water is impossible to place. GIBS wants a
+  // plain date for this one, whatever the imagery underneath is stamped with.
   satCoast = L.tileLayer(
-    `${GIBS}/Coastlines/default/${src.kind === "goes" ? src.at.toISOString().slice(0, 10) : src.stamp}` +
+    `${GIBS}/Coastlines/default/${src.at.toISOString().slice(0, 10)}` +
     `/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`,
     { maxNativeZoom: 9, maxZoom: 18, opacity: .55 }).addTo(map);
 
@@ -995,9 +1051,15 @@ function drawSatellite() {
   const age = mins < 90 ? `${mins} min ago`
             : mins < 36 * 60 ? `${Math.round(mins / 60)} h ago`
             : `${Math.round(mins / 1440)} days ago`;
+  // Drag the slider into the forecast and there is no picture to show: nobody photographs
+  // Saturday. It holds the newest one there is, and says so rather than letting the reader
+  // think the cloud on screen is a forecast.
+  const ahead = (satTarget().when.getTime() - src.at.getTime()) / 36e5;
   badge.hidden = false;
-  badge.textContent = `${src.label} · ${age}`;
-  badge.title = src.res + (satBackoff ? " (earlier sources had nothing for this moment)" : "");
+  badge.textContent = ahead > 1.5 ? `${src.label} · newest, ${age}` : `${src.label} · ${age}`;
+  badge.title = src.res
+    + (ahead > 1.5 ? " \u2014 the slider is ahead of it; no satellite has photographed that hour yet." : "")
+    + (satBackoff ? " (earlier sources had nothing for this moment)" : "");
 }
 
 // --------------------------------------------------- the glyph layer, on one canvas
@@ -1403,20 +1465,38 @@ function aheadAt(hoursOut) {
 function clearRewind() {
   rewindLayers.forEach(l => map.removeLayer(l));
   rewindLayers = [];
-  document.getElementById("rewind").hidden = true;
-  document.getElementById("nowbtn").hidden = true;
+}
+
+// The panel keeps its place whatever the slider is doing. Emptying it used to mean hiding
+// it, and because it sits above the cards the whole page jumped every time the slider
+// crossed the zero point - which is exactly where you are trying to aim when you drag it
+// back. Now the box stays and its words change.
+function rewindLine(head) {
+  const el = id => document.getElementById(id);
+  el("rewind").hidden = false;
+  el("rw-when").textContent = head;
+  for (const f of ["rw-pos", "rw-sail", "rw-wind", "rw-wave"]) el(f).textContent = "";
 }
 
 function drawRewind() {
   clearRewind();
   const times = (gridData.wind || gridData.waves)?.times || [];
   const t = times[gridIndex];
-  if (!t) return;
+  const nowBtn = document.getElementById("nowbtn");
+  if (!t) {
+    document.getElementById("rewind").hidden = true;
+    nowBtn.disabled = true;
+    return;
+  }
   const whenMs = new Date(t + "Z").getTime();
   const offsetH = (whenMs - Date.now()) / 36e5;
-  if (Math.abs(offsetH) < 0.75) return;                // this is now: nothing to overlay
+  const away = Math.abs(offsetH) >= 0.75;
+  nowBtn.disabled = !away;
+  if (!away) {                                          // this is now: nothing to overlay
+    rewindLine("Now \u2014 drag to wind back, or forward through the forecast");
+    return;
+  }
 
-  document.getElementById("nowbtn").hidden = false;
   if (offsetH > 0) { drawForward(offsetH); return; }
 
   const pts = (window.__track?.points) || [];
