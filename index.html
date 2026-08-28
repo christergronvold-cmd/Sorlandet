@@ -415,15 +415,24 @@ function dailyDistance(points) {
 // alongside averages a tenth of a knot; a ship passing averages her passage speed.
 const PORT_NM = 5, PORT_DWELL_H = 2.5, PORT_CALM_KN = 2.0, PORT_REJOIN_H = 6;
 
-function portCalls(points, ports) {
-  const out = [];
-  if (!points.length || !ports.length) return out;
+function portStays(points, ports) {
+  if (!points.length || !ports.length) return [];
+  // Ports are identified by their INDEX on the route, never by name: this voyage ends where
+  // it began, so "Kristiansand" is both the first port and the nineteenth. Keyed by name,
+  // the very first morning alongside in August reads as having reached the last port of the
+  // voyage - the page would have announced the whole thing complete on day one.
+  //
+  // `floor` is how far along the route she has been seen; the search never looks behind it,
+  // so the same quay means port 0 in August and port 18 next May. No two ports on this
+  // route are within five miles of each other, so nothing else is affected by it.
+  let floor = 0;
   const at = pt => {
-    let best = null, bd = PORT_NM;
-    for (const q of ports) {
-      const d = nm([pt.lat, pt.lon], [q.lat, q.lon]);
-      if (d < bd) { bd = d; best = q; }
+    let best = -1, bd = PORT_NM;
+    for (let i = floor; i < ports.length; i++) {
+      const d = nm([pt.lat, pt.lon], [ports[i].lat, ports[i].lon]);
+      if (d < bd) { bd = d; best = i; }
     }
+    if (best > floor) floor = best;
     return best;
   };
   // Consecutive fixes inside the same port, merged across short excursions - a harbour move
@@ -434,10 +443,10 @@ function portCalls(points, ports) {
   let prev = null;
   for (const pt of points) {
     if (pt.lat == null || pt.lon == null || !pt.t) continue;
-    const q = at(pt);
-    if (!q) { prev = null; continue; }
+    const pi = at(pt);
+    if (pi < 0) { prev = null; continue; }
     const last = stays[stays.length - 1];
-    const rejoin = last && last.port === q.name &&
+    const rejoin = last && last.pi === pi &&
       (new Date(pt.t) - new Date(last.out)) <= PORT_REJOIN_H * 36e5;
     if (rejoin) {
       if (prev) {
@@ -446,25 +455,71 @@ function portCalls(points, ports) {
       }
       last.out = pt.t;
     } else {
-      stays.push({ port: q.name, country: q.country, in: pt.t, out: pt.t,
-                   dist: 0, span: 0 });
+      stays.push({ pi, port: ports[pi].name, country: ports[pi].country,
+                   in: pt.t, out: pt.t, dist: 0, span: 0 });
     }
     prev = pt;
   }
   const stillThere = at(points[points.length - 1]);
-  stays.forEach((v, i) => {
-    if (v.span < PORT_DWELL_H) return;
-    if (v.span > 0 && v.dist / v.span >= PORT_CALM_KN) return;   // she was passing through
+  return stays.filter((v, i) => {
+    if (v.span < PORT_DWELL_H) return false;
+    if (v.span > 0 && v.dist / v.span >= PORT_CALM_KN) return false;  // passing through
+    // A stay she has not ended: the last one, with her still inside it.
+    v.ended = !(i === stays.length - 1 && stillThere === v.pi);
+    return true;
+  });
+}
+
+function portCalls(points, ports) {
+  const out = [];
+  for (const v of portStays(points, ports)) {
     out.push({ t: v.in, ic: "\u{1F3D9}\uFE0F", port: v.port, clock: true,
                text: `Arrived ${v.port}, ${v.country}` });
-    // no departure for a stay she has not ended
-    const ongoing = i === stays.length - 1 && stillThere && stillThere.name === v.port;
-    if (!ongoing) {
+    if (v.ended) {
       out.push({ t: v.out, ic: "\u26F5", port: v.port, clock: true,
                  text: `Left ${v.port}` });
     }
-  });
+  }
   return out;
+}
+
+// ---- which leg she is on, from the track first and the calendar only as a fallback
+//
+// Everything about the voyage used to be answered by comparing today's date against
+// ports.json: the next port was "the first one whose arrive date is still ahead". A plan
+// the page itself calls tentative was therefore the only authority on where she is. The
+// consequence was dated: at midnight on 7 September, Lerwick's scheduled arrival day, the
+// whole forward projection - course, ETA, nm to run, the map's extent - would have swung to
+// Dublin, 460 nm further on, whether or not she had docked. And the Voyage plan card would
+// have said she was in Lerwick at the same moment. Two cards on one screen disagreeing.
+//
+// So: the track decides while it can. The furthest port along the route she has actually
+// been observed at fixes the leg - she is either still in it or at sea beyond it. The plan
+// answers only for what the track cannot see, which is the stretch before this page
+// existed, and even then "next" now means the first port she has not yet left, not the
+// first one she has not yet reached.
+function voyageState(points, ports, todayISO) {
+  ports = ports || [];
+  const stays = portStays(points || [], ports);
+  let last = null;
+  for (const v of stays) if (last === null || v.pi >= last.pi) last = v;
+  const settle = (i, ended) => ({
+    to: ports[i + 1] || null,
+    inPort: ended ? null : ports[i],
+    done: ended ? i + 1 : i,
+    basis: last ? "track" : "plan",
+  });
+  if (last) return settle(last.pi, last.ended);
+
+  // Nothing observed. Fall back to the calendar - but read the same shape out of it, so
+  // the fallback cannot say she is alongside in Lerwick and also on her way to Lerwick.
+  // A port counts as reached only once its arrival day has fully passed: on the morning of
+  // the seventh, the plan claiming she is in Lerwick is a hope, not an observation.
+  const end = q => q.depart || q.arrive || "";
+  let i = -1;
+  ports.forEach((q, k) => { if ((q.arrive || "") < todayISO) i = k; });
+  if (i < 0) return { to: ports[0] || null, inPort: null, done: 0, basis: "plan" };
+  return settle(i, end(ports[i]) < todayISO);
 }
 
 function milestones(points, ports, todayISO, sogFrom) {
@@ -776,7 +831,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "82d49b8cb7";
+const BUILD = "c94daa447a";
 
 async function checkForNewBuild() {
   try {
@@ -1693,6 +1748,12 @@ function stopPlay() {
   satFollow();               // the throttle may have skipped the last frame; land on it
 }
 
+// A hundred and twenty hours at 150 ms went by too fast to read - the wind had turned
+// before your eye reached it. The satellite throttle is scaled with it so the animation
+// still shows about forty pictures however long it runs: slowing the clock down should not
+// mean asking a free service for twice as many images.
+const PLAY_MS = 300, PLAY_SAT_MS = 900;
+
 document.getElementById("playbtn").addEventListener("click", () => {
   if (playTimer) { stopPlay(); return; }
   const times = (gridData.wind || gridData.waves)?.times || [];
@@ -1709,12 +1770,12 @@ document.getElementById("playbtn").addEventListener("click", () => {
     document.getElementById("windwhen").textContent = gridLabel(gridIndex);
     drawGrids();
     drawRewind();
-    satFollow(420);          // the cloud follows too, at a pace a public service can bear
+    satFollow(PLAY_SAT_MS);  // the cloud follows too, at a pace a public service can bear
     if (gridIndex >= stop) { stopPlay(); return; }
     gridIndex++;
   };
   step();
-  playTimer = setInterval(step, 150);
+  playTimer = setInterval(step, PLAY_MS);
 });
 
 document.getElementById("nowbtn").addEventListener("click", () => {
@@ -1971,6 +2032,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const ports = plan.ports || [];
   const todayISO = new Date().toISOString().slice(0, 10);
 
+  // Where she is on the voyage - read from her own track, with the schedule as the
+  // fallback. Everything on the page that says "which port next", "which ports are behind
+  // her" or "is she alongside" comes from this one answer, so no two cards can disagree.
+  const leg = voyageState(track.points || [], ports, todayISO);
+
   // Work the totals out from the track itself. latest.json only knows what the job saw
   // on its last run, so a backfill would leave it saying "0 nm over 1 position".
   // Segments under 0.02 nm (about 37 m) are dropped: that is receiver jitter while she
@@ -2064,8 +2130,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     layers.push(L.polyline(routeLine, {
       color: "#7c8ea0", weight: 1.5, opacity: .5, dashArray: "2,6"
     }).addTo(map));
-    ports.forEach(q => {
-      const passed = q.depart < todayISO;
+    ports.forEach((q, i) => {
+      const passed = i < leg.done;
       layers.push(L.circleMarker([q.lat, q.lon], {
         radius: passed ? 4 : 5.5,
         color: passed ? "#7c8ea0" : "#0b6ea8",
@@ -2118,7 +2184,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     });
   }
 
-  const nextPort = ports.find(q => q.arrive > todayISO);
+  const nextPort = leg.to;
   if (p.lat !== undefined && !waiting) {
     layers.push(L.marker([p.lat, p.lon], { icon: shipIcon(p.heading_deg ?? p.cog_deg) })
       .bindPopup(`<b>${d.ship}</b><br>${dms(p.lat, "lat")} ${dms(p.lon, "lon")}<br>${fmtTime(p.seen_utc)} UTC`)
@@ -2133,9 +2199,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // ---- voyage plan card
   let planCard = "";
   if (ports.length) {
-    const inPort = ports.find(q => q.arrive <= todayISO && todayISO <= q.depart);
-    const from = [...ports].reverse().find(q => q.depart <= todayISO);
-    const done = ports.filter(q => q.depart < todayISO).length;
+    const inPort = leg.inPort;
+    // The port the leg started from, by index rather than by date - the same way the
+    // progress bar takes it, so the two cannot disagree.
+    const from = nextPort ? ports[Math.max(0, ports.indexOf(nextPort) - 1)]
+                          : ports[ports.length - 1];
+    const done = leg.done;
 
     let rows = "";
     if (inPort) {
@@ -2160,9 +2229,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         // 440 nm to Lerwick when the whole leg is 338 and she was 126 along it - 239 nm of
         // pure doubling back. It is the identical mistake the progress bar had, fixed there
         // and left here, and the two numbers sat on the same screen disagreeing.
-        const leg = alongLeg([[legStart.lat, legStart.lon], ...(nextPort.waypoints || []),
-                              [nextPort.lat, nextPort.lon]], [p.lat, p.lon]);
-        rows += row("Distance", `${N(Math.max(0, leg.legLength - leg.covered), 0)} nm to run`);
+        const along = alongLeg([[legStart.lat, legStart.lon], ...(nextPort.waypoints || []),
+                                [nextPort.lat, nextPort.lon]], [p.lat, p.lon]);
+        rows += row("Distance", `${N(Math.max(0, along.legLength - along.covered), 0)} nm to run`);
       }
       if (nextPort.events) rows += row("Programme", nextPort.events.join("<br>"));
     } else {
@@ -2173,9 +2242,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   }
 
   // ---- full route strip
-  const routeStrip = ports.map(q => {
-    const passed = q.depart < todayISO;
-    const here = q.arrive <= todayISO && todayISO <= q.depart;
+  const routeStrip = ports.map((q, i) => {
+    const passed = i < leg.done;
+    const here = q === leg.inPort;
     const isNext = !here && q === nextPort;
     return `<div style="${passed ? "opacity:.45" : ""}${
       here || isNext ? "border-color:var(--accent);border-width:2px" : ""}">
@@ -2297,10 +2366,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       const legPts = [[ports[k - 1].lat, ports[k - 1].lon],
                       ...(nextPort.waypoints || []),
                       [nextPort.lat, nextPort.lon]];
-      const leg = alongLeg(legPts, [p.lat, p.lon]);
-      done = cum[k - 1] + Math.min(leg.covered, leg.legLength);
-      legNote = `${Math.round(leg.covered).toLocaleString("en-GB")} of ` +
-                `${Math.round(leg.legLength).toLocaleString("en-GB")} nm on this leg`;
+      const along = alongLeg(legPts, [p.lat, p.lon]);
+      done = cum[k - 1] + Math.min(along.covered, along.legLength);
+      legNote = `${Math.round(along.covered).toLocaleString("en-GB")} of ` +
+                `${Math.round(along.legLength).toLocaleString("en-GB")} nm on this leg`;
     }
     const pct = Math.max(0, Math.min(100, (done / total) * 100));
     const firstDay = new Date(ports[0].depart + "T12:00:00Z");
@@ -2441,9 +2510,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     const atSea = orbitHits.filter(h => !portAt(h.t)).slice(0, 12);
 
     // Where the next chance is, so an empty card is a "not yet" and not a "never".
-    const nextPort = (plan.ports || []).find(q => q.arrive && q.arrive >= todayISO);
-    const nextWhen = nextPort
-      ? new Date(nextPort.arrive + "T12:00:00Z")
+    // The next time she is alongside, which is when the good pictures happen. Same answer
+    // as everywhere else on the page; if she is in port now, the next chance is this one.
+    const nextStop = leg.inPort || leg.to;
+    const nextWhen = nextStop && nextStop.arrive
+      ? new Date(nextStop.arrive + "T12:00:00Z")
           .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
       : null;
 
@@ -2471,8 +2542,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
          cross. Tap one to open it in ESA's own viewer and zoom in yourself.`
       : `Nothing yet. ESA photographs coasts, not the middle of the ocean, so a crossing
          produces no passes at all — and a pass only counts here if its footprint contained
-         her at the moment the shutter opened.${nextWhen && nextPort
-           ? ` The next real chance is ${nextPort.name}, due ${nextWhen}, where she will be
+         her at the moment the shutter opened.${nextWhen && nextStop
+           ? ` The next real chance is ${nextStop.name}, due ${nextWhen}, where she will be
              alongside and the quay gives her scale.` : ""}`;
 
     albumCard = wideCard(

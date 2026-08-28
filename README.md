@@ -349,7 +349,8 @@ estimated arrival it says she is alongside rather than clamping to the last fore
 and claiming she is still 59 nm out three days after docking.
 
 The panel reads out the hour, her position, and the wind and sea - what she was in, or
-what she is heading for. **▶** plays the whole span through at 150 ms an hour; **Now**
+what she is heading for. **▶** plays the whole span through at 300 ms an hour - about half a minute for the
+five days, and 150 ms turned out to be faster than an eye can follow; **Now**
 jumps back to the present.
 
 That panel used to be shown only while the slider was away from now, and **Now** used to
@@ -550,8 +551,10 @@ the clock, drew the wind and the waves and never told the imagery, so the cloud 
 through the whole animation while everything over it moved. It now follows by swapping the
 timestamp on the layer that is already up rather than building a new one - which asks only
 for the tiles on screen instead of all of them, and does not flash the map white forty times
-in a row - and it is throttled, because a hundred and twenty frames of satellite imagery in
-eighteen seconds is not a reasonable thing to ask of a public service. The wind and waves
+in a row - and it is throttled, because a hundred and twenty frames of satellite imagery in half a
+minute is not a reasonable thing to ask of a public service. The throttle is scaled with the
+frame rate, so the animation shows about forty pictures however long it runs - slowing the
+clock down should not mean asking a free service for twice as many images. The wind and waves
 are already in memory and keep their own pace.
 
 The layer follows the time slider. Drag it back and you get the picture from that hour -
@@ -736,6 +739,43 @@ two numbers converge, she is on passage and the course estimate is worth watchin
 
 Turn on **Course** above the map. A ring marks every tack, with the wind angle and which
 side it is on. It is recomputed from her current position on every run.
+
+## Which leg she is on
+
+Everything about the voyage - the next port, the ports behind her, whether she is alongside,
+what the forward projection aims at, the map's extent, the route strip - used to be decided
+by comparing today's date against `ports.json`. The next port was "the first one whose
+`arrive` date is still ahead". A plan this page itself calls tentative was therefore the
+only authority on where the ship was.
+
+The consequence had a date on it. At midnight on **7 September** - Lerwick's *scheduled*
+arrival day - the whole forward projection would have swung to Dublin, 460 nm further on,
+whether or not she had docked; and the Voyage plan card would have said she was in Lerwick
+at the same moment. Two cards on one screen disagreeing.
+
+The rule now: the furthest port along the route she has actually been **observed** at fixes
+the leg. She is either still in it, or at sea beyond it. A call is the same thing the ship's
+log counts - 5 nm, 2.5 hours, under 2 knots - so the log and the leg cannot tell different
+stories. The calendar answers only where the track cannot see, and even there it reads the
+same shape: a port counts as reached once its arrival day has fully passed, and if she is
+alongside port *i* then the next port is *i+1*, so the fallback cannot say she is in Lerwick
+and on her way to Lerwick at the same time.
+
+The rule is written twice, once in Python for the routing and once in JavaScript for the
+page. That is a standing invitation to drift, so `test_leg.py` runs eleven scenarios through
+**both** and fails if the two ever answer differently.
+
+### Kristiansand is two ports
+
+Writing the test found something worse than the date bug. **The voyage ends where it began**:
+Kristiansand is port 0 and port 18, at identical coordinates. The first version identified
+ports by name, so the very first morning alongside in August matched the *last* entry - and
+the page would have announced the whole voyage complete on day one, `Ports done 19 of 19`.
+
+Ports are therefore identified by their index on the route, never their name, and the search
+for "which port is she at" never looks behind the furthest one she has already reached. The
+same quay is port 0 in August and port 18 next May. No two ports on this route are within
+five miles of each other, so nothing else is affected.
 
 ## The ship's log
 

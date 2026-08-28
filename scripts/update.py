@@ -665,12 +665,10 @@ def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
 # --------------------------------------------------------- sun, moon, history
 
 
-def civil_place(ports: list) -> dict | None:
+def civil_place(ports: list, points: list | None = None) -> dict | None:
     """The port whose clock belongs on the page: the one she is in, else the next."""
-    for q in ports:
-        if q.get("arrive") and q.get("depart") and q["arrive"] <= today_iso() <= q["depart"]:
-            return q
-    return next_port(ports)
+    st = voyage_state(ports, points)
+    return st["in_port"] or st["to"]
 
 
 def port_timezone(lat: float, lon: float) -> str | None:
@@ -685,7 +683,7 @@ def port_timezone(lat: float, lon: float) -> str | None:
     return (data or {}).get("timezone")
 
 
-def fetch_sun_moon(lat: float, lon: float) -> dict | None:
+def fetch_sun_moon(lat: float, lon: float, points: list | None = None) -> dict | None:
     """Sunrise, sunset and the moon where the ship is, plus the clock ashore.
 
     Sunrise is asked for in UTC and converted by the page into the port's civil time, so
@@ -705,7 +703,7 @@ def fetch_sun_moon(lat: float, lon: float) -> dict | None:
     )
     out: dict = {"moon": moon_phase()}
 
-    place = civil_place((read_json(DATA / "ports.json", {}).get("ports") or []))
+    place = civil_place((read_json(DATA / "ports.json", {}).get("ports") or []), points)
     if place:
         tz = port_timezone(float(place["lat"]), float(place["lon"]))
         if tz:
@@ -1302,9 +1300,126 @@ def _build_wake(points: list) -> None:
     print(f"  -> wake: {len(wanted)} hours on the track, {withw} with weather")
 
 
-def next_port(ports: list) -> dict | None:
-    today = now_utc().strftime("%Y-%m-%d")
-    return next((q for q in ports if q.get("arrive", "") > today), None)
+# ------------------------------------------------------------------ where she is on the plan
+#
+# The same rule as the page, deliberately: a stay within PORT_NM of a listed port lasting at
+# least PORT_DWELL_H, during which she averages under PORT_CALM_KN. Five miles covers an
+# anchorage or a berth slightly off the position held for the port, and is wide enough that
+# she also sails through it on the way past - the approaches to Lerwick are on the road to
+# Dublin - so the dwell and the speed are both needed. `test_leg.py` runs this and the
+# page's `voyageState()` over identical fixtures and fails if they ever answer differently.
+PORT_NM = 5.0
+PORT_DWELL_H = 2.5
+PORT_CALM_KN = 2.0
+PORT_REJOIN_H = 6.0
+
+
+def port_stays(points: list, ports: list) -> list:
+    """Every call she has actually made, in order, from her own track.
+
+    Ports are identified by their INDEX on the route, never by name: this voyage ends where
+    it began, so "Kristiansand" is both the first port and the nineteenth. Keyed by name,
+    the very first morning alongside in August reads as having reached the last port of the
+    voyage. `floor` is how far along the route she has been seen and the search never looks
+    behind it, so the same quay means port 0 in August and port 18 next May. No two ports on
+    this route are within five miles of each other, so nothing else is affected by it.
+    """
+    if not points or not ports:
+        return []
+    floor = 0
+
+    def at(pt):
+        nonlocal floor
+        best, bd = -1, PORT_NM
+        for i in range(floor, len(ports)):
+            try:
+                d = nm_between((pt["lat"], pt["lon"]), (ports[i]["lat"], ports[i]["lon"]))
+            except (KeyError, TypeError):
+                continue
+            if d < bd:
+                best, bd = i, d
+        if best > floor:
+            floor = best
+        return best
+
+    stays, prev = [], None
+    for pt in points:
+        if pt.get("lat") is None or pt.get("lon") is None or not pt.get("t"):
+            continue
+        pi = at(pt)
+        if pi < 0:
+            prev = None
+            continue
+        last = stays[-1] if stays else None
+        t = parse_iso(pt["t"])
+        if last and last["pi"] == pi and \
+                (t - parse_iso(last["out"])).total_seconds() <= PORT_REJOIN_H * 3600:
+            if prev:
+                last["dist"] += nm_between((prev["lat"], prev["lon"]), (pt["lat"], pt["lon"]))
+                last["span"] += (t - parse_iso(prev["t"])).total_seconds() / 3600
+            last["out"] = pt["t"]
+        else:
+            stays.append({"pi": pi, "port": ports[pi]["name"],
+                          "country": ports[pi].get("country"), "in": pt["t"],
+                          "out": pt["t"], "dist": 0.0, "span": 0.0})
+        prev = pt
+
+    still = at(points[-1])
+    out = []
+    for i, v in enumerate(stays):
+        if v["span"] < PORT_DWELL_H:
+            continue
+        if v["span"] > 0 and v["dist"] / v["span"] >= PORT_CALM_KN:
+            continue                                  # she was passing through
+        v["ended"] = not (i == len(stays) - 1 and still == v["pi"])
+        out.append(v)
+    return out
+
+
+def voyage_state(ports: list, points: list | None = None, today: str | None = None) -> dict:
+    """Which leg she is on: the track first, the calendar only where it cannot see.
+
+    The plan is tentative and the page says so. Letting the calendar decide meant that at
+    midnight on Lerwick's scheduled arrival date the whole forward projection swung to
+    Dublin, 460 nm further on, whether or not she had docked - while the Voyage plan card
+    said she was in Lerwick. Two cards on one screen disagreeing.
+    """
+    today = today or today_iso()
+    ports = ports or []
+    stays = port_stays(points or [], ports)
+    last = None
+    for v in stays:
+        if last is None or v["pi"] >= last["pi"]:
+            last = v
+
+    def settle(i, ended, basis):
+        return {"to": ports[i + 1] if i + 1 < len(ports) else None,
+                "in_port": None if ended else ports[i],
+                "done": i + 1 if ended else i,
+                "basis": basis}
+
+    if last:
+        return settle(last["pi"], last["ended"], "track")
+
+    # Nothing observed. Fall back to the calendar - but read the same shape out of it, so
+    # the fallback cannot say she is alongside in Lerwick and also on her way to Lerwick.
+    # A port counts as reached only once its arrival day has fully passed: on the morning
+    # of the seventh, the plan claiming she is in Lerwick is a hope, not an observation.
+    def end(q):
+        return q.get("depart") or q.get("arrive") or ""
+
+    i = -1
+    for k, q in enumerate(ports):
+        if q.get("arrive", "") < today:
+            i = k
+    if i < 0:
+        return {"to": ports[0] if ports else None, "in_port": None, "done": 0,
+                "basis": "plan"}
+    return settle(i, end(ports[i]) < today, "plan")
+
+
+def next_port(ports: list, points: list | None = None) -> dict | None:
+    return voyage_state(ports, points)["to"]
 
 
 def build_ahead(lat: float, lon: float, speed_kn: float | None,
@@ -1312,7 +1427,7 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
     """The whole chain: route from here to the next port, then the weather on the way."""
     try:
         plan = read_json(DATA / "ports.json", {})
-        port = next_port(plan.get("ports") or [])
+        port = next_port(plan.get("ports") or [], track_points)
         if not port:
             return
         # The route she is drawn along is the SAILING COURSE, not a line ruled to the port.
@@ -1376,11 +1491,9 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
         # If she is alongside somewhere, the passage has not begun: the clock starts when
         # she sails, not now. Otherwise pacing a leg that starts in three weeks would
         # spread it over the weeks in port too and creep along at half a knot.
-        in_port = None
-        for q in (plan.get("ports") or []):
-            if q.get("arrive") and q.get("depart") and q["arrive"] <= today_iso() <= q["depart"]:
-                in_port = q
-                break
+        # Alongside according to her track, not to the calendar - she can be a day late in
+        # or a day late out, and the projection has to start when she actually sails.
+        in_port = voyage_state(plan.get("ports") or [], track_points)["in_port"]
         if in_port:
             try:
                 sails_at = max(now_utc(), parse_iso(in_port["depart"] + "T12:00:00Z"))
@@ -1493,7 +1606,7 @@ COURSE_MAX_HOURS = float(os.environ.get("COURSE_MAX_HOURS", "168"))
 COURSE_STEP_H = float(os.environ.get("COURSE_STEP_H", "3"))
 
 
-def build_course(lat: float, lon: float) -> None:
+def build_course(lat: float, lon: float, points: list | None = None) -> None:
     try:
         import sailrouter as SR
     except ImportError as exc:
@@ -1513,7 +1626,7 @@ def build_course(lat: float, lon: float) -> None:
     try:
         plan = read_json(DATA / "ports.json", {})
         ports = plan.get("ports") or []
-        port = next_port(ports)
+        port = next_port(ports, points)
         if not port:
             return
 
@@ -1526,13 +1639,12 @@ def build_course(lat: float, lon: float) -> None:
 
         # She sails when she sails: if alongside, the passage starts at her departure.
         depart = now_utc()
-        for q in ports:
-            if q.get("arrive") and q.get("depart") and q["arrive"] <= today_iso() <= q["depart"]:
-                try:
-                    depart = max(depart, parse_iso(q["depart"] + "T12:00:00Z"))
-                except Exception:
-                    pass
-                break
+        here = voyage_state(ports, points)["in_port"]
+        if here and here.get("depart"):
+            try:
+                depart = max(depart, parse_iso(here["depart"] + "T12:00:00Z"))
+            except Exception:
+                pass
 
         # How long the plan allows, for the comparison that is the interesting part.
         plan_hours = None
@@ -1823,7 +1935,7 @@ def main() -> int:
         ) if step >= 0.02
     )
 
-    sun = fetch_sun_moon(lat, lon)
+    sun = fetch_sun_moon(lat, lon, points)
 
     for kind, path in (("wind", WIND), ("waves", WAVES)):
         grid = fetch_grid(lat, lon, kind)
@@ -1873,7 +1985,7 @@ def main() -> int:
     #   ahead  - walks along the course at her measured rate of closing on the port
     build_wake(points)
     build_polar()
-    build_course(lat, lon)
+    build_course(lat, lon, points)
     build_ahead(lat, lon, position.get("sog_kn"), points)
     build_orbit(points)
     update_history(weather, points, collected)
