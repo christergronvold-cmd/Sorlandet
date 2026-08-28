@@ -170,7 +170,10 @@
   .chart svg{width:100%; height:auto; display:block; overflow:visible}
   .chart .axis{stroke:var(--line); stroke-width:1}
   .chart .tick{fill:var(--muted); font-size:9px}
-  .chart .val{fill:var(--ink); font-size:10px; font-weight:650}
+  /* every bar is labelled now, so the numbers sit back a little and the peak keeps
+     the emphasis that used to come from being the only one shown */
+  .chart .val{fill:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+  .chart .val.mx{fill:var(--ink); font-weight:750}
   .share{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap}
   .share svg{width:118px; height:118px; color:var(--ink); flex:0 0 auto}
   .share .txt{flex:1; min-width:200px; font-size:13.5px; color:var(--muted); line-height:1.55}
@@ -372,6 +375,71 @@ function dailyDistance(points) {
 }
 
 // Milestones worth telling the family about, worked out from the track itself.
+// ---- port calls, read from the track rather than from the schedule
+// The schedule says when she is *due* somewhere. The track says when she actually got
+// there, which is the thing a parent is refreshing the page for.
+//
+// A call is a stay within PORT_NM of a listed port that lasts at least PORT_DWELL_H and
+// during which she is barely moving - under PORT_CALM_KN averaged over the fixes inside the
+// radius. Both halves are needed. Five miles is wide enough to cover an anchorage or a
+// berth slightly off the position we hold for the port, but wide enough that she also sails
+// through it on the way past: the approaches to Lerwick are on the road to Dublin. Time
+// alone does not separate the two either, because she can crawl past in light airs. A ship
+// alongside averages a tenth of a knot; a ship passing averages her passage speed.
+const PORT_NM = 5, PORT_DWELL_H = 2.5, PORT_CALM_KN = 2.0, PORT_REJOIN_H = 6;
+
+function portCalls(points, ports) {
+  const out = [];
+  if (!points.length || !ports.length) return out;
+  const at = pt => {
+    let best = null, bd = PORT_NM;
+    for (const q of ports) {
+      const d = nm([pt.lat, pt.lon], [q.lat, q.lon]);
+      if (d < bd) { bd = d; best = q; }
+    }
+    return best;
+  };
+  // Consecutive fixes inside the same port, merged across short excursions - a harbour move
+  // or an afternoon sail out and back should not read as leaving and coming again. Only the
+  // fixes actually inside the radius count towards the dwell and the distance covered, so
+  // an excursion neither pads the stay nor makes her look like she was under way in port.
+  const stays = [];
+  let prev = null;
+  for (const pt of points) {
+    if (pt.lat == null || pt.lon == null || !pt.t) continue;
+    const q = at(pt);
+    if (!q) { prev = null; continue; }
+    const last = stays[stays.length - 1];
+    const rejoin = last && last.port === q.name &&
+      (new Date(pt.t) - new Date(last.out)) <= PORT_REJOIN_H * 36e5;
+    if (rejoin) {
+      if (prev) {
+        last.dist += nm([prev.lat, prev.lon], [pt.lat, pt.lon]);
+        last.span += (new Date(pt.t) - new Date(prev.t)) / 36e5;
+      }
+      last.out = pt.t;
+    } else {
+      stays.push({ port: q.name, country: q.country, in: pt.t, out: pt.t,
+                   dist: 0, span: 0 });
+    }
+    prev = pt;
+  }
+  const stillThere = at(points[points.length - 1]);
+  stays.forEach((v, i) => {
+    if (v.span < PORT_DWELL_H) return;
+    if (v.span > 0 && v.dist / v.span >= PORT_CALM_KN) return;   // she was passing through
+    out.push({ t: v.in, ic: "\u{1F3D9}\uFE0F", port: v.port, clock: true,
+               text: `Arrived ${v.port}, ${v.country}` });
+    // no departure for a stay she has not ended
+    const ongoing = i === stays.length - 1 && stillThere && stillThere.name === v.port;
+    if (!ongoing) {
+      out.push({ t: v.out, ic: "\u26F5", port: v.port, clock: true,
+                 text: `Left ${v.port}` });
+    }
+  });
+  return out;
+}
+
 function milestones(points, ports, todayISO, sogFrom) {
   const out = [];
   if (points.length) {
@@ -422,7 +490,15 @@ function milestones(points, ports, todayISO, sogFrom) {
     out.push({ t: top.t, ic: "🚀",
                text: `Fastest speed she reported: ${top.kn.toFixed(1)} knots` });
   }
+  // What the track shows her doing comes first...
+  const calls = portCalls(points, ports);
+  out.push(...calls);
+  const seen = new Set(calls.map(c => c.port));
+  // ...and the schedule only fills in the ports the track cannot speak for: the ones she
+  // called at before this tracker existed, or during a gap in the AIS coverage. Those stay
+  // greyed, because they are a plan, not an observation.
   ports.forEach((q, i) => {
+    if (seen.has(q.name)) return;
     // The first port is where she sailed from, so the date that belongs in the log is
     // the departure - not the arrival, which is only the day the crew mustered.
     if (i === 0) {
@@ -436,7 +512,7 @@ function milestones(points, ports, todayISO, sogFrom) {
       out.push({ t: q.arrive + "T12:00:00Z", ic: "🏙️", text: `${q.name}, ${q.country}`, soft: true });
     }
   });
-  return out.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 9);
+  return out.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 40);
 }
 
 // ------------------------------------------------------------------- charts
@@ -444,28 +520,64 @@ function milestones(points, ports, todayISO, sogFrom) {
 // single pair of axes would misrepresent both.
 function barChart(rows, unit, decimals, colorVar) {
   if (!rows.length) return "";
-  const W = 210, H = 96, padB = 14, padT = 12;
+  const W = 210, H = 96, padB = 14;
   const max = Math.max(...rows.map(r => r.v)) || 1;
-  const bw = Math.max(3, (W / rows.length) - 2);          // 2px surface gap
-  const bars = rows.map((r, i) => {
+  const slot = W / rows.length;
+  const bw = Math.max(3, slot - 2);                       // 2px surface gap
+
+  // Every bar carries its own number, not just the tallest. Fourteen days on a card this
+  // wide leaves about fifteen units per bar, and "12.8" laid flat needs more than that - so
+  // the label is measured against the room it has, shrunk while that helps, and turned on
+  // its side when it does not. All four charts hold the same number of days, so they all
+  // make the same choice and the row stays consistent.
+  const texts = rows.map(r => r.v.toFixed(decimals));
+  const widest = Math.max(...texts.map(t => t.length));
+  const CH = 0.58;                          // width of a digit, as a fraction of font size
+  let fs = 10, rot = false;
+  while (fs > 7 && widest * fs * CH > slot - 1.5) fs -= 1;
+  if (widest * fs * CH > slot - 1.5) { rot = true; fs = 8; }
+  const padT = rot ? widest * fs * CH + 5 : fs + 4;       // headroom for the labels
+
+  const tops = rows.map(r => {
     const h = Math.max(1.5, (r.v / max) * (H - padB - padT));
-    const x = i * (W / rows.length), y = H - padB - h;
-    const isMax = r.v === max;
-    return `<g><title>${r.label}: ${r.v.toFixed(decimals)} ${unit}</title>
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}"
-            rx="3" fill="var(${colorVar})" opacity="${isMax ? 1 : .8}"/></g>`;
+    return { h, y: H - padB - h };
+  });
+
+  const bars = rows.map((r, i) => {
+    const x = i * slot;
+    return `<g><title>${r.label}: ${texts[i]} ${unit}</title>
+      <rect x="${x.toFixed(1)}" y="${tops[i].y.toFixed(1)}" width="${bw.toFixed(1)}"
+            height="${tops[i].h.toFixed(1)}" rx="3" fill="var(${colorVar})"
+            opacity="${r.v === max ? 1 : .8}"/></g>`;
   }).join("");
-  const maxRow = rows.find(r => r.v === max);
-  const maxX = rows.indexOf(maxRow) * (W / rows.length) + bw / 2;
-  const label = `<text class="val" x="${Math.min(W - 13, Math.max(11, maxX)).toFixed(1)}"
-      y="${(H - padB - (max / max) * (H - padB - padT) - 3).toFixed(1)}" text-anchor="middle"
-      >${max.toFixed(decimals)}</text>`;
-  const ticks = rows.map((r, i) => (i === 0 || i === rows.length - 1 || i === Math.floor(rows.length / 2))
-    ? `<text class="tick" x="${(i * (W / rows.length) + bw / 2).toFixed(1)}" y="${H - 3}"
-        text-anchor="middle">${r.short}</text>` : "").join("");
+
+  const labels = rows.map((r, i) => {
+    const cx = i * slot + bw / 2, top = tops[i].y - 3;
+    const cls = r.v === max ? "val mx" : "val";
+    if (rot) {
+      return `<text class="${cls}" style="font-size:${fs}px" text-anchor="start"
+          dominant-baseline="central"
+          transform="translate(${cx.toFixed(1)},${top.toFixed(1)}) rotate(-90)"
+          >${texts[i]}</text>`;
+    }
+    const half = texts[i].length * fs * CH / 2;
+    const x = Math.min(W - half, Math.max(half, cx));
+    return `<text class="${cls}" style="font-size:${fs}px" x="${x.toFixed(1)}"
+        y="${top.toFixed(1)}" text-anchor="middle">${texts[i]}</text>`;
+  }).join("");
+
+  // The first and last dates are centred under bars at the very edges, so they need the same
+  // clamp as the values or "15 Aug" loses its 1 off the left of the chart.
+  const ticks = rows.map((r, i) => {
+    if (!(i === 0 || i === rows.length - 1 || i === Math.floor(rows.length / 2))) return "";
+    const half = r.short.length * 9 * 0.5 / 2;
+    const x = Math.min(W - half, Math.max(half, i * slot + bw / 2));
+    return `<text class="tick" x="${x.toFixed(1)}" y="${H - 3}"
+        text-anchor="middle">${r.short}</text>`;
+  }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" role="img">
       <line class="axis" x1="0" y1="${H - padB}" x2="${W}" y2="${H - padB}"/>
-      ${bars}${label}${ticks}</svg>`;
+      ${bars}${labels}${ticks}</svg>`;
 }
 
 // ------------------------------------------------------------- staying up to date
@@ -637,7 +749,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "ea0730a307";
+const BUILD = "58f5f06e79";
 
 async function checkForNewBuild() {
   try {
@@ -753,31 +865,86 @@ function satTarget() {
   return { when, lon };
 }
 
-function satSource() {
+// Every source that could show her weather, best first. The page walks down this list
+// whenever tiles fail, so a layer name that turns out not to exist costs a few 404s on
+// first load and nothing else - which is what makes it safe to include one I could not
+// verify from here (see METEOSAT below).
+//
+// The badge under the map names whichever one actually rendered, so what you are looking
+// at is never a guess.
+const SAT_DAILY_SATS = [
+  { layer: "VIIRS_NOAA21_CorrectedReflectance_TrueColor", label: "VIIRS on NOAA-21",
+    res: "375 m per pixel, one pass a day", level: 9 },
+  { layer: "VIIRS_NOAA20_CorrectedReflectance_TrueColor", label: "VIIRS on NOAA-20",
+    res: "375 m per pixel, one pass a day", level: 9 },
+  { layer: "VIIRS_SNPP_CorrectedReflectance_TrueColor", label: "VIIRS on Suomi-NPP",
+    res: "375 m per pixel, one pass a day", level: 9 },
+  { layer: "MODIS_Aqua_CorrectedReflectance_TrueColor", label: "MODIS on Aqua",
+    res: "250 m per pixel, early afternoon pass", level: 9 },
+  { layer: "MODIS_Terra_CorrectedReflectance_TrueColor", label: "MODIS on Terra",
+    res: "250 m per pixel, mid-morning pass", level: 9 },
+];
+
+// Meteosat sits over 0 degrees longitude and images Europe, the eastern Atlantic and
+// Africa. NASA added it to GIBS at three-hourly intervals - eight pictures a day over
+// exactly the water she is in now, against one from the polar orbiters.
+//
+// The identifiers below are UNVERIFIED. The GIBS capabilities document is too large to
+// read from here and its catalogue loads dynamically, so I could not confirm the exact
+// spelling. They are tried in order and cost nothing if wrong: the chain falls through to
+// the daily layers, which is exactly today's behaviour. If one of them works, the badge
+// will say "Meteosat" and the slider will move the clouds in three-hour steps.
+const METEOSAT = ["Meteosat-0deg_SEVIRI_Natural_Color",
+                  "MSG_SEVIRI_Natural_Color",
+                  "Meteosat_SEVIRI_Natural_Color"];
+
+function satSources() {
   const { when, lon } = satTarget();
   const ageMin = (Date.now() - when.getTime()) / 6e4;
+  const out = [];
 
-  // GOES only where it can see, and only for the recent past - it has no forecast.
+  // GOES-East: a new picture every ten minutes, but it cannot see round the earth, so it
+  // is useless east of about 12 W. From Funchal in late October it covers the rest of the
+  // voyage. Measured: a slot 40 minutes old still 404s, 50 minutes old is there.
   if (lon < -12 && ageMin > -60 && ageMin < 18 * 60) {
-    // Measured: a slot 40 minutes old still 404s, 50 minutes old is there.
-    const clamped = Math.min(Date.now() - 50 * 6e4, when.getTime()) - satBackoff * 6e5;
+    const clamped = Math.min(Date.now() - 50 * 6e4, when.getTime());
     const slot = new Date(Math.floor(clamped / 6e5) * 6e5);
-    return {
-      kind: "goes", layer: "GOES-East_ABI_GeoColor", level: 7, maxNative: 7, ext: "jpg",
-      stamp: slot.toISOString().replace(/\.\d+Z$/, "Z"), at: slot,
-      label: "GOES-East", res: "about 2 km per pixel, a new picture every 10 minutes"
-    };
+    out.push({ layer: "GOES-East_ABI_GeoColor", level: 7, maxNative: 7, ext: "jpg",
+               stamp: slot.toISOString().replace(/\.\d+Z$/, "Z"), at: slot,
+               label: "GOES-East",
+               res: "about 2 km per pixel, a new picture every 10 minutes" });
   }
 
-  // Daily true colour. Today is not published yet, so never ask for it.
+  // Meteosat, three-hourly, for everywhere it can see - Europe, Africa, the eastern
+  // Atlantic. Allow two hours for the slot to be published.
+  if (lon > -65 && lon < 65 && ageMin > -60 && ageMin < 10 * 24 * 60) {
+    const clamped = Math.min(Date.now() - 2 * 36e5, when.getTime());
+    const slot = new Date(Math.floor(clamped / (3 * 36e5)) * 3 * 36e5);
+    for (const layer of METEOSAT) {
+      out.push({ layer, level: 7, maxNative: 7, ext: "jpg",
+                 stamp: slot.toISOString().replace(/\.\d+Z$/, "Z"), at: slot,
+                 label: "Meteosat",
+                 res: "about 3 km per pixel, a new picture every 3 hours" });
+    }
+  }
+
+  // The daily polar orbiters. Today's pass is not published yet, so never ask for it.
   const newest = new Date(Date.now() - 24 * 36e5);
-  const day = new Date(Math.min(newest.getTime(), when.getTime()) - satBackoff * 864e5);
+  const day = new Date(Math.min(newest.getTime(), when.getTime()));
   const iso = day.toISOString().slice(0, 10);
-  return {
-    kind: "daily", layer: SAT_DAILY, level: 9, maxNative: 9, ext: "jpg",
-    stamp: iso, at: day,
-    label: "VIIRS on NOAA-20", res: "375 m per pixel, one pass a day"
-  };
+  for (const sat of SAT_DAILY_SATS) {
+    out.push({ ...sat, kind: "daily", maxNative: sat.level, ext: "jpg", stamp: iso, at: day });
+  }
+  // ...and yesterday's, in case a whole day is missing over her.
+  const back = new Date(day.getTime() - 864e5);
+  out.push({ ...SAT_DAILY_SATS[1], kind: "daily", maxNative: 9, ext: "jpg",
+             stamp: back.toISOString().slice(0, 10), at: back });
+  return out;
+}
+
+function satSource() {
+  const list = satSources();
+  return list[Math.min(satBackoff, list.length - 1)];
 }
 
 function drawSatellite() {
@@ -806,7 +973,12 @@ function drawSatellite() {
   let failed = 0;
   satLayer.on("tileerror", () => {
     failed++;
-    if (failed === 1 && satBackoff < 3) { satBackoff++; drawSatellite(); }
+    // One failure is enough to move on: the chain is ordered best-first, so trying the
+    // next source is always the right answer. The cap is the length of the list.
+    if (failed === 1 && satBackoff < satSources().length - 1) {
+      satBackoff++;
+      drawSatellite();
+    }
   });
   satLayer.on("load", () => { badge.title = src.res; });
 
@@ -825,7 +997,7 @@ function drawSatellite() {
             : `${Math.round(mins / 1440)} days ago`;
   badge.hidden = false;
   badge.textContent = `${src.label} · ${age}`;
-  badge.title = src.res + (satBackoff ? ` (stepped back ${satBackoff} to the newest published)` : "");
+  badge.title = src.res + (satBackoff ? " (earlier sources had nothing for this moment)" : "");
 }
 
 // --------------------------------------------------- the glyph layer, on one canvas
@@ -1629,7 +1801,7 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile, eventFile, courseFile, orbitFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile, orbitFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -1638,11 +1810,10 @@ async function load() {
     fetch("data/history.json" + bust).then(r => r.json()).catch(() => ({ days: [] })),
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/events.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/course.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, eventFile, courseFile, orbitFile);
+  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
@@ -1651,7 +1822,7 @@ async function load() {
   else showVisitorCount();
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, eventFile, courseFile, orbitFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, courseFile, orbitFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -2019,9 +2190,17 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // ---- ship's log
   const marks = milestones(track.points || [], ports, todayISO,
                            track.sog_provenance_from);
-  const logCard = marks.length ? wideCard("Ship's log", `<ul class="log">${
+  const logCard = marks.length ? wideCard("Ship's log", `
+    <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
+      Arrivals and departures as her own track shows them, with the distances and the
+      records she has set along the way. Greyed lines are from the schedule — ports she
+      called at before this page existed, or during a gap in coverage.
+    </div>
+    <ul class="log${marks.length > 9 ? " scroll" : ""}">${
     marks.map(m => `<li><time>${new Date(m.t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</time>
-      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${m.text}</span></li>`).join("")
+      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${m.text}${
+        m.clock ? ` <span style="color:var(--muted)">${new Date(m.t).toLocaleTimeString("en-GB",
+          { hour: "2-digit", minute: "2-digit" })}</span>` : ""}</span></li>`).join("")
   }</ul>`) : "";
 
   // ---- charts
@@ -2175,27 +2354,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         sections.length ? 14 : 0}px">${intro}</div>${sections.join("")}`);
   }
 
-  // ---- event log, derived from the ship's own AIS fields
-  const EVENT_ICON = { nav: "\u2693", destination: "\u{1F9ED}", eta: "\u{1F551}",
-                       eta_text: "\u{1F551}", draught_m: "\u{1F4CF}", coverage: "\u{1F4E1}" };
-  // A day of events, or the last dozen if it has been a quiet day - a card that shows
-  // four lines and hides the rest is worse than one you can scroll.
-  const dayAgo = Date.now() - 36e5 * 24;
-  const allEvents = (eventFile?.events || []);
-  const recent = allEvents.filter(e => new Date(e.t).getTime() >= dayAgo);
-  const evList = (recent.length >= 4 ? recent : allEvents.slice(-12)).slice(-60).reverse();
-  const evRows = evList.map(e => `
-    <li><time>${new Date(e.t).toLocaleString("en-GB",
-        { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time>
-      <span>${EVENT_ICON[e.kind] || "\u2022"} ${e.text}${
-        e.detail ? ` <span style="color:var(--muted)">(${e.detail})</span>` : ""}</span></li>`).join("");
-  const eventCard = evRows ? wideCard("Event log", `
-    <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
-      What she reports about herself: under sail or under engine, and the voyage details the
-      crew set by hand. Only changes are listed${
-        recent.length >= 4 ? " — the last 24 hours, scroll for more" : ""}.
-    </div>
-    <ul class="log scroll">${evRows}</ul>`) : "";
 
   // ---- share
   const shareCard = wideCard("Share with other parents", `
@@ -2211,13 +2369,19 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     </div>`);
 
   document.getElementById("cards").innerHTML = [
-    card("Position", waiting ? row("Status", "no AIS message yet") : `
+    card("Position", waiting ? `
+      ${row("Status", "no AIS message yet")}
+      ${row("Track starts", fmtTime(stats.first_point_utc))}
+      ${row("Data updated", ago(d.updated_utc))}` : `
       <div class="big">${dms(p.lat, "lat")}<br>${dms(p.lon, "lon")}</div>
       ${row("Last seen", fmtTime(p.seen_utc))}
       ${row("Speed", `${N(p.sog_kn)} knots${p.sog_derived ? ' <span title="This position came from a feed that sends no speed, so it is worked out from the step between two fixes - a curve reads low.">(worked out from her track)</span>' : ""}`)}
       ${row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`)}
+      ${row("Sailed so far", `${N(stats.distance_nm, 0)} nm`)}
       ${row("Heard by", SOURCES[p.source] || p.source || "unknown")}
-      ${p.destination ? row("Reported destination", p.destination) : ""}`),
+      ${p.destination ? row("Reported destination", p.destination) : ""}
+      ${row("Track starts", fmtTime(stats.first_point_utc))}
+      ${row("Data updated", ago(d.updated_utc))}`),
 
     planCard,
     boardCard,
@@ -2241,14 +2405,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ${row("Cloud cover", `${N(air.cloud_pct, 0)} %`)}
       ${row("Precipitation", `${N(air.precip_mm)} mm`)}`),
 
-    card("Voyage so far", `
-      <div class="big">${N(stats.distance_nm, 0)} <small>nm sailed</small></div>
-      ${row("Track starts", fmtTime(stats.first_point_utc))}
-      ${row("Data updated", ago(d.updated_utc))}`),
-
     progressCard,
     logCard,
-    eventCard,
     albumCard,
     chartsCard,
     aheadCard,

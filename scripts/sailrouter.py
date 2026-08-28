@@ -77,11 +77,32 @@ def _interp(x: float, xs: list, ys: list) -> float:
 _SPEED_CACHE: dict[tuple[int, int], float] = {}
 
 
+# A polar learned from her own sailing, if one has been built. It is consulted first and
+# only where it has enough hours behind it; everything else falls through to the table
+# below. See polar.py - the point is that this can be switched on from the first day, when
+# it changes nothing, and grows into the truth over a season.
+_LEARNED = None
+
+
+def use_learned_polar(speed_fn) -> None:
+    """Give the router a speed(twa, tws) that prefers measured figures."""
+    global _LEARNED
+    _LEARNED = speed_fn
+    _SPEED_CACHE.clear()
+
+
 def boat_speed(twa: float, tws: float) -> float:
     """Speed through the water at a true wind angle and speed, in knots."""
     twa = abs(((twa + 180) % 360) - 180)          # fold onto 0..180
     if twa < NO_GO:
         return 0.0
+    if _LEARNED is not None:
+        key = (int(twa + 0.5), int(tws * 2 + 0.5))
+        hit = _SPEED_CACHE.get(key)
+        if hit is None:
+            hit = min(MAX_SPEED, max(0.0, float(_LEARNED(twa, tws))))
+            _SPEED_CACHE[key] = hit
+        return hit
     key = (int(twa + 0.5), int(tws * 2 + 0.5))
     hit = _SPEED_CACHE.get(key)
     if hit is not None:

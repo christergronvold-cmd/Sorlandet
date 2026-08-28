@@ -17,7 +17,6 @@ data/wind.json                wind forecast grid around the ship  <- written by 
 data/waves.json               wave forecast grid around the ship  <- written by the script
 data/history.json             one row per day: strongest wind, highest wave  <- written by the script
 data/wake.json                hour by hour: where she was and the weather there  <- written by the script
-data/events.json              what changed: sail or engine, destination, ETA  <- written by the script
 data/course.json              the fastest sailing course and its tacks  <- written by the script
 scripts/sailrouter.py         the polar diagram and the isochrone router
 scripts/orbithunter.py        finds the satellite passes that covered her
@@ -279,53 +278,20 @@ There are three layers, and the third costs nothing: the wind grid already calls
 Open-Meteo's forecast endpoint, so asking the same request for `weather_code` and
 `temperature_2m` adds a **Weather** layer - sky symbol and temperature at each grid point -
 without a single extra API call. It starts off, because three glyphs per point is a lot at
-once; Wind and Waves start on. Turning it on does not re-fetch anything - the sky symbol
-and the temperature were already in the wind block.
+once; Wind and Waves start on.
 
 On the map, **wind** is a single arrow, coloured pale blue through green and amber to dark
-red as it strengthens. **Waves** are a double chevron with the height in metres under it,
-on a blue-to-purple scale. Both point the way they are travelling. Each grid point holds up
-to three glyphs, so each has its own corner of the cell: sky and temperature above, wind to
-the left, waves to the right with the height below them. The slider under the map steps
-through the forecast; the buttons turn each layer on and off. Wind and Waves start on. It
-opens on **now**, which with the axis above puts the handle a little under half way along.
-
-Hovering a glyph gives the numbers in words - wind speed and Beaufort, wave height and
-period, sky and temperature. On a phone, where nothing hovers, a tap does the same.
-
-### One canvas, and why density is now free
-
-The glyphs used to be one Leaflet marker each, carrying an inline SVG the browser had to
-re-position on every pan. That is what capped the density, and the cap bit hardest on a
-phone - the smallest map, where density matters most, got the fewest arrows. A 390 px
-screen was down to 3 x 3, which is not a weather map.
-
-They are now all drawn into a **single canvas** in the map's overlay pane, repositioned
-once per frame instead of once per glyph. Eighty arrows cost about what four used to, so
-the grid is set by what a reader can tell apart rather than by what the DOM can afford:
-one glyph roughly every 64 px across and 78 px down. A phone gets 6 x 6, a desktop 6 x 14.
-
-Two details that turned out to matter:
-
-* **The grid is spaced in pixels, not in degrees.** An evenly spaced set of latitudes is
-  only evenly spaced on screen for a small map. Zoomed out to the whole voyage, from 10 N
-  to 62 N, Mercator stretches the top of the map to twice the scale of the bottom - so an
-  even grid of latitudes came out as wide gaps in the tropics and rows almost touching up
-  by Norway. The density target is a distance in pixels, so the projection is asked for
-  pixel positions and converted back.
-* **The map's shape matters as much as its size.** A phone map is 356 x 471 and wants a
-  square grid; a desktop map is 1006 x 478 and wants many columns and few rows. Asking for
-  a square grid on the desktop put nine rows into 478 px, and the temperatures landed on
-  the wave heights.
-
-The total is capped at 84 points because that is how many go into one Open-Meteo request -
-a limit of politeness to the API, not of the browser, which no longer cares.
+red as it strengthens. **Waves** are a double chevron with the height in metres beside it,
+on a blue-to-purple scale. Both point the way they are travelling, and the two sit on
+either side of their grid point so they stay readable together. The slider under the map
+steps through the forecast; the two buttons turn each layer on and off. Both start on. It opens on **now**, which
+with the axis above puts the handle a little under half way along.
 
 ### The grid follows the map
 
 The files above are a fixed box around the ship: dense when you look at the whole North
 Sea, sparse when you zoom in on her. So the page also asks Open-Meteo directly, in the
-browser, for a grid covering **what is actually on screen**, whenever the map is
+browser, for a 6 x 6 grid covering **what is actually on screen**, whenever the map is
 moved or zoomed. Zoom in and the arrows tighten to a few nautical miles apart; zoom out
 and they spread again. A small "live grid" mark appears in the bar when that is what you
 are looking at.
@@ -424,7 +390,7 @@ changed:
 | Coordinates rounded to 5 decimals | some fixes carried 15 digits of float noise; 5 decimals is about a metre, and the ship is 64 m long |
 | One track point per 2 minutes for the last week | the dense sources gave one a minute - 0.1 nm apart at cruising speed, invisible at any zoom |
 | `preferCanvas: true` on the map | the track and route were hundreds of SVG nodes the browser re-laid-out on every pan; now one canvas |
-| All the glyphs on one canvas | each used to be a DOM node with an inline SVG, re-positioned on every pan. One canvas is repositioned once a frame instead, so 72 glyphs on a phone cost less than the 18 did |
+| Arrow grid scales to the screen | each arrow is a DOM node with an inline SVG. 6 x 6 on a desktop, 3 x 3 on a phone: 51 markers down to 19 |
 | The weather bar wraps | at 390 px the time and the Now button ran off the right edge |
 
 Gzip already squeezed the whitespace out on the wire, so those first two changes barely
@@ -455,7 +421,8 @@ time Franco adopted in 1940. That is a good story and a poor thing to put on a c
 parents, so the page shows the city clock instead: the number that answers "can I call him
 now".
 
-**Voyage so far** and **Voyage progress** no longer count AIS fixes. The number said more
+**Voyage progress** no longer counts AIS fixes (the **Voyage so far** card is
+folded into **Position**). The number said more
 about receiver coverage than about the voyage: it jumps by a thousand when she passes a
 busy shore station and stops entirely mid-ocean.
 
@@ -482,13 +449,15 @@ The **Course** layer no longer has a card of its own - six rows of numbers for o
 too much. The comparison that matters lives in the tooltip on the drawn line: how long the
 fastest passage takes, and how much time the plan leaves in hand.
 
-**Event log** shows the last 24 hours and scrolls, rather than showing four lines and hiding
-the rest. If it has been a quiet day it falls back to the last dozen entries whenever they
-happened.
+**Ship's log** scrolls once it holds more than nine entries, rather than showing a few
+lines and hiding the rest.
 
-**Day by day** draws three small charts - distance per day from the track, and the
-strongest wind and highest wave each day from `history.json`. They are deliberately three
-charts rather than one with three scales. The third series is rose rather than the teal
+**Day by day** draws four small charts - distance per day from the track, and the strongest
+wind, highest wave and fastest speed she reported each day from `history.json`. They are
+deliberately four charts rather than one with four scales. Every bar carries its own number,
+not just the tallest: with fourteen days on a card about 210 px wide a bar gets fifteen
+pixels, so the label is measured against the room it has, shrunk while that helps, and
+turned on its side when it does not. The third series is rose rather than the teal
 that would suit "wave" better: teal came out 10.3 OKLab ΔE from the blue in dark mode,
 under the 15 floor, so the two would have been hard to tell apart. Rose passes every
 computable check - lightness band, chroma floor, CVD separation, contrast - in both themes.
@@ -513,53 +482,36 @@ Latencies measured against the services, not taken from their marketing:
 The newest Sentinel-2 scene near her is usually a day or so old, and that is the *revisit*
 rather than the latency: the satellite simply has not been back yet.
 
-## The NASA weather card was removed
+Because today's VIIRS pass is often published by mid-afternoon, the card asks for **today**
+first and lets the image fall back a day on its own error, up to three days, relabelling
+the caption as it goes. There is nothing to gain from assuming the worst.
 
-There used to be a **From orbit** card here: two NASA panels, VIIRS at 375 m per pixel,
-centred on her with a cross on the spot. It was cut, and the reason is worth recording,
-because it was a fair question to ask of it: *does this ever get better?*
+## From orbit
 
-It does not, and it never could. She is 64 m long. At 375 m to a pixel she is a fifth of
-one pixel - not a hard image to improve but an impossible one, because the improvement
-would have to come from the satellite. And the card was showing the same NASA data as the
-**Satellite** button already on the map, which at least you can zoom and wind back in time.
-Two sections saying the same thing, one of them worse.
+Two different things share this card, and the first one matters every single day.
 
-What survives the question is Sentinel-2 at 10 m - 37 times finer, and the only free source
-in which the ship is present at all. So that is the only imagery section left.
+**Yesterday's view of her weather.** A true-colour image from NASA centred on her position,
+with a red ring and cross on it. Cloud hiding the sea does not spoil this - the cloud *is*
+the thing worth seeing, and knowing she is underneath it is the point. Two panels: the wide
+one, widened until a coastline is in frame, and a sixth of it. This works everywhere on
+earth, every day, with no dependence on anyone's acquisition plan. The marker carries its
+own dark outline because it sits over white cloud as often as over dark sea.
 
 ## Seen from space - the album
 
-Every pass that photographed the patch of sea she was in gets a tile, and the count sits in
-the card's title so it reads as something that grows over the year. Each tile links to ESA's
-own viewer so the reader can zoom in themselves rather than trusting a crop.
+Every pass that photographed the patch of sea she was in gets a tile, newest first, and the
+count sits in the card's title so it reads as something that grows over the year. Each tile
+links to ESA's own viewer so the reader can zoom in themselves rather than trusting a crop.
 
-**Port calls are the good ones, and they get their own row** - first, and with bigger
-tiles. Alongside she is not going anywhere, the quay gives the eye something to measure her
-against, and she arrives somewhere every ten days or so. Given that every port on the
-voyage has Sentinel-2 coverage while the ocean crossings have none, that row is where most
-of the album will come from over the year. A port tile is cropped tighter, 500 m instead of
-800, because a stationary ship against a harbour wall is worth a closer look. Under way she
-gets the second row and the honest warning: look for a bright streak, not a ship.
+**Port calls are the good ones**, and the card says which are which. Alongside she is not
+going anywhere, the quay gives the eye something to measure her against, and she arrives
+somewhere every ten days or so - which, given that every port on the voyage has Sentinel-2
+coverage while the ocean crossings have none, is where most of the album will come from. A
+tile for a port call is cropped tighter, 500 m instead of 800, because a stationary ship
+against a harbour wall is worth a closer look than one somewhere in open water.
 
 Whether she is alongside is worked out in the page from the voyage plan's own arrive and
-depart dates, so it costs nothing and stays right if the plan changes. Tiles are sorted
-newest-first in the page rather than trusting the file's order.
-
-Two failure modes are handled, because both of them look like a bug otherwise:
-
-* **Nothing caught yet.** The card still appears and explains itself - that ESA does not
-  photograph the middle of the ocean, that a pass only counts if its footprint contained
-  her at the moment the shutter opened, and when the next real chance is (the next port,
-  by name and date). A section that simply vanishes reads as broken. One that explains
-  reads as working.
-* **The crop server is down.** Every tile is cropped by `titiler.xyz`, a public demo
-  instance with nobody promising it will be up. If a crop fails the tile drops the broken
-  image, says "Crop unavailable - open it at ESA", and keeps its caption and its link. The
-  scene is still real and ESA's viewer can still show it.
-
-The tiles are `loading="lazy"`, so a phone downloads none of them until you scroll down to
-the card.
+depart dates, so it costs nothing and stays right if the plan changes.
 
 ## Passes that actually looked at her
 
@@ -616,53 +568,15 @@ course and speed put her at the exposure, 3° off her heading, and it is the onl
 thing in 100 km² of sea. Three Sentinel-1 passes covered her the same two days, which is how we know radar would
 work if its pixels were reachable.
 
-Each tile is a single image request to a titiler instance that crops the Sentinel-2 COG on
-the fly, so nothing is composited in the job or stored in the repository. The brightness
-stretch (`rescale=4,46`) happens server-side too: over water the useful range is a sliver
-at the bottom of the histogram, and stretching it in the browser amplified JPEG artefacts
-into coloured mush. A cross marks where AIS put her; she will have moved a little from it in
-the seconds either side of the shutter, and the caption gives that gap.
+The **From orbit** card shows three panels, widest first, because a blue square with a
+white speck in it means nothing without somewhere to be: the land-bearing wide view, then
+a sixth of it, then her 800 m. Each panel is a single image request - two to NASA's WMS, one to a titiler instance
+that crops the Sentinel-2 COG - so nothing is composited in the job or stored in the
+repository. A cross marks where AIS put her; she will have moved a little from it, and the
+caption says so.
 
 What the card claims is careful: a satellite photographed the patch of sea she was in, at
 the moment she was in it. Whether there is a ship in those pixels, the reader can see.
-
-## Counting who looks at it
-
-GitHub Pages keeps no logs, so a visitor count has to come from outside the page. It uses
-[GoatCounter](https://www.goatcounter.com): one script tag, free, open source.
-
-**It has an off switch, and the off state is the real default.** `COUNTER_CODE` in
-`index.html` is now `"christer-cmd"`, the site Christer registered; set it back to an empty
-string and the page sends nothing, injects nothing and sets no globals - not even a request
-that 404s. The first build shipped empty deliberately: a page that gets shared with other
-families should not begin beaconing because a file was copied somewhere, and the code cannot
-be filled in before the account exists, because the code *is* the account's subdomain.
-
-Showing the total on the page additionally needs "Allow adding visitor counts on your
-website" ticked in GoatCounter's own settings, which is off by default there. Until it is
-ticked, visits are counted and the dashboard fills, but the on-page line stays hidden.
-
-Why this one, out of everything that counts visitors:
-
-* **No cookies, and nothing stored in the reader's browser at all** - no `localStorage`
-  either. The visit is identified server-side by hashing site + IP + User-Agent, held in
-  memory for eight hours and mapped to a random UUID. Only the UUID is written to their
-  database; the IP and the User-Agent never reach their disk.
-* **Do Not Track and Global Privacy Control are honoured** in the page itself, before the
-  script is even fetched, rather than being left to the vendor.
-* The counted path is pinned to `location.pathname`. The stale-page check reloads once with
-  a `?v=` on the end, and left alone that would land as a second, different path and read
-  as a second visitor.
-
-The number at the bottom of the page comes from GoatCounter's own public counter endpoint,
-`/counter/TOTAL.json`, which needs "Allow adding visitor counts on your website" enabled in
-its settings - off by default there. If it is off, or the answer is malformed, or the reader
-is offline, the line stays hidden rather than showing a blank or an error.
-
-**Read the number for what it is.** "Visits" means unique browsers over an eight-hour
-window, not people: one parent on a phone and a laptop is two, and a parent who looks in the
-morning and again at night is two. The on-page total is cached up to four hours their end,
-which the caption says rather than implying it is live.
 
 ## Actual satellite pictures
 
@@ -740,31 +654,29 @@ two numbers converge, she is on passage and the course estimate is worth watchin
 Turn on **Course** above the map. A ring marks every tack, with the wind angle and which
 side it is on. It is recomputed from her current position on every run.
 
-## The event log
+## The ship's log
 
-A tracking site's "Manoeuvring" and "Destination changed" lines are not messages the ship
-sends. They are that site's reading of two things that ride along in ordinary AIS: the
-**navigational status** in every position report, and the **voyage block** the crew fill in
-by hand (message 5 - destination, ETA, draught). We receive both from aisstream and from
-BarentsWatch, so `build_events()` derives the same log itself into `data/events.json`.
+Arrivals and departures come out of her own track, not out of the schedule. The schedule
+says when she is *due* somewhere, and a sailing ship is early or late; what a parent is
+refreshing the page for is when she actually got there.
 
-It can also name things more usefully than "manoeuvring". For a full-rigged ship the
-interesting change is status 0 against status 8:
+A call is a stay within **5 nm** of a listed port that lasts at least **2.5 hours** and
+during which she averages under **2 knots** over the fixes inside that circle. Both halves
+of that are load-bearing. Five miles is wide enough to cover an anchorage or a berth a
+little off the position we hold for the port - and wide enough that she sails through it on
+the way past, because the approaches to Lerwick are on the road to Dublin. Time alone does
+not separate the two either: in light airs she can crawl through the same water for three
+hours. A ship alongside averages a tenth of a knot; a ship passing averages her passage
+speed.
 
-| Status | Shown as |
-|---|---|
-| 0 | Under way using engine |
-| 8 | **Under way under sail** |
-| 1 / 5 | At anchor / Moored |
-| 3 | Restricted manoeuvrability |
+Short excursions are merged into the stay they interrupt, so a harbour move or an afternoon
+sail out and back does not read as leaving and arriving again. A stay she has not ended gets
+an arrival and no departure. Ports the track cannot speak for - the ones she called at
+before this page existed - still appear, greyed, from the schedule, and disappear the moment
+the track can account for them.
 
-Only changes are recorded, and a status has to hold for **two consecutive fixes** before it
-counts - a single stray report while she tacks would otherwise fill the log with noise.
-The log also notes when she comes back into AIS coverage after a silence of six hours or
-more, which on this voyage will mean an ocean.
-
-`data/events.json` keeps a `state` block alongside the events, so each run compares against
-what was last true rather than re-deriving the whole history.
+The rest of the log is unchanged: tracking started, every thousand miles, the equator, the
+best day, and the fastest speed she has reported.
 
 ## What was taken out, and why
 
@@ -776,6 +688,14 @@ assumes she is still here. They are gone, along with the API fields that fed the
 **At current speed** and **Positions logged** went for the reasons in the sections above:
 a date extrapolated from this minute's speed is not a prediction, and a count of AIS fixes
 measures receiver coverage rather than the voyage.
+
+**The event log** listed what changed in her AIS fields: under sail against under engine,
+and the voyage block the crew fill in by hand. In practice it was unpredictable and said
+very little - the status flag is set by whoever is on watch and often left alone through a
+sail change, so the card was either silent or full of noise. What belongs in a log is where
+she has been, so the arrivals and departures moved into **Ship's log** and `build_events()`
+is gone. `data/events.json` is no longer written or read; the copy in the repository is
+harmless and can be deleted.
 
 ## Data sources
 

@@ -825,9 +825,9 @@ SEAGRID_BIN = DATA / "seagrid.bin"
 SEAGRID_META = DATA / "seagrid.json"
 AHEAD = DATA / "ahead.json"
 WAKE = DATA / "wake.json"
-EVENTS = DATA / "events.json"
 COURSE = DATA / "course.json"
 ORBIT = DATA / "orbit.json"
+POLAR = DATA / "polar.json"
 # Forecast points along the projected route. The ladder is trimmed to the leg, so a
 # two-day hop shows only the near steps and a two-week ocean crossing reaches as far as
 # the models do. Open-Meteo's marine model stops at 8 days, so 168 h is the ceiling.
@@ -1187,6 +1187,7 @@ def position_at(points: list, when: datetime) -> dict | None:
         "lat": a["lat"] + (b["lat"] - a["lat"]) * f,
         "lon": a["lon"] + (b["lon"] - a["lon"]) * f,
         "sog": a.get("sog") if f < 0.5 else b.get("sog"),
+        "ns": a.get("ns") if f < 0.5 else b.get("ns"),
         "cog": a.get("cog") if f < 0.5 else b.get("cog"),
     }
 
@@ -1246,7 +1247,18 @@ def build_wake(points: list) -> None:
     Entries already fetched are kept, so a run only asks about the hours that are new -
     normally one or two. That keeps the file honest as history rather than re-deriving it
     from today's model run every time.
+
+    Wrapped, like every other builder: this was the only one without a guard, so one odd
+    answer from the weather API took down the polar, the course, the projection, the orbit
+    and the history that all run after it.
     """
+    try:
+        _build_wake(points)
+    except Exception as exc:
+        print(f"  ! wake failed: {exc}", file=sys.stderr)
+
+
+def _build_wake(points: list) -> None:
     if len(points) < 2:
         return
     kept = {e["t"]: e for e in (read_json(WAKE, {}) or {}).get("hours", [])
@@ -1445,6 +1457,33 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
         print(f"  ! weather ahead failed: {exc}", file=sys.stderr)
 
 
+def build_polar() -> None:
+    """Fold the last window of sailing into her measured polar.
+
+    Cheap: it reads the wake the job has already fetched, skips every hour it has counted
+    before, and writes a file of counts. No network, no extra API calls.
+    """
+    try:
+        import polar as PL
+    except ImportError as exc:
+        print(f"  ! polar not importable: {exc}", file=sys.stderr)
+        return
+    try:
+        hours = (read_json(WAKE, {}) or {}).get("hours") or []
+        if not hours:
+            return
+        learned = PL.learn(hours, read_json(POLAR, None))
+        learned["generated_utc"] = iso(now_utc())
+        useful = PL.summary(learned)
+        learned["bins_with_enough"] = len(useful)
+        write_json(POLAR, learned)
+        print(f"  -> polar: +{learned['added_last_run']} sailing hours "
+              f"(skipped {learned['skipped_last_run']}), {learned['samples']} in total, "
+              f"{len(useful)} bins now solid enough to steer by")
+    except Exception as exc:
+        print(f"  ! polar failed: {exc}", file=sys.stderr)
+
+
 # --------------------------------------------------------- the course she would sail
 # The dashed route to the next port assumes she closes on it steadily. She does not: she
 # cannot point within about 58 degrees of the wind, so on a headwind leg she has to beat,
@@ -1460,6 +1499,17 @@ def build_course(lat: float, lon: float) -> None:
     except ImportError as exc:
         print(f"  ! sailrouter not importable: {exc}", file=sys.stderr)
         return
+    try:
+        import polar as PL
+        stored = read_json(POLAR, None)
+        if stored:
+            table = PL.blended_table(stored, SR.boat_speed)
+            if table.learned_bins:
+                SR.use_learned_polar(table)
+                print(f"  -> course: steering by {table.learned_bins} measured wind angles, "
+                      f"the rest from the built-in polar")
+    except Exception as exc:
+        print(f"  ! learned polar not used: {exc}", file=sys.stderr)
     try:
         plan = read_json(DATA / "ports.json", {})
         ports = plan.get("ports") or []
@@ -1569,95 +1619,7 @@ NAV_STATUS = {
     14: "Distress signal (AIS-SART)",
     15: "Status not reported",
 }
-EVENT_CAP = int(os.environ.get("EVENT_CAP", "400"))
 SILENCE_HOURS = float(os.environ.get("SILENCE_HOURS", "6"))
-
-
-def build_events(collected: list, static: dict) -> None:
-    """Append what changed to data/events.json.
-
-    Only changes are recorded, and a status has to hold for two fixes before it counts -
-    a single stray report while she tacks would otherwise fill the log with noise.
-    """
-    stored = read_json(EVENTS, {}) or {}
-    events = [e for e in (stored.get("events") or []) if isinstance(e, dict) and e.get("t")]
-    state = dict(stored.get("state") or {})
-    added = 0
-
-    def note(when: str, kind: str, text: str, detail: str | None = None):
-        nonlocal added
-        if any(e["t"] == when and e.get("kind") == kind and e.get("text") == text for e in events):
-            return
-        row = {"t": when, "kind": kind, "text": text}
-        if detail:
-            row["detail"] = detail
-        events.append(row)
-        added += 1
-
-    fixes = sorted([c for c in collected if c.get("seen_utc")], key=lambda c: c["seen_utc"])
-
-    # A long silence, now ended: worth a line, because on this voyage it will mean an ocean.
-    if fixes and state.get("last_fix_utc"):
-        try:
-            gap = (parse_iso(fixes[0]["seen_utc"]) - parse_iso(state["last_fix_utc"])).total_seconds() / 3600
-            if gap >= SILENCE_HOURS:
-                note(fixes[0]["seen_utc"], "coverage",
-                     f"Back in AIS coverage after {round(gap)} hours",
-                     f"last heard {state['last_fix_utc']}")
-        except Exception:
-            pass
-
-    # Navigational status, with a two-fix confirmation.
-    pending, pending_since, count = state.get("nav_pending"), state.get("nav_pending_since"), state.get("nav_pending_n", 0)
-    for f in fixes:
-        ns = f.get("nav_status")
-        if ns is None or ns == 15:
-            continue
-        if ns == state.get("nav_status"):
-            pending, pending_since, count = None, None, 0
-            continue
-        if ns == pending:
-            count += 1
-        else:
-            pending, pending_since, count = ns, f["seen_utc"], 1
-        if count >= 2:
-            name = NAV_STATUS.get(ns, f"Status {ns}")
-            was = NAV_STATUS.get(state.get("nav_status"))
-            note(pending_since, "nav", name, f"was {was}" if was else None)
-            state["nav_status"] = ns
-            pending, pending_since, count = None, None, 0
-    state["nav_pending"], state["nav_pending_since"], state["nav_pending_n"] = pending, pending_since, count
-
-    # The voyage block the crew type in.
-    newest = fixes[-1]["seen_utc"] if fixes else iso(now_utc())
-    merged_static = dict(static or {})
-    for f in fixes:
-        for key in ("destination", "draught_m"):
-            if f.get(key):
-                merged_static.setdefault(key, f[key])
-    for key, label in (("destination", "Destination reported"),
-                       ("eta_text", "ETA reported"),
-                       ("draught_m", "Draught reported")):
-        value = merged_static.get(key)
-        if value in (None, "", 0):
-            continue
-        if state.get(key) != value:
-            shown = f"{value} m" if key == "draught_m" else str(value)
-            was = state.get(key)
-            note(newest, key, f"{label}: {shown}",
-                 f"was {was}{' m' if key == 'draught_m' and was else ''}" if was else None)
-            state[key] = value
-
-    if fixes:
-        state["last_fix_utc"] = fixes[-1]["seen_utc"]
-
-    events.sort(key=lambda e: e["t"])
-    events = events[-EVENT_CAP:]
-    write_json(EVENTS, {"generated_utc": iso(now_utc()), "state": state, "events": events})
-    if added:
-        print(f"  -> events: {added} new, {len(events)} kept")
-    else:
-        print(f"  -> events: nothing new, {len(events)} kept")
 
 
 # --------------------------------------------------- satellite passes that saw her
@@ -1815,6 +1777,13 @@ def main() -> int:
             # carries it.
             if fix.get("sog_derived") and sog_v is not None:
                 entry["d"] = 1
+            # Navigational status, but only the two values that answer "was she sailing":
+            # 8 under sail, 0 under engine. It is what separates a polar learned from real
+            # sailing from one polluted by sail drills and motoring, and the ship's own feed
+            # does not carry it, so it is worth keeping where we do hear it.
+            ns = fix.get("nav_status")
+            if ns in (0, 8):
+                entry["ns"] = ns
             merged_pts.insert(k, (when, entry))
             stamps.insert(k, when)
             added += 1
@@ -1897,14 +1866,15 @@ def main() -> int:
             },
         },
     )
-    # Course first: the forward projection now walks along the sailing course rather than
-    # along a near-straight line, so the course has to exist before it is paced.
+    # Order matters here, and each step feeds the next:
+    #   wake   - where she was hour by hour, and the weather that was there
+    #   polar  - folds those hours into what she can actually do at each wind angle
+    #   course - the isochrone route, steering by that polar
+    #   ahead  - walks along the course at her measured rate of closing on the port
+    build_wake(points)
+    build_polar()
     build_course(lat, lon)
     build_ahead(lat, lon, position.get("sog_kn"), points)
-    build_wake(points)
-    # The voyage fields ride on the newest position, having been merged there from the
-    # static messages, so pass them along rather than re-deriving them.
-    build_events(collected, {k: position.get(k) for k in ("destination", "eta_text", "draught_m")})
     build_orbit(points)
     update_history(weather, points, collected)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
