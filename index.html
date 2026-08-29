@@ -936,7 +936,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "b4486a8371";
+const BUILD = "40c55f376c";
 
 async function checkForNewBuild() {
   try {
@@ -2587,15 +2587,24 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     return { v: get(x), label: dayLabel(d), short: dayLabel(d) };
   });
 
-  // The record, then the recent days. If the record happened inside those days it is
-  // already on the chart, and repeating it would read as two separate gales.
+  // The record, always, then the recent days.
+  //
+  // The first version left the record bar out when it happened to fall inside the five days
+  // shown, on the grounds that drawing it twice would read as two separate gales. That was
+  // wrong, and wrong in a way that only showed up once the charts had real data in them:
+  // this voyage is a week old, so every record IS inside the window, and the record bar
+  // simply never appeared. Worse, the chart's shape became unpredictable - five bars, or
+  // six, depending on when the worst day happened to fall.
+  //
+  // The point of the bar is to be a fixed reference in a fixed place. So it is always
+  // there. When it repeats a day that is also among the five, both bars carry the same date
+  // and the same figure in bold, which reads correctly as "that day, there, is the worst so
+  // far" rather than as two events.
   function recordThenRecent(rows, n = 5) {
-    if (!rows.length) return [];
-    const recent = rows.slice(-n);
+    if (rows.length < 2) return rows;
     const best = rows.reduce((a, b) => (b.v > a.v ? b : a), rows[0]);
-    if (recent.includes(best)) return recent;
-    return [{ ...best, record: true,
-              label: `Best so far — ${best.label}` }, ...recent];
+    return [{ ...best, record: true, label: `Best so far — ${best.label}` },
+            ...rows.slice(-n)];
   }
 
   const byDay = dailyDistance(track.points || []);
@@ -2622,8 +2631,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       <div class="chart"><h3>Highest speed</h3><p>fastest so far, then the last five, knots</p>
         ${barChart(sogRows, "kn", 1, "--chart-d") || '<p style="margin:0">Builds up from today.</p>'}</div>
     </div>`, { key: "charts", open: true,
-      note: distRows.some(r => r.record) || windRows.some(r => r.record)
-          ? "the record, then the last five days" : "the last five days" }) : "";
+      note: "the record, then the last five days" }) : "";
 
   // Sentinel-2 true colour, 10 m per pixel, cropped to a square around where she was at
   // that scene's own timestamp. titiler does the crop and the brightness stretch

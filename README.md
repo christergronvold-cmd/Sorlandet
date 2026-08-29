@@ -471,10 +471,20 @@ lines and hiding the rest.
 
 **Day by day** draws four small charts - distance per day from the track, and the strongest
 wind, highest wave and fastest speed she reported each day from `history.json`. They are
-deliberately four charts rather than one with four scales. Every bar carries its own number,
-not just the tallest: with fourteen days on a card about 210 px wide a bar gets fifteen
-pixels, so the label is measured against the room it has, shrunk while that helps, and
-turned on its side when it does not. The third series is rose rather than the teal
+deliberately four charts rather than one with four scales.
+
+They showed fourteen days, which made every bar thin, forced the figures onto their sides to
+fit, and buried the one number a reader actually wants - the worst it has been. Now each
+chart is **the record, a gap, then the last five days**: six bars, wide enough to carry
+their numbers upright, with the date of the record under its own bar.
+
+The record bar is drawn **even when the record falls inside those five days**, and getting
+that wrong is worth recording. The first version left it out in that case, reasoning that
+drawing it twice would read as two separate gales. On real data it was plainly wrong: this
+voyage is a week old, so every record IS recent, and the bar simply never appeared - and the
+chart was five bars or six depending on the weather. The point of the bar is to be a fixed
+reference in a fixed place. When it repeats a day, both bars carry the same date and the
+same figure in bold, which reads as "that day, there, is the worst so far". The third series is rose rather than the teal
 that would suit "wave" better: teal came out 10.3 OKLab ΔE from the blue in dark mode,
 under the 15 floor, so the two would have been hard to tell apart. Rose passes every
 computable check - lightness band, chroma floor, CVD separation, contrast - in both themes.
