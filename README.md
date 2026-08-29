@@ -799,13 +799,29 @@ comparison explains what you see on the map: they are not making for Shetland, t
 sailing a school ship around the North Sea with a fortnight to do it in. On a leg where the
 two numbers converge, she is on passage and the course estimate is worth watching.
 
-**The drawn course reaches the quay.** The isochrone search stops as soon as it is within
+**The drawn course reaches the quay, and goes round the island to get there.** The isochrone search stops as soon as it is within
 twelve miles of the port, because it steps in whole hours and can never land on a berth -
 which left the line ending twelve miles offshore, reading as a route that gave up short of
 where she was going. The run in is now appended, and flagged `"final": true` with no wind
 angle, no tack and no speed of its own, because it is not a sailing course: those last miles
-are pilotage and never were ours to plan. The land-mask test excludes that one point on
-purpose - a harbour is against the land the mask is drawn from.
+are pilotage and never were ours to plan.
+
+Appending the port alone was not enough, and the map said so within the hour: **Lerwick is
+on the west side of Bressay**, so a straight line to it from seaward crosses the island. Nor
+can the run in be computed - the sea mask routes with six kilometres of clearance, and
+Lerwick Sound is about one wide, so no cell in it counts as navigable. It follows the port's
+own approach waypoints from `ports.json` instead, which is where somebody already decided
+which side to pass.
+
+That exposed a deeper fault. "Arrived" in the search means *within twelve miles of the goal,
+from any direction*, so a search aimed at the berth could finish north-west of Shetland and
+then have to cross the island to reach an approach waypoint lying east of it. The search is
+now aimed at the **first approach waypoint** - the sea entrance - and the run in walks the
+rest. A ship arrives from seaward; so does the route now.
+
+The land check in `test_course.py` samples sixty points along every approach leg and demands
+clear water on all of them, except the last one into the harbour: that runs up a channel the
+grid cannot represent, and a harbour is against the land the mask is drawn from.
 
 Turn on **Course** above the map. A ring marks every tack, with the wind angle and which
 side it is on. It is recomputed from her current position on every run.
@@ -913,6 +929,23 @@ constants:
 After that it is the reader's choice, remembered per browser in `localStorage`. Nothing is
 sent anywhere, and a browser with storage switched off still works - the test runs the whole
 page with `localStorage` throwing on access.
+
+## Two readings of the wind that both looked wrong
+
+Drag the slider forward and the map's arrows move to that hour. The **Wind**, **Sea** and
+**Air** cards do not, because they are not a forecast field - they are what was measured
+where she is, this minute. Nothing on the page said so, and the result was a screen showing
+4.2 m/s on the map and 9.7 m/s on the card at the same time. Both were right: the map was
+drawing Monday 04:00, thirty-two hours ahead, at a cell some distance from her.
+
+The cards now carry a small **now** beside their heading, and only while the slider is away
+from now - a permanent badge on a card that is always now is just noise. It costs one line
+and removes the whole question.
+
+This is the third time on this page that two numbers disagreed because they answered
+different questions: 440 nm against 338 on the voyage plan, 8.5 knots against 8.8 in the
+log, and now this. The first two were fixed by deleting one of the numbers. This one could
+not be - both are worth having - so the fix is to say which is which.
 
 ## Harbour cameras
 

@@ -287,7 +287,8 @@ def isochrone_route(start: tuple[float, float], goal: tuple[float, float],
                     depart: datetime, field: WindField,
                     is_sea=None, step_h: float = 3.0, max_hours: float = 240.0,
                     headings: int = 36, sectors: int = 90,
-                    arrive_within_nm: float = 12.0):
+                    arrive_within_nm: float = 12.0,
+                    approach: list | None = None):
     """The fastest sailing route from start to goal, or None if she cannot get there.
 
     Returns {"points": [{lat, lon, t, twa, tws, sog, course}], "hours": float,
@@ -350,18 +351,19 @@ def isochrone_route(start: tuple[float, float], goal: tuple[float, float],
                     arrived = here
 
         if arrived is not None:
-            return _unwind(nodes, arrived, depart, goal)
+            return _unwind(nodes, arrived, depart, goal, approach)
 
     # Never reached it: give back the best effort so the page can still draw something.
     if not frontier:
         return None
     closest = min(frontier, key=lambda i: nm_between((nodes[i]["lat"], nodes[i]["lon"]), goal))
-    out = _unwind(nodes, closest, depart, goal)
+    out = _unwind(nodes, closest, depart, goal, approach)
     out["reached"] = False
     return out
 
 
-def _unwind(nodes: list, end: int, depart: datetime, goal: tuple) -> dict:
+def _unwind(nodes: list, end: int, depart: datetime, goal: tuple,
+            approach: list | None = None) -> dict:
     chain = []
     i = end
     while i is not None:
@@ -381,30 +383,47 @@ def _unwind(nodes: list, end: int, depart: datetime, goal: tuple) -> dict:
             "sog": None if n["sog"] is None else round(n["sog"], 1),
         })
 
-    # ...and then the last few miles into the harbour.
+    # ...and then the run in.
     #
     # The search stops as soon as it is within arrive_within_nm of the port, because an
     # isochrone steps in whole hours and can never land exactly on a quay. That left the
-    # drawn course ending up to twelve miles offshore, which reads as a route that gives up
-    # short of where she is going.
+    # drawn course ending twelve miles offshore, reading as a route that gave up short of
+    # where she was going.
     #
-    # This last leg is NOT a sailing course and is not pretended to be: it carries no wind
-    # angle, no tack, no speed of its own, and is flagged so nothing downstream mistakes it
-    # for something the router worked out. It is simply the run in, which in a real ship is
-    # pilotage under engine and never was ours to plan.
+    # Appending the port on its own was not enough, and the map said so immediately: Lerwick
+    # sits on the WEST side of Bressay, so a straight line to it from the east goes over the
+    # island. The approach has to go round. It is not ours to compute either - the sea mask
+    # this project routes on keeps six kilometres clear of land, and Lerwick Sound is about
+    # one kilometre wide, so no cell inside it is navigable as far as the grid is concerned.
+    #
+    # So the run in follows the port's OWN approach waypoints out of ports.json, which is
+    # where somebody already worked out which side of the island to pass. It carries no wind
+    # angle, no tack and no speed, and is flagged so nothing downstream mistakes it for
+    # something the router chose: in a real ship these last miles are pilotage, and never
+    # were ours to plan.
+    #
+    # The caller also aims the SEARCH at the first of those waypoints rather than at the
+    # quay. That matters more than it looks: "arrived" here means within twelve miles of the
+    # goal, in any direction, so a search aimed at the berth can finish north-west of the
+    # island and then have to cross it to reach an approach point that lies east. Aimed at
+    # the sea entrance instead, it arrives from seaward, which is the only way a ship can.
     if points:
+        run_in = list(approach) if approach else [goal]
         last = points[-1]
-        rest = nm_between((last["lat"], last["lon"]), goal)
-        if rest > 0.5:
+        for leg in run_in:
+            gap = nm_between((last["lat"], last["lon"]), leg)
+            if gap < 0.3:
+                continue
             speed = last["sog"] or 6.0
-            points.append({
-                "lat": round(goal[0], 4), "lon": round(goal[1], 4),
-                "t": (depart + timedelta(hours=last["hours"] + rest / max(speed, 1.0)))
-                     .strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "hours": round(last["hours"] + rest / max(speed, 1.0), 1),
+            hours = last["hours"] + gap / max(speed, 1.0)
+            last = {
+                "lat": round(leg[0], 4), "lon": round(leg[1], 4),
+                "t": (depart + timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "hours": round(hours, 1),
                 "course": None, "twa": None, "tws": None, "sog": None,
                 "final": True,
-            })
+            }
+            points.append(last)
 
     # A tack or a gybe: the wind crosses from one side to the other.
     tacks = []

@@ -68,6 +68,17 @@
     font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
     margin:0 0 10px; font-weight:650;
   }
+  /* Drag the slider and the map's arrows move to that hour; these cards do not, because
+     they are what was measured where she is, not a forecast field. Nothing said so, and
+     the two readings look like a contradiction: on 29 August the map said 4.2 m/s for
+     Monday 04:00 while the Wind card said 9.7 m/s for that minute. Both were right. The
+     card now admits which moment it is talking about, but only while the slider is
+     somewhere else - a permanent "now" on a card that is always now is just noise. */
+  .nowchip{display:none}
+  body.offnow .nowchip{
+    display:inline; margin-left:7px; color:var(--accent); font-weight:650;
+    text-transform:none; letter-spacing:0; font-size:10.5px;
+  }
   .row{display:flex; justify-content:space-between; gap:12px; padding:4px 0; font-variant-numeric:tabular-nums}
   .row span:first-child{color:var(--muted)}
   .row span:last-child{font-weight:600; text-align:right}
@@ -414,6 +425,10 @@ const wideCard = (title, html, fold) => fold
        <div class="foldbody">${html}</div></details>`
   : `<div class="card wide"><h2>${title}</h2>${html}</div>`;
 const card = (title, html) => `<div class="card"><h2>${title}</h2>${html}</div>`;
+
+// Shown on the weather cards only while the slider is away from now - see .nowchip.
+const NOWCHIP = '<span class="nowchip" title="What is measured where she is, at this ' +
+  'moment. The map is showing the hour the slider is on.">now</span>';
 
 // Remember which cards a reader folded away. Per browser, nothing sent anywhere, and the
 // page is fine if the store is unavailable - a private window, or storage switched off.
@@ -915,7 +930,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "2b119d9ab7";
+const BUILD = "5046403624";
 
 async function checkForNewBuild() {
   try {
@@ -1669,12 +1684,14 @@ function drawRewind() {
   if (!t) {
     document.getElementById("rewind").hidden = true;
     nowBtn.disabled = true;
+    document.body.classList.remove("offnow");
     return;
   }
   const whenMs = new Date(t + "Z").getTime();
   const offsetH = (whenMs - Date.now()) / 36e5;
   const away = Math.abs(offsetH) >= 0.75;
   nowBtn.disabled = !away;
+  document.body.classList.toggle("offnow", away);
   if (!away) {                                          // this is now: nothing to overlay
     rewindLine("Now \u2014 drag to wind back, or forward through the forecast");
     return;
@@ -2748,20 +2765,20 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     planCard,
     boardCard,
 
-    card("Wind", waiting ? row("Status", "waiting for position") : `
+    card("Wind" + NOWCHIP, waiting ? row("Status", "waiting for position") : `
       <div class="big">${N(air.wind_ms)} <small>m/s</small></div>
       <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">${beaufort(air.wind_ms)}</div>
       ${row("From", `${compass(air.wind_direction_deg)} (${N(air.wind_direction_deg, 0)}°)`)}
       ${row("Gusts", `${N(air.gust_ms)} m/s`)}
       ${row("Pressure", `${N(air.pressure_hpa, 0)} hPa`)}`),
 
-    card("Sea", waiting ? row("Status", "waiting for position") : `
+    card("Sea" + NOWCHIP, waiting ? row("Status", "waiting for position") : `
       <div class="big">${N(sea.wave_height_m)} <small>m waves</small></div>
       ${row("Swell", `${N(sea.swell_height_m)} m / ${N(sea.swell_period_s, 0)} s`)}
       ${row("Wave direction", compass(sea.wave_direction_deg))}
       ${row("Sea temperature", `${N(sea.sea_temp_c)} °C`)}`),
 
-    card("Air", waiting ? row("Status", "waiting for position") : (() => {
+    card("Air" + NOWCHIP, waiting ? row("Status", "waiting for position") : (() => {
       const sky = skyOf(air);
       return `
       <div class="big">${sky ? `<span class="sky" title="${sky.text}">${sky.ic}</span> ` : ""}${

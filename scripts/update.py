@@ -1602,6 +1602,9 @@ def build_polar() -> None:
 # cannot point within about 58 degrees of the wind, so on a headwind leg she has to beat,
 # and where the tacks fall depends on the forecast. This works that out.
 
+# How near a port one of its waypoints has to be to count as part of the approach
+# rather than part of the ocean crossing before it.
+APPROACH_NM = float(os.environ.get("APPROACH_NM", "30"))
 COURSE_MAX_HOURS = float(os.environ.get("COURSE_MAX_HOURS", "168"))
 COURSE_STEP_H = float(os.environ.get("COURSE_STEP_H", "3"))
 
@@ -1674,8 +1677,22 @@ def build_course(lat: float, lon: float, points: list | None = None) -> None:
             cell = _cell(la, lo)
             return True if cell is None else _is_sea(*cell)
 
-        route = SR.isochrone_route(start, goal, depart, field, is_sea=is_sea,
-                                  step_h=COURSE_STEP_H, max_hours=horizon)
+        # The port's own approach waypoints, for the run in. Only the trailing ones that
+        # are genuinely near the port: the same list also carries the ocean waypoints for
+        # the whole leg, which are hundreds of miles away and none of the router's business.
+        approach = []
+        for w in reversed(port.get("waypoints") or []):
+            if nm_between((float(w[0]), float(w[1])), goal) > APPROACH_NM:
+                break
+            approach.append((float(w[0]), float(w[1])))
+        approach.reverse()
+
+        # Sail to the sea entrance, then walk the rest in. See _unwind in sailrouter.
+        router_goal = approach[0] if approach else goal
+        run_in = (approach[1:] + [goal]) if approach else None
+        route = SR.isochrone_route(start, router_goal, depart, field, is_sea=is_sea,
+                                  step_h=COURSE_STEP_H, max_hours=horizon,
+                                  approach=run_in)
         if not route or len(route.get("points") or []) < 2:
             print("  ! could not work out a sailing course", file=sys.stderr)
             return
