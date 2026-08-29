@@ -808,8 +808,22 @@ an arrival and no departure. Ports the track cannot speak for - the ones she cal
 before this page existed - still appear, greyed, from the schedule, and disappear the moment
 the track can account for them.
 
-The rest of the log is unchanged: tracking started, every thousand miles, the equator, the
-best day, and the fastest speed she has reported.
+The rest of the log is what a log should hold: tracking started, every thousand miles, and
+the equator.
+
+**"Best day so far" and "Fastest speed she reported" were in here and came out**, because
+they had become the first bar of their own chart - and the two did not agree. On 29 August
+the log said 8.5 knots and the chart said 8.8. Neither was lying; they counted different
+things. The chart's figure comes from `history.json`, which the job builds from **every fix
+it collects**; the log's came from `track.json`, which is merged and thinned, so the fix
+that made 8.8 had been dropped before the page ever saw it.
+
+Reconciling two sources is work that has to be redone every time either one changes. The
+number now exists in one place. That also retired the provenance guard the page used to
+carry - the whole `sog_provenance_from` apparatus existed to stop the log claiming a record
+from a speed the job had computed, and the protection now sits where the number is made, in
+`update_history()`, which skips `sog_derived` fixes at the point of collection. `update.py`
+still stamps the track, as a record of when the distinction began; nothing reads it.
 
 ## The long cards fold
 

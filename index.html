@@ -612,15 +612,27 @@ function voyageState(points, ports, todayISO) {
   return settle(i, end(ports[i]) < todayISO);
 }
 
-function milestones(points, ports, todayISO, sogFrom) {
+// A log of things that HAPPENED, not a second copy of the statistics.
+//
+// It used to carry "Best day so far" and "Fastest speed she reported" as well. Both are now
+// the first bar of their chart, with the date under them - so the log was repeating the
+// charts, and the two did not even agree: on 29 August the log said 8.5 knots and the chart
+// said 8.8. Neither was lying. They counted different things. The chart's figure comes from
+// `history.json`, which the job builds from EVERY fix it collects; the log's came from
+// track.json, which is merged and thinned, so the fix that made 8.8 had been dropped from it
+// by the time the page read it.
+//
+// Reconciling two sources is a job that has to be redone every time either one changes. The
+// number now exists in exactly one place, which is the only kind of agreement that stays
+// true. What is left here is what a log should hold: where she went and when.
+function milestones(points, ports, todayISO) {
   const out = [];
   if (points.length) {
     out.push({ t: points[0].t, ic: "⚓", text: "Tracking started" });
   }
-  let cum = 0, nextMark = 1000, best = { nm: 0, t: null }, top = { kn: 0, t: null };
+  let cum = 0, nextMark = 1000;
   for (let i = 1; i < points.length; i++) {
-    const step = nm([points[i - 1].lat, points[i - 1].lon], [points[i].lat, points[i].lon]);
-    cum += step;
+    cum += nm([points[i - 1].lat, points[i - 1].lon], [points[i].lat, points[i].lon]);
     if (cum >= nextMark) {
       out.push({ t: points[i].t, ic: "📏", text: `${nextMark.toLocaleString("en-GB")} nautical miles sailed` });
       nextMark += 1000;
@@ -628,39 +640,6 @@ function milestones(points, ports, todayISO, sogFrom) {
     if ((points[i - 1].lat > 0) !== (points[i].lat > 0)) {
       out.push({ t: points[i].t, ic: "🌍", text: "Crossed the equator" });
     }
-    // Only a speed the ship actually transmitted can be a record. Points carrying "d" have
-    // a speed worked out here from the step between two positions, and that number is not a
-    // measurement: the straight line between two fixes is the shortest path, so a ship
-    // sailing a curve reads slow, while a little receiver error over a short step reads
-    // fast. Letting those into the maximum is how the log claimed 11.1 knots when the
-    // fastest thing she ever reported was 9.6.
-    // ...and only from the era in which the track records where a speed came from. Points
-    // older than that were written before the distinction existed and cannot be classified
-    // now, because the source was never stored. An unknown number is not a record.
-    //
-    // No stamp at all means the job has not yet run the code that makes the distinction, so
-    // nothing in the file is known to be a reported speed - and then there is no record to
-    // show. That is deliberately the strict way round: this page gets shared with other
-    // families who can check it against MarineTraffic, so a missing line costs nothing and
-    // a wrong number costs the page its credibility.
-    if (points[i].sog && !points[i].d && points[i].sog > top.kn &&
-        sogFrom && points[i].t >= sogFrom) {
-      top = { kn: points[i].sog, t: points[i].t };
-    }
-    // best run in any rolling 24 hours
-    let j = i, run = 0;
-    while (j > 0 && (new Date(points[i].t) - new Date(points[j - 1].t)) <= 864e5) {
-      run += nm([points[j - 1].lat, points[j - 1].lon], [points[j].lat, points[j].lon]);
-      j--;
-    }
-    if (run > best.nm) best = { nm: run, t: points[i].t };
-  }
-  if (best.t && best.nm > 40) {
-    out.push({ t: best.t, ic: "💨", text: `Best day so far: ${Math.round(best.nm)} nm in 24 hours` });
-  }
-  if (top.t && top.kn >= 8) {
-    out.push({ t: top.t, ic: "🚀",
-               text: `Fastest speed she reported: ${top.kn.toFixed(1)} knots` });
   }
   // What the track shows her doing comes first...
   const calls = portCalls(points, ports);
@@ -936,7 +915,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "40c55f376c";
+const BUILD = "2b119d9ab7";
 
 async function checkForNewBuild() {
   try {
@@ -2513,13 +2492,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   }
 
   // ---- ship's log
-  const marks = milestones(track.points || [], ports, todayISO,
-                           track.sog_provenance_from);
+  const marks = milestones(track.points || [], ports, todayISO);
   const logCard = marks.length ? wideCard("Ship's log", `
     <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
-      Arrivals and departures as her own track shows them, with the distances and the
-      records she has set along the way. Greyed lines are from the schedule — ports she
-      called at before this page existed, or during a gap in coverage.
+      Where she has been and when, as her own track shows it. Greyed lines are from the
+      schedule — ports she called at before this page existed, or during a gap in coverage.
+      The records live in Day by day, as the first bar of each chart.
     </div>
     <ul class="log${marks.length > 9 ? " scroll" : ""}">${
     marks.map(m => `<li><time>${new Date(m.t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</time>
@@ -2796,11 +2774,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     })()),
 
     progressCard,
+    aheadCard,
     logCard,
     cameraCard,
     albumCard,
     chartsCard,
-    aheadCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`,
       { key: "route", open: false, note: `${ports.length} ports` }) : "",
     shareCard
