@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import sys
 import urllib.error
 import urllib.request
 import ssl
@@ -106,28 +107,69 @@ def hunt(points: list, position_at, iso, parse_iso, days: int = 10,
         return []
     start = max(t_first, t_last - timedelta(days=days))
 
-    lats = [p["lat"] for p in points]
-    lons = [p["lon"] for p in points]
-    bbox = [min(lons) - 0.4, min(lats) - 0.4, max(lons) + 0.4, max(lats) + 0.4]
-    # A track that has crossed the date line would give a bbox spanning the globe; skip
-    # rather than ask for every scene on earth.
-    if bbox[2] - bbox[0] > 60:
-        print("  -> orbit: track too wide for one search, skipping this run")
-        return []
+    # One search per DAY of track, not one search over the whole window.
+    #
+    # It used to take a single bounding box around ten days of sailing and ask for a hundred
+    # scenes inside it. On a passage that box is enormous - a thousand miles of ocean - and
+    # the catalogue holds nothing over open water, so it looked fine. The failure was at the
+    # other end: the moment she closed a coast, that same box covered the ocean AND the
+    # coast, and coasts are photographed most days. Ten days of a European coastline is
+    # comfortably more than a hundred scenes, so the limit bound, and which hundred came
+    # back was the catalogue's business rather than ours. The passes that saw her arrive
+    # could simply be absent, and nothing would say so.
+    #
+    # A day of sailing spans a couple of degrees. Each query is small, the limit never
+    # binds, and it needs no help from anyone about which places are ports or coasts - it
+    # asks the same question everywhere, which is the point.
+    def day_windows():
+        out, cur = [], []
+        for p in points:
+            try:
+                t = parse_iso(p["t"])
+            except Exception:
+                continue
+            if t < start:
+                continue
+            if cur and (t - parse_iso(cur[0]["t"])).total_seconds() > 24 * 3600:
+                out.append(cur)
+                cur = []
+            cur.append(p)
+        if cur:
+            out.append(cur)
+        return out
 
     seen = {h.get("id") for h in (known or []) if isinstance(h, dict)}
     hits = list(known or [])
     added = 0
+    windows = day_windows()
 
     for collection, label in COLLECTIONS:
-        data = _post(STAC, {
-            "collections": [collection], "limit": 100, "bbox": bbox,
-            "datetime": f"{iso(start)}/{iso(t_last)}",
-        })
-        if not data:
-            print(f"  ! orbit: no answer from the {label} catalogue")
-            continue
-        features = data.get("features") or []
+        features, asked, capped = [], 0, 0
+        for win in windows:
+            lons = [q["lon"] for q in win]
+            lats = [q["lat"] for q in win]
+            bbox = [min(lons) - 0.4, min(lats) - 0.4, max(lons) + 0.4, max(lats) + 0.4]
+            # Only a track that has crossed the date line can be this wide in one day, and
+            # a bbox spanning the globe would ask for every scene on earth.
+            if bbox[2] - bbox[0] > 60:
+                continue
+            data = _post(STAC, {
+                "collections": [collection], "limit": 100, "bbox": bbox,
+                "datetime": f"{iso(parse_iso(win[0]['t']))}/{iso(parse_iso(win[-1]['t']))}",
+                "sortby": [{"field": "properties.datetime", "direction": "desc"}],
+            })
+            asked += 1
+            if not data:
+                print(f"  ! orbit: no answer from the {label} catalogue")
+                continue
+            got = data.get("features") or []
+            if len(got) >= 100:
+                capped += 1
+            features.extend(got)
+        if capped:
+            print(f"  ! orbit: {capped} of {asked} day(s) came back full - some {label} "
+                  f"scenes were not looked at", file=sys.stderr)
+
         covered = 0
         for f in features:
             fid = f.get("id")
@@ -166,7 +208,8 @@ def hunt(points: list, position_at, iso, parse_iso, days: int = 10,
             hits.append(hit)
             seen.add(fid)
             added += 1
-        print(f"  -> orbit: {len(features)} {label} scenes in the box, {covered} covered her")
+        print(f"  -> orbit: {len(features)} {label} scenes across {asked} day(s) of "
+              f"track, {covered} covered her")
 
     hits = [h for h in hits if h.get("gap_min", 0) <= MAX_GAP_MIN]
     hits.sort(key=lambda h: h["t"], reverse=True)

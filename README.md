@@ -611,6 +611,26 @@ depart dates, so it costs nothing and stays right if the plan changes.
 
 ## Passes that actually looked at her
 
+**One search per day of track, not one per run.** This is the fix that matters, and the bug
+it replaced was invisible in exactly the places worth watching.
+
+`hunt()` used to take a single bounding box around the whole ten-day window and ask the
+catalogue for a hundred scenes inside it. On passage that looks fine: the box is a thousand
+miles of ocean, and ESA photographs almost none of it, so a handful of scenes come back and
+all of them get checked. It breaks the moment she closes a coast. The same ten-day box then
+covers the ocean **and** the coastline, and coasts are photographed most days - measured
+over Lerwick harbour, twenty-six acquisitions in twenty-eight days. Ten days of European
+coast is comfortably more than a hundred scenes, so the limit bound, and which hundred came
+back was the catalogue's business rather than ours. The passes that saw her arrive could
+simply be absent, and nothing on the page would say so.
+
+A day of sailing spans about two degrees. One query per day keeps every box small, so the
+limit never binds; the search also asks for newest first, so if a page ever did fill up it
+would lose the oldest rather than the arrival that just happened. It needs no list of ports
+or coastlines and no switch to throw - it asks the same question everywhere, every run,
+which is the only version that can be trusted not to miss the one day it mattered.
+
+
 `scripts/orbithunter.py` asks the right question. "Which scenes are near the ship" finds
 pictures of the water she happens to be in today, taken on a morning she was two hundred
 miles away. The question that matters is a **space-and-time intersection**: for every scene
