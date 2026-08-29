@@ -49,20 +49,46 @@ jobs:
           LISTEN_SECONDS: "1740"
           CONTACT_UA: "sorlandet-tracker (github actions)"
         run: |
+          # Nothing in this step may block for ever.
+          #
+          # On 29 August a run held the concurrency group for four hours and wrote nothing.
+          # The listener was not the problem - it is bounded by LISTEN_SECONDS and every
+          # HTTP call in update.py carries a timeout. git is the part with no clock on it:
+          # a stalled `pull` or `push` waits until the job's own 350-minute limit, and
+          # meanwhile every hourly run queues behind the concurrency group and is cancelled
+          # an hour later. The page just stops, on the day it matters, and nothing says so.
+          #
+          # Three guards below, outermost first: git gives up on a dead transfer, each git
+          # command has a hard ceiling, and each listening round has one too. If two rounds
+          # in a row have to be killed the run ends early rather than sitting on the group -
+          # a fresh run gets a fresh network and a fresh token.
+          ROUND_TIMEOUT=2400        # 40 min: a 29-minute listen plus room for the router
+          GIT_TIMEOUT=180
+
           git config user.name "sorlandet-bot"
           git config user.email "bot@users.noreply.github.com"
+          # give up on a transfer moving less than 1 kB/s for half a minute
+          git config http.lowSpeedLimit 1000
+          git config http.lowSpeedTime 30
 
           save() {
             if [ -n "$(git status --porcelain data/)" ]; then
               git add data/
               git commit -m "$1 $(date -u +'%Y-%m-%d %H:%M UTC')"
               for attempt in 1 2 3; do
-                git pull --rebase --autostash origin main && git push && break
+                if timeout "$GIT_TIMEOUT" git pull --rebase --autostash origin main \
+                   && timeout "$GIT_TIMEOUT" git push; then
+                  return 0
+                fi
+                echo "::warning::push attempt $attempt stalled or failed, retrying"
+                git rebase --abort 2>/dev/null || true
                 sleep 5
               done
+              echo "::warning::could not push this round; the next one will carry it"
             else
               echo "nothing new to save"
             fi
+            return 0
           }
 
           # A quick pass first. update.py spends its whole listening window before it
@@ -70,7 +96,8 @@ jobs:
           # weather, route and forecast included, however fresh the code is. Twenty
           # seconds is enough to refresh everything that does not depend on hearing her.
           echo "::group::Quick first pass"
-          LISTEN_SECONDS=20 python3 scripts/update.py || echo "quick pass failed, carrying on"
+          LISTEN_SECONDS=20 timeout --kill-after=30 600 python3 scripts/update.py \
+            || echo "quick pass failed or timed out, carrying on"
           save "Refresh"
           echo "::endgroup::"
 
@@ -78,11 +105,29 @@ jobs:
           ROUNDS=$(python3 -c "print(max(1, min(11, round(float('$HOURS') * 2))))")
           echo "Running $ROUNDS rounds of 29 minutes"
 
+          stalls=0
           for round in $(seq 1 "$ROUNDS"); do
             echo "::group::Round $round of $ROUNDS"
-            python3 scripts/update.py || echo "round failed, carrying on"
+            set +e
+            timeout --kill-after=60 "$ROUND_TIMEOUT" python3 scripts/update.py
+            rc=$?
+            set -e
+            # 124 is timeout's own code; 137 means it had to send KILL as well.
+            if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+              stalls=$((stalls + 1))
+              echo "::warning::round $round was still running after ${ROUND_TIMEOUT}s and was killed ($stalls in a row)"
+            elif [ "$rc" -ne 0 ]; then
+              echo "round $round failed (exit $rc), carrying on"
+              stalls=0
+            else
+              stalls=0
+            fi
             save "Position"
             echo "::endgroup::"
+            if [ "$stalls" -ge 2 ]; then
+              echo "::warning::two rounds in a row had to be killed - ending this run early so the chain starts a fresh one"
+              break
+            fi
           done
 
       # Always, even if the listening step failed - a broken round must not break the chain.
