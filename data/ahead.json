@@ -1,139 +1,93 @@
 {
- "generated_utc": "2026-08-29T14:07:01Z",
+ "generated_utc": "2026-08-29T17:15:28Z",
  "to": "Lerwick",
  "country": "United Kingdom",
- "distance_nm": 92.1,
- "direct_nm": 99.7,
+ "distance_nm": 70.3,
+ "direct_nm": 78.4,
  "route_basis": "course",
  "winding": 1.0,
  "tacks": [],
- "speed_kn": 2.1,
- "vmg_kn": 2.15,
+ "speed_kn": 2.5,
+ "vmg_kn": 2.49,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good easing to the plan",
  "due_utc": "2026-09-07T12:00:00Z",
- "eta_utc": "2026-09-02T13:07:01Z",
+ "eta_utc": "2026-08-30T22:15:28Z",
  "route": [
   [
-   60.422,
-   2.1626
+   60.2517,
+   1.4767
   ],
   [
-   60.4197,
-   1.3826
+   60.1762,
+   0.6453
   ],
   [
-   60.4174,
-   0.6021
+   60.1039,
+   -0.1496
   ],
   [
-   60.4153,
-   -0.1506
-  ],
-  [
-   60.2793,
-   -0.893
+   60.1021,
+   -0.8508
   ]
  ],
  "points": [
   {
    "hours": 0,
-   "time_utc": "2026-08-29T14:00:00Z",
-   "lat": 60.422,
-   "lon": 2.1626,
-   "wind_ms": 9.1,
-   "wind_dir": 9,
-   "gust_ms": 11.3,
-   "temp_c": 13.7,
+   "time_utc": "2026-08-29T17:00:00Z",
+   "lat": 60.2517,
+   "lon": 1.4767,
+   "wind_ms": 9.7,
+   "wind_dir": 11,
+   "gust_ms": 12.1,
+   "temp_c": 13.4,
    "weather_code": 3,
-   "wave_m": 1.38,
-   "wave_dir": 61,
-   "wave_period_s": 5.6
+   "wave_m": 1.64,
+   "wave_dir": 8,
+   "wave_period_s": 5.5
   },
   {
    "hours": 6,
-   "time_utc": "2026-08-29T20:00:00Z",
-   "lat": 60.4207,
-   "lon": 1.7279,
-   "wind_ms": 9.5,
-   "wind_dir": 8,
-   "gust_ms": 12.6,
-   "temp_c": 13.3,
+   "time_utc": "2026-08-29T23:00:00Z",
+   "lat": 60.207,
+   "lon": 0.9847,
+   "wind_ms": 8.5,
+   "wind_dir": 4,
+   "gust_ms": 10.8,
+   "temp_c": 13.1,
    "weather_code": 3,
-   "wave_m": 1.84,
-   "wave_dir": 354,
-   "wave_period_s": 5.7
+   "wave_m": 1.8,
+   "wave_dir": 358,
+   "wave_period_s": 5.8
   },
   {
    "hours": 12,
-   "time_utc": "2026-08-30T02:00:00Z",
-   "lat": 60.4194,
-   "lon": 1.2933,
-   "wind_ms": 8.5,
-   "wind_dir": 6,
-   "gust_ms": 11.0,
-   "temp_c": 12.7,
+   "time_utc": "2026-08-30T05:00:00Z",
+   "lat": 60.1623,
+   "lon": 0.493,
+   "wind_ms": 7.1,
+   "wind_dir": 1,
+   "gust_ms": 9.3,
+   "temp_c": 12.3,
    "weather_code": 3,
-   "wave_m": 1.78,
-   "wave_dir": 356,
-   "wave_period_s": 5.95
+   "wave_m": 1.56,
+   "wave_dir": 5,
+   "wave_period_s": 5.9
   },
   {
    "hours": 24,
-   "time_utc": "2026-08-30T14:00:00Z",
-   "lat": 60.4169,
-   "lon": 0.424,
-   "wind_ms": 6.3,
-   "wind_dir": 9,
-   "gust_ms": 8.3,
+   "time_utc": "2026-08-30T17:00:00Z",
+   "lat": 60.103,
+   "lon": -0.494,
+   "wind_ms": 4.0,
+   "wind_dir": 51,
+   "gust_ms": 5.7,
    "temp_c": 12.0,
    "weather_code": 2,
-   "wave_m": 1.28,
-   "wave_dir": 5,
-   "wave_period_s": 6.05
-  },
-  {
-   "hours": 36,
-   "time_utc": "2026-08-31T02:00:00Z",
-   "lat": 60.4041,
-   "lon": -0.2117,
-   "wind_ms": 3.3,
-   "wind_dir": 63,
-   "gust_ms": 4.6,
-   "temp_c": 12.1,
-   "weather_code": 2,
-   "wave_m": 0.94,
-   "wave_dir": 14,
+   "wave_m": 1.02,
+   "wave_dir": 20,
    "wave_period_s": 6.25
-  },
-  {
-   "hours": 48,
-   "time_utc": "2026-08-31T14:00:00Z",
-   "lat": 60.3461,
-   "lon": -0.5283,
-   "wind_ms": 5.6,
-   "wind_dir": 125,
-   "gust_ms": 7.9,
-   "temp_c": 13.0,
-   "weather_code": 3,
-   "wave_m": 0.68,
-   "wave_dir": 23,
-   "wave_period_s": 5.85
-  },
-  {
-   "hours": 72,
-   "time_utc": "2026-09-01T14:00:00Z",
-   "lat": 60.2968,
-   "lon": -0.7975,
-   "wind_ms": 10.4,
-   "wind_dir": 271,
-   "gust_ms": 13.8,
-   "temp_c": 12.1,
-   "weather_code": 1,
-   "wave_m": 0.98,
-   "wave_dir": 231,
-   "wave_period_s": 4.1
   }
  ]
 }
