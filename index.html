@@ -73,8 +73,13 @@
   .row span:last-child{font-weight:600; text-align:right}
   .big{font-size:27px; font-weight:650; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
   .big small{font-size:14px; font-weight:500; color:var(--muted)}
+  .big .sky{font-size:23px; vertical-align:-1px}
   .arrow{display:inline-block; color:var(--accent)}
   .card.wide{grid-column:1/-1}
+  /* Voyage plan absorbed the old Position card, so it carries the most rows of any of them
+     and is the first thing anyone reads. Given two columns it stops being a narrow strip of
+     wrapped labels, and the five cards fill the row more evenly than 4 + 1. */
+  @media (min-width:900px){ .card.plan{grid-column:span 2} }
   /* Folding cards. <details> does this natively - keyboard, screen readers and find-in-page
      all work, and it needs no script to open and close. The script only remembers the
      choice. The summary is styled to look exactly like the h2 it replaces, plus a chevron,
@@ -94,6 +99,21 @@
   .card.fold > summary:hover h2, .card.fold > summary:focus-visible h2{color:var(--ink)}
   .card.fold > summary .count{color:var(--muted); font-weight:600; font-size:11px}
   .card.fold > .foldbody{padding:0 16px 14px}
+  /* An inline "+" for a paragraph worth having and not worth the room it takes. Same idea
+     as the folding cards, at the size of a line rather than a section. */
+  details.why{margin-top:3px}
+  details.why > summary{
+    list-style:none; cursor:pointer; color:var(--accent); font-size:12.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:4px;
+  }
+  details.why > summary::-webkit-details-marker{display:none}
+  details.why > summary::before{
+    content:"+"; display:inline-block; width:13px; height:13px; line-height:12px;
+    text-align:center; border:1px solid currentColor; border-radius:4px; font-size:11px;
+  }
+  details.why[open] > summary::before{content:"−"}
+  details.why > p, details.why{line-height:1.5}
+  details.why[open] > summary{margin-bottom:3px}
   .fc{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch}
   .fc>div{
     flex:0 0 96px; text-align:center; border:1px solid var(--line); border-radius:11px;
@@ -216,6 +236,7 @@
   .chart svg{width:100%; height:auto; display:block; overflow:visible}
   .chart .axis{stroke:var(--line); stroke-width:1}
   .chart .tick{fill:var(--muted); font-size:9px}
+  .chart .tick.rec{fill:var(--ink); font-weight:700}
   /* every bar is labelled now, so the numbers sit back a little and the peak keeps
      the emphasis that used to come from being the only one shown */
   .chart .val{fill:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
@@ -331,6 +352,27 @@ const WMO_TEXT = {0:"clear",1:"mainly clear",2:"partly cloudy",3:"overcast",45:"
   71:"light snow",73:"snow",75:"heavy snow",77:"snow grains",80:"light showers",81:"showers",
   82:"violent showers",85:"snow showers",86:"heavy snow showers",95:"thunderstorm",
   96:"thunderstorm with hail",99:"thunderstorm with hail"};
+
+// The sky in one glyph, from the same WMO code and the same table the map's sky layer uses,
+// so the card and the chart cannot show different weather.
+//
+// latest.json has carried weather_code for a while, but a page can be uploaded before the
+// job that fills it is, so there is a fallback: cloud cover and rainfall are enough to tell
+// clear from overcast, which is most of what the symbol is for. It is deliberately coarse -
+// guessing drizzle from a millimetre of rain would be inventing detail we do not have.
+function skyOf(air) {
+  if (air.weather_code != null && WMO[air.weather_code]) {
+    return { ic: WMO[air.weather_code], text: WMO_TEXT[air.weather_code] || "" };
+  }
+  const c = air.cloud_pct, r = air.precip_mm;
+  if (c == null) return null;
+  if (r > 0.5) return { ic: "\u{1F327}\uFE0F", text: "rain" };
+  if (r > 0) return { ic: "\u{1F326}\uFE0F", text: "showers" };
+  if (c < 15) return { ic: "\u2600\uFE0F", text: "clear" };
+  if (c < 50) return { ic: "\u{1F324}\uFE0F", text: "mainly clear" };
+  if (c < 85) return { ic: "\u26C5", text: "partly cloudy" };
+  return { ic: "\u2601\uFE0F", text: "overcast" };
+}
 
 const dms = (v, axis) => {
   if (v === null || v === undefined) return "–";
@@ -570,30 +612,8 @@ function voyageState(points, ports, todayISO) {
   return settle(i, end(ports[i]) < todayISO);
 }
 
-// Pictures and posts from the voyage, kept by hand in data/posts.json and folded into the
-// log beside the arrivals and departures.
-//
-// Not fetched from Instagram, and that is not laziness. The Basic Display API - the one that
-// could read a public account - was withdrawn in December 2024, and what replaced it needs a
-// token belonging to the account owner. We do not have @aplusworldacademy's token and have no
-// business asking for one, and scraping the page would be against their terms and would break
-// the first time the markup changed. A hand-kept list is the honest version: it works, it
-// never breaks, and anything with a public address goes in it, not only Instagram.
-function postMarks(postFile) {
+function milestones(points, ports, todayISO, sogFrom) {
   const out = [];
-  for (const q of (postFile?.posts || [])) {
-    // Only https, and only entries with a moment to place them at. These come from a file in
-    // the repository rather than from anything a reader can reach, but a link is a link.
-    if (!q || !q.t || typeof q.url !== "string" || !/^https:\/\//.test(q.url)) continue;
-    out.push({ t: q.t, ic: "\u{1F4F7}", href: q.url, clock: true,
-               text: (q.text || "A picture from on board")
-                     + (q.by ? ` \u2014 ${q.by}` : "") });
-  }
-  return out;
-}
-
-function milestones(points, ports, todayISO, sogFrom, postFile) {
-  const out = postMarks(postFile);
   if (points.length) {
     out.push({ t: points[0].t, ic: "⚓", text: "Tracking started" });
   }
@@ -674,7 +694,11 @@ function barChart(rows, unit, decimals, colorVar) {
   if (!rows.length) return "";
   const W = 210, H = 96, padB = 14;
   const max = Math.max(...rows.map(r => r.v)) || 1;
-  const slot = W / rows.length;
+  // A record bar is not one of the recent days, so it is set apart by a gap rather than
+  // just sitting first in the row and being mistaken for six days ago.
+  const gap = rows[0] && rows[0].record ? 0.5 : 0;
+  const slot = W / (rows.length + gap);
+  const xOf = i => (i + (i > 0 ? gap : 0)) * slot;
   const bw = Math.max(3, slot - 2);                       // 2px surface gap
 
   // Every bar carries its own number, not just the tallest. Fourteen days on a card this
@@ -696,7 +720,7 @@ function barChart(rows, unit, decimals, colorVar) {
   });
 
   const bars = rows.map((r, i) => {
-    const x = i * slot;
+    const x = xOf(i);
     return `<g><title>${r.label}: ${texts[i]} ${unit}</title>
       <rect x="${x.toFixed(1)}" y="${tops[i].y.toFixed(1)}" width="${bw.toFixed(1)}"
             height="${tops[i].h.toFixed(1)}" rx="3" fill="var(${colorVar})"
@@ -704,7 +728,7 @@ function barChart(rows, unit, decimals, colorVar) {
   }).join("");
 
   const labels = rows.map((r, i) => {
-    const cx = i * slot + bw / 2, top = tops[i].y - 3;
+    const cx = xOf(i) + bw / 2, top = tops[i].y - 3;
     const cls = r.v === max ? "val mx" : "val";
     if (rot) {
       return `<text class="${cls}" style="font-size:${fs}px" text-anchor="start"
@@ -720,11 +744,14 @@ function barChart(rows, unit, decimals, colorVar) {
 
   // The first and last dates are centred under bars at the very edges, so they need the same
   // clamp as the values or "15 Aug" loses its 1 off the left of the chart.
+  // The record bar always gets its tick - unlabelled it is just a tall bar with no date.
   const ticks = rows.map((r, i) => {
-    if (!(i === 0 || i === rows.length - 1 || i === Math.floor(rows.length / 2))) return "";
+    const first = gap ? 1 : 0;
+    if (!(r.record || i === first || i === rows.length - 1
+          || i === Math.floor((first + rows.length - 1) / 2))) return "";
     const half = r.short.length * 9 * 0.5 / 2;
-    const x = Math.min(W - half, Math.max(half, i * slot + bw / 2));
-    return `<text class="tick" x="${x.toFixed(1)}" y="${H - 3}"
+    const x = Math.min(W - half, Math.max(half, xOf(i) + bw / 2));
+    return `<text class="tick${r.record ? " rec" : ""}" x="${x.toFixed(1)}" y="${H - 3}"
         text-anchor="middle">${r.short}</text>`;
   }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" role="img">
@@ -909,7 +936,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "ff76181864";
+const BUILD = "b4486a8371";
 
 async function checkForNewBuild() {
   try {
@@ -2068,8 +2095,7 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile, orbitFile,
-         postFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile, orbitFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -2079,10 +2105,9 @@ async function load() {
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/course.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/posts.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile, postFile);
+  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
@@ -2091,7 +2116,7 @@ async function load() {
   else showVisitorCount();
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, courseFile, orbitFile, postFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, courseFile, orbitFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -2284,7 +2309,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     // progress bar takes it, so the two cannot disagree.
     const from = nextPort ? ports[Math.max(0, ports.indexOf(nextPort) - 1)]
                           : ports[ports.length - 1];
-    const done = leg.done;
 
     let rows = "";
     if (inPort) {
@@ -2317,8 +2341,27 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     } else {
       rows += row("Status", "Voyage complete");
     }
-    rows += row("Ports done", `${done} of ${ports.length}`);
-    planCard = card("Voyage plan", rows);
+
+    // Where she actually is, on the same footing as the rest. This used to be a card of its
+    // own with the coordinates set large at the top of it, which gave the position more of
+    // the screen than it earns: the coordinates are the one line on the page nobody reads
+    // for meaning - the map already says where she is, far better than two numbers can.
+    // What a reader wants from them is a fact to quote, so they are a row like any other.
+    //
+    // Gone with it: "Heard by", which named the receiver rather than telling anyone
+    // anything about the ship; and "Sailed so far" and "Track starts", which are both in
+    // the ship's log, and were a second copy of a number that has to agree with the first.
+    if (waiting) {
+      rows += row("Status", "no AIS message yet");
+    } else {
+      rows += row("Position", `${dms(p.lat, "lat")} ${dms(p.lon, "lon")}`);
+      rows += row("Last seen", fmtTime(p.seen_utc));
+      rows += row("Speed", `${N(p.sog_kn)} knots${p.sog_derived ? ' <span title="This position came from a feed that sends no speed, so it is worked out from the step between two fixes - a curve reads low.">(worked out from her track)</span>' : ""}`);
+      rows += row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`);
+      if (p.destination) rows += row("Reported destination", p.destination);
+    }
+    rows += row("Data updated", ago(d.updated_utc));
+    planCard = card("Voyage plan", rows).replace('class="card"', 'class="card plan"');
   }
 
   // ---- full route strip
@@ -2415,8 +2458,13 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     boardCard = card("Ship's clock", `
       <div class="big" id="shipclock">--:--</div>
       <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">
-        nautical zone ${label} · ${vsYou} · an estimate from her longitude, the way ships
-        set clocks — the master may hold a zone longer</div>
+        nautical zone ${label} · ${vsYou}
+        <details class="why"><summary>why this is an estimate</summary>
+          Ships set their clocks by nautical zones, fifteen degrees of longitude each, and
+          this is worked out from her longitude the same way. It is the convention rather
+          than a reading from the bridge: a master may hold a zone through a passage, or
+          shift the clocks at a convenient hour rather than the moment a meridian goes by.
+        </details></div>
       ${row("Changes at", `${dms.toFixed(1)}° ${nextMeridian >= 0 ? "E" : "W"}` +
         `<span style="color:var(--muted)"> · ${goingWest ? "one hour back" : "one hour on"}</span>`)}
       ${row("Sunrise", fromUTC(sun.sunrise_utc))}
@@ -2466,20 +2514,16 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
   // ---- ship's log
   const marks = milestones(track.points || [], ports, todayISO,
-                           track.sog_provenance_from, postFile);
+                           track.sog_provenance_from);
   const logCard = marks.length ? wideCard("Ship's log", `
     <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
       Arrivals and departures as her own track shows them, with the distances and the
       records she has set along the way. Greyed lines are from the schedule — ports she
-      called at before this page existed, or during a gap in coverage.${
-        postFile?.source?.url ? ` Pictures from on board are added by hand; the crew post
-        theirs at <a href="${postFile.source.url}" target="_blank" rel="noopener"
-        >${postFile.source.name || "Instagram"}</a>.` : ""}
+      called at before this page existed, or during a gap in coverage.
     </div>
     <ul class="log${marks.length > 9 ? " scroll" : ""}">${
     marks.map(m => `<li><time>${new Date(m.t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</time>
-      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${
-        m.href ? `<a href="${m.href}" target="_blank" rel="noopener">${m.text}</a>` : m.text}${
+      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${m.text}${
         m.clock ? ` <span style="color:var(--muted)">${new Date(m.t).toLocaleTimeString("en-GB",
           { hour: "2-digit", minute: "2-digit" })}</span>` : ""}</span></li>`).join("")
   }</ul>`, { key: "log", open: true,
@@ -2492,102 +2536,94 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // a while to notice. A link is honest, it survives, and it sends them the traffic they run
   // the camera for.
   //
-  // The port she is in, or heading for, comes first and says when: those are the minutes when
-  // there is actually something to see. The rest of the list stays, because a camera is worth
-  // knowing about before you need it.
-  const camPorts = ports.map((q, i) => ({ q, i })).filter(({ q }) => (q.cameras || []).length);
+  // And the card only exists when there is something to see. It began as a standing list of
+  // every camera on the route, which is a directory: nine months of a row for Dublin sitting
+  // there while she is in the Caribbean. A camera is worth exactly one thing - watching her
+  // come in - so it appears when she is inside APPROACH_NM of a port that has one, or lying
+  // alongside it, and is absent the rest of the time. The page knows both from AIS.
+  const APPROACH_NM = 25;      // a few hours out, about when a ship is committed to the run in
   let cameraCard = "";
-  if (camPorts.length) {
-    const hereIdx = leg.inPort ? ports.indexOf(leg.inPort)
-                  : nextPort ? ports.indexOf(nextPort) : -1;
-    const order = [...camPorts].sort((a, b) =>
-      (a.i === hereIdx ? -1 : b.i === hereIdx ? 1 : a.i - b.i));
-    const when = ({ q, i }) => {
-      if (leg.inPort && i === hereIdx) return `<b style="color:var(--accent)">alongside now</b>`;
-      // She asked for a look back at Kristiansand. This is as close as it gets, and it is
-      // worth being plain about the limit: the camera is live, so it shows the quay as it is
-      // this minute, not as it was the morning she left.
-      if (i === 0 && i < leg.done) return "where she sailed from — the quay as it is now";
-      if (i < leg.done) return "astern";
-      if (nextPort && i === hereIdx) {
-        const days = Math.round((new Date(q.arrive + "T12:00:00Z") - Date.now()) / 864e5);
-        return days <= 0 ? "<b>due today</b>"
-             : `<b>due ${dayName(q.arrive)}</b>, in ${days} day${days === 1 ? "" : "s"}`;
-      }
-      return dayName(q.arrive);
-    };
-    cameraCard = wideCard("Harbour cameras", `
+  const camPort = (leg.inPort && (leg.inPort.cameras || []).length) ? leg.inPort
+                : (nextPort && (nextPort.cameras || []).length
+                   && !waiting && p.lat !== undefined
+                   && nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]) <= APPROACH_NM)
+                  ? nextPort : null;
+  if (camPort) {
+    const alongside = camPort === leg.inPort;
+    const off = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
+    cameraCard = wideCard(`Watch her into ${camPort.name}`, `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
-        Other people's cameras, looking at the quays she ties up to. They open in their own
-        windows — nothing here is copied or embedded. Whether she is in the frame is luck,
-        but arrival and departure are the moments worth trying.
+        ${alongside
+          ? `She is alongside in ${camPort.name} now.`
+          : `She is ${Math.round(off)} nm off ${camPort.name} and closing.`}
+        These are other people's cameras, looking at the quays — they open in their own
+        windows, nothing here is copied or embedded. Whether she is in the frame is luck.
       </div>
-      <ul class="log">${order.map(({ q, i }) => `
-        <li${i < leg.done ? ' style="opacity:.55"' : ""}>
-          <time style="flex:0 0 108px">${q.name}</time>
-          <span class="ic">${leg.inPort && i === hereIdx ? "\u{1F441}\uFE0F"
-                            : i < leg.done ? "\u2713" : "\u{1F4F9}"}</span>
-          <span>${q.cameras.map(c =>
-            `<a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>` +
-            (c.view ? ` <span style="color:var(--muted)">— ${c.view}</span>` : "") +
-            (c.rewind_h ? ` <span style="color:var(--muted)">· rewindable ${c.rewind_h} h,
-              so an arrival can be watched after the fact</span>` : "") +
-            (c.by ? ` <span style="color:var(--muted)">· ${c.by}</span>` : "")
-          ).join("<br>")}
-          <div style="color:var(--muted);margin-top:2px">${when({ q, i })}</div></span>
+      <ul class="log">${camPort.cameras.map(c => `
+        <li><span class="ic">\u{1F4F9}</span>
+          <span><a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>${
+            c.view ? ` <span style="color:var(--muted)">— ${c.view}</span>` : ""}${
+            c.rewind_h ? ` <span style="color:var(--muted)">· rewindable ${c.rewind_h} h,
+              so an arrival can be watched after the fact</span>` : ""}${
+            c.by ? ` <span style="color:var(--muted)">· ${c.by}</span>` : ""}</span>
         </li>`).join("")}</ul>
       <div style="font-size:12.5px;color:var(--muted);margin-top:9px">
-        These are live views only. None of them keeps an archive, so they cannot be wound back
-        to show a departure that has already happened${
-          camPorts.some(({ q }) => (q.cameras || []).some(c => c.rewind_h))
-            ? " — except Dublin Port's, which can be rewound half a day" : ""}.
+        ${camPort.cameras.some(c => c.rewind_h)
+          ? "These rewind, so an arrival can still be watched hours later."
+          : "These are live views only, with no archive — they cannot be wound back."}
       </div>`, {
-        key: "cameras",
-        // Shut while she is at sea, because then it is only reference. Open by itself the
-        // moment she is alongside somewhere with a camera on it - that is the whole reason
-        // the card exists, and a reader should not have to know to go looking.
-        open: !!(leg.inPort && (leg.inPort.cameras || []).length),
-        note: leg.inPort && (leg.inPort.cameras || []).length ? "she is alongside now"
-            : `${camPorts.reduce((n, { q }) => n + q.cameras.length, 0)} cameras` });
+        key: "cameras", open: true,
+        note: alongside ? "alongside now" : `${Math.round(off)} nm out` });
   }
 
   // ---- charts
+  // The charts showed fourteen days. That made every bar thin, forced the figures onto
+  // their sides to fit, and buried the one number a reader actually wants - the worst it
+  // has been. So: the record first, a gap, then the last five days. Six bars instead of
+  // fourteen, wide enough to carry their numbers upright.
+  const dayLabel = d => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const asRows = (list, get, date) => list.map(x => {
+    const d = date(x);
+    return { v: get(x), label: dayLabel(d), short: dayLabel(d) };
+  });
+
+  // The record, then the recent days. If the record happened inside those days it is
+  // already on the chart, and repeating it would read as two separate gales.
+  function recordThenRecent(rows, n = 5) {
+    if (!rows.length) return [];
+    const recent = rows.slice(-n);
+    const best = rows.reduce((a, b) => (b.v > a.v ? b : a), rows[0]);
+    if (recent.includes(best)) return recent;
+    return [{ ...best, record: true,
+              label: `Best so far — ${best.label}` }, ...recent];
+  }
+
   const byDay = dailyDistance(track.points || []);
-  const days = [...byDay.keys()].sort().slice(-14);
-  const distRows = days.map(dd => ({
-    v: byDay.get(dd), label: new Date(dd).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-    short: new Date(dd).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-  }));
-  const windDays = (history.days || []).filter(r => r.max_wind_ms != null).slice(-14);
-  const windRows = windDays.map(r => ({
-    v: r.max_wind_ms, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-    short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-  }));
-  const waveDays = (history.days || []).filter(r => r.max_wave_m != null).slice(-14);
-  const waveRows = waveDays.map(r => ({
-    v: r.max_wave_m, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-    short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-  }));
+  const distRows = recordThenRecent(
+    asRows([...byDay.keys()].sort(), dd => byDay.get(dd), dd => dd));
+  const windRows = recordThenRecent(asRows(
+    (history.days || []).filter(r => r.max_wind_ms != null), r => r.max_wind_ms, r => r.date));
+  const waveRows = recordThenRecent(asRows(
+    (history.days || []).filter(r => r.max_wave_m != null), r => r.max_wave_m, r => r.date));
   // Fastest she REPORTED each day. Speeds the job worked out from the step between two
   // positions are excluded at source, so this cannot become the 11.1-knot bug once a day.
-  const sogDays = (history.days || []).filter(r => r.max_sog_kn != null).slice(-14);
-  const sogRows = sogDays.map(r => ({
-    v: r.max_sog_kn, label: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-    short: new Date(r.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-  }));
+  const sogRows = recordThenRecent(asRows(
+    (history.days || []).filter(r => r.max_sog_kn != null), r => r.max_sog_kn, r => r.date));
   const chartsCard = (distRows.length > 1 || windRows.length > 1 || waveRows.length > 1
                       || sogRows.length > 1)
     ? wideCard("Day by day", `
     <div class="charts">
-      <div class="chart"><h3>Distance sailed</h3><p>nautical miles per day, last ${distRows.length} days</p>
+      <div class="chart"><h3>Distance sailed</h3><p>best day, then the last five, nm</p>
         ${barChart(distRows, "nm", 0, "--chart-a") || '<p style="margin:0">Not enough data yet.</p>'}</div>
-      <div class="chart"><h3>Strongest wind</h3><p>highest reading each day, m/s</p>
+      <div class="chart"><h3>Strongest wind</h3><p>worst so far, then the last five, m/s</p>
         ${barChart(windRows, "m/s", 1, "--chart-b") || '<p style="margin:0">Builds up from today.</p>'}</div>
-      <div class="chart"><h3>Highest wave</h3><p>highest reading each day, metres</p>
+      <div class="chart"><h3>Highest wave</h3><p>worst so far, then the last five, metres</p>
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
-      <div class="chart"><h3>Highest speed</h3><p>fastest she reported each day, knots</p>
+      <div class="chart"><h3>Highest speed</h3><p>fastest so far, then the last five, knots</p>
         ${barChart(sogRows, "kn", 1, "--chart-d") || '<p style="margin:0">Builds up from today.</p>'}</div>
-    </div>`, { key: "charts", open: true, note: "last 14 days" }) : "";
+    </div>`, { key: "charts", open: true,
+      note: distRows.some(r => r.record) || windRows.some(r => r.record)
+          ? "the record, then the last five days" : "the last five days" }) : "";
 
   // Sentinel-2 true colour, 10 m per pixel, cropped to a square around where she was at
   // that scene's own timestamp. titiler does the crop and the brightness stretch
@@ -2723,20 +2759,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     </div>`, { key: "share", open: false, note: "link, QR and a ready-made message" });
 
   document.getElementById("cards").innerHTML = [
-    card("Position", waiting ? `
-      ${row("Status", "no AIS message yet")}
-      ${row("Track starts", fmtTime(stats.first_point_utc))}
-      ${row("Data updated", ago(d.updated_utc))}` : `
-      <div class="big">${dms(p.lat, "lat")}<br>${dms(p.lon, "lon")}</div>
-      ${row("Last seen", fmtTime(p.seen_utc))}
-      ${row("Speed", `${N(p.sog_kn)} knots${p.sog_derived ? ' <span title="This position came from a feed that sends no speed, so it is worked out from the step between two fixes - a curve reads low.">(worked out from her track)</span>' : ""}`)}
-      ${row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`)}
-      ${row("Sailed so far", `${N(stats.distance_nm, 0)} nm`)}
-      ${row("Heard by", SOURCES[p.source] || p.source || "unknown")}
-      ${p.destination ? row("Reported destination", p.destination) : ""}
-      ${row("Track starts", fmtTime(stats.first_point_utc))}
-      ${row("Data updated", ago(d.updated_utc))}`),
-
     planCard,
     boardCard,
 
@@ -2753,11 +2775,17 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ${row("Wave direction", compass(sea.wave_direction_deg))}
       ${row("Sea temperature", `${N(sea.sea_temp_c)} °C`)}`),
 
-    card("Air", waiting ? row("Status", "waiting for position") : `
-      <div class="big">${N(air.temp_c)} <small>°C</small></div>
+    card("Air", waiting ? row("Status", "waiting for position") : (() => {
+      const sky = skyOf(air);
+      return `
+      <div class="big">${sky ? `<span class="sky" title="${sky.text}">${sky.ic}</span> ` : ""}${
+        N(air.temp_c)} <small>°C</small></div>
+      ${sky && sky.text ? `<div style="color:var(--muted);font-size:13px;margin:-2px 0 8px"
+        >${sky.text}</div>` : ""}
       ${row("Feels like", `${N(air.feels_c)} °C`)}
       ${row("Cloud cover", `${N(air.cloud_pct, 0)} %`)}
-      ${row("Precipitation", `${N(air.precip_mm)} mm`)}`),
+      ${row("Precipitation", `${N(air.precip_mm)} mm`)}`;
+    })()),
 
     progressCard,
     logCard,

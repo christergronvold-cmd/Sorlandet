@@ -830,15 +830,28 @@ After that it is the reader's choice, remembered per browser in `localStorage`. 
 sent anywhere, and a browser with storage switched off still works - the test runs the whole
 page with `localStorage` throwing on access.
 
-## Harbour cameras, and pictures from on board
+## Harbour cameras
 
-Two small things that share one rule: **link, never embed.**
+One rule: **link, never embed.**
 
 Pulling somebody else's stream into this page would be their bandwidth under their terms,
 and camera addresses move without warning - it would die silently and take a while for
 anyone to notice. A link is honest, it survives, and it sends them the traffic they run the
 camera for. `test_cameras.py` asserts that loading the page makes **zero** requests to any
 camera host, and that the card contains no `iframe`, `img` or `video`.
+
+**The card only exists when there is something to see.** It began as a standing list of
+every camera on the route, which is a directory: nine months of a row for Dublin sitting
+there while she is in the Caribbean. A camera is worth exactly one thing - watching her come
+in - so the card appears when she is within **25 nm** of a port that has one, or lying
+alongside it, and is absent the rest of the time. The page knows both from AIS, and it uses
+the same `voyageState()` answer as everything else, so it cannot disagree with the Voyage
+plan card. Twenty-five miles is a few hours out, about when a ship is committed to the run
+in.
+
+Kristiansand's camera was in here and came out: it is the local newspaper's, it shows only
+this minute, and a live view of the quay she left in August is not a thing anyone wants nine
+months later.
 
 The cameras live in `ports.json` beside the port they look at, so adding one is three lines:
 
@@ -851,43 +864,14 @@ What is in there now:
 
 | Port | Cameras | Run by |
 |---|---|---|
-| Kristiansand | the port's own, over the quays | Port of Kristiansand / Fædrelandsvennen |
 | Lerwick | Victoria Pier, Esplanade, Town Hall east, Harbour north | Shetland Webcams |
 | Dublin | three: Poolbeg lighthouse, the bay, the Liffey | Dublin Port Company |
-
-The card orders them by where she actually is - the port she is in, or heading for, comes
-first and says when, because those are the minutes when there is something to see. Ports
-astern go grey rather than disappearing. It uses the same `voyageState()` answer as
-everything else on the page, so it cannot disagree with the Voyage plan card.
 
 **They are live views, and that is a real limit.** None of them keeps an archive, so none can
 be wound back to show a departure that has already happened - the request for a look back at
 Kristiansand cannot be granted, and the card says so rather than implying otherwise. The one
 exception is Dublin Port, whose streams rewind twelve hours, which is long enough to catch an
 arrival after the fact.
-
-### Instagram
-
-There is no feed here, and that is not laziness. Instagram's **Basic Display API - the one
-that could read a public account - was withdrawn in December 2024**, and what replaced it
-needs a token belonging to the account owner. We do not have @aplusworldacademy's token and
-have no business asking for one; scraping the page would be against their terms and would
-break the first time the markup changed.
-
-So `data/posts.json` is the honest version: paste a link, give it a date and a line of text,
-and it appears in the ship's log beside the arrivals and departures, newest first.
-
-    {"t": "2026-09-08T14:30:00Z",
-     "url": "https://www.instagram.com/p/XXXXXXXXXXX/",
-     "text": "Alongside in Lerwick",
-     "by": "A+ World Academy"}
-
-Anything with a public address goes in, not only Instagram. The account itself is linked from
-the log's caption so a reader can always find the rest. **Only `https://` links are
-rendered** - an entry with `javascript:`, `data:`, plain `http:` or no date at all is dropped
-without comment, which the test checks one form at a time. That file is edited by hand in the
-repository, so the guard is belt and braces rather than a defence against strangers, but a
-link is a link.
 
 ## What was taken out, and why
 
@@ -899,6 +883,21 @@ assumes she is still here. They are gone, along with the API fields that fed the
 **At current speed** and **Positions logged** went for the reasons in the sections above:
 a date extrapolated from this minute's speed is not a prediction, and a count of AIS fixes
 measures receiver coverage rather than the voyage.
+
+**Pictures from Instagram** were going to be a hand-kept list in `data/posts.json`, folded
+into the ship's log. It is gone before it was ever used, and the reason is worth recording
+so nobody rebuilds it. There is no way to read a public Instagram account automatically:
+the **Basic Display API was withdrawn in December 2024**, and what replaced it needs a token
+belonging to the account owner - we do not have @aplusworldacademy's and have no business
+asking for one. Scraping would be against their terms and would break on the first markup
+change. That left a file somebody would have to paste links into, by hand, every week for
+nine months, which is a chore that gets abandoned in October and then sits there empty.
+
+Nor is there another source: neither `aplusworldacademy.com` nor `fullriggeren.no` publishes
+an RSS or Atom feed, so there is nothing to subscribe to either. A link to the account
+survived the first cut and then went too - it was the last remnant of a feature that no
+longer existed, and a page that follows one ship does not need to be a directory of places
+the ship is mentioned. There is nothing about Instagram on the page at all.
 
 **The event log** listed what changed in her AIS fields: under sail against under engine,
 and the voyage block the crew fill in by hand. In practice it was unpredictable and said
