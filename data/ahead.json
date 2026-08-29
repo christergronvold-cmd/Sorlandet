@@ -1,93 +1,97 @@
 {
- "generated_utc": "2026-08-29T17:15:28Z",
+ "generated_utc": "2026-08-29T17:44:58Z",
  "to": "Lerwick",
  "country": "United Kingdom",
- "distance_nm": 70.3,
- "direct_nm": 78.4,
+ "distance_nm": 77.9,
+ "direct_nm": 76.4,
  "route_basis": "course",
- "winding": 1.0,
+ "winding": 1.02,
  "tacks": [],
- "speed_kn": 2.5,
- "vmg_kn": 2.49,
+ "speed_kn": 2.6,
+ "vmg_kn": 2.53,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good easing to the plan",
  "due_utc": "2026-09-07T12:00:00Z",
- "eta_utc": "2026-08-30T22:15:28Z",
+ "eta_utc": "2026-08-31T01:44:58Z",
  "route": [
   [
-   60.2517,
-   1.4767
+   60.2455,
+   1.4081
   ],
   [
-   60.1762,
-   0.6453
+   60.17,
+   0.5766
   ],
   [
-   60.1039,
-   -0.1496
+   60.0979,
+   -0.2161
   ],
   [
-   60.1021,
-   -0.8508
+   60.0962,
+   -0.8962
+  ],
+  [
+   60.155,
+   -1.145
   ]
  ],
  "points": [
   {
    "hours": 0,
    "time_utc": "2026-08-29T17:00:00Z",
-   "lat": 60.2517,
-   "lon": 1.4767,
-   "wind_ms": 9.7,
+   "lat": 60.2455,
+   "lon": 1.4081,
+   "wind_ms": 9.8,
    "wind_dir": 11,
-   "gust_ms": 12.1,
+   "gust_ms": 12.2,
    "temp_c": 13.4,
    "weather_code": 3,
-   "wave_m": 1.64,
-   "wave_dir": 8,
-   "wave_period_s": 5.5
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 6,
    "time_utc": "2026-08-29T23:00:00Z",
-   "lat": 60.207,
-   "lon": 0.9847,
-   "wind_ms": 8.5,
+   "lat": 60.1991,
+   "lon": 0.8976,
+   "wind_ms": 8.3,
    "wind_dir": 4,
    "gust_ms": 10.8,
-   "temp_c": 13.1,
+   "temp_c": 13.0,
    "weather_code": 3,
-   "wave_m": 1.8,
-   "wave_dir": 358,
-   "wave_period_s": 5.8
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 12,
    "time_utc": "2026-08-30T05:00:00Z",
-   "lat": 60.1623,
-   "lon": 0.493,
+   "lat": 60.1528,
+   "lon": 0.3875,
    "wind_ms": 7.1,
    "wind_dir": 1,
    "gust_ms": 9.3,
    "temp_c": 12.3,
    "weather_code": 3,
-   "wave_m": 1.56,
-   "wave_dir": 5,
-   "wave_period_s": 5.9
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 24,
    "time_utc": "2026-08-30T17:00:00Z",
-   "lat": 60.103,
-   "lon": -0.494,
-   "wind_ms": 4.0,
-   "wind_dir": 51,
-   "gust_ms": 5.7,
+   "lat": 60.0968,
+   "lon": -0.6376,
+   "wind_ms": 3.8,
+   "wind_dir": 58,
+   "gust_ms": 5.3,
    "temp_c": 12.0,
-   "weather_code": 2,
-   "wave_m": 1.02,
-   "wave_dir": 20,
-   "wave_period_s": 6.25
+   "weather_code": 3,
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   }
  ]
 }
