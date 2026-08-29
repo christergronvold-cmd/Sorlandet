@@ -801,6 +801,94 @@ the track can account for them.
 The rest of the log is unchanged: tracking started, every thousand miles, the equator, the
 best day, and the fastest speed she has reported.
 
+## The long cards fold
+
+The page grew: the log, the cameras, the charts, the album, the whole route, the share panel.
+On a phone, scrolling past all of that was most of what you did to get from the map to
+anything else. Measured on a 390 px screen: 4,719 px of cards with everything open, 2,163 px
+with the folds shut - **54 % of the scroll was material nobody was reading at that moment.**
+
+The cards that answer "where is she" - Position, Voyage plan, Ship's clock, the weather -
+never fold. Everything else does.
+
+They are `<details>` elements rather than a div and a click handler, and that is not a
+detail. They open and close **with no script at all**; the keyboard and screen readers get it
+for free; and find-in-page opens a closed card to show a match instead of hiding it, because
+the content stays in the document either way. `test_folds.py` asserts each of those directly.
+
+Which cards start open is a judgement about what a reader came for, and two of them are not
+constants:
+
+| Card | Starts |
+|---|---|
+| Ship's log, Day by day | open |
+| Seen from space | open **only when there are pictures** - a card whose whole content is an apology should not take a screen |
+| Harbour cameras | shut at sea, **open by itself the moment she is alongside somewhere with a camera on it** |
+| Full route, Share | shut |
+
+After that it is the reader's choice, remembered per browser in `localStorage`. Nothing is
+sent anywhere, and a browser with storage switched off still works - the test runs the whole
+page with `localStorage` throwing on access.
+
+## Harbour cameras, and pictures from on board
+
+Two small things that share one rule: **link, never embed.**
+
+Pulling somebody else's stream into this page would be their bandwidth under their terms,
+and camera addresses move without warning - it would die silently and take a while for
+anyone to notice. A link is honest, it survives, and it sends them the traffic they run the
+camera for. `test_cameras.py` asserts that loading the page makes **zero** requests to any
+camera host, and that the card contains no `iframe`, `img` or `video`.
+
+The cameras live in `ports.json` beside the port they look at, so adding one is three lines:
+
+    "cameras": [
+      {"name": "Victoria Pier", "url": "https://...",
+       "view": "the pier visiting sail training ships berth at", "by": "Shetland Webcams"}
+    ]
+
+What is in there now:
+
+| Port | Cameras | Run by |
+|---|---|---|
+| Kristiansand | the port's own, over the quays | Port of Kristiansand / Fædrelandsvennen |
+| Lerwick | Victoria Pier, Esplanade, Town Hall east, Harbour north | Shetland Webcams |
+| Dublin | three: Poolbeg lighthouse, the bay, the Liffey | Dublin Port Company |
+
+The card orders them by where she actually is - the port she is in, or heading for, comes
+first and says when, because those are the minutes when there is something to see. Ports
+astern go grey rather than disappearing. It uses the same `voyageState()` answer as
+everything else on the page, so it cannot disagree with the Voyage plan card.
+
+**They are live views, and that is a real limit.** None of them keeps an archive, so none can
+be wound back to show a departure that has already happened - the request for a look back at
+Kristiansand cannot be granted, and the card says so rather than implying otherwise. The one
+exception is Dublin Port, whose streams rewind twelve hours, which is long enough to catch an
+arrival after the fact.
+
+### Instagram
+
+There is no feed here, and that is not laziness. Instagram's **Basic Display API - the one
+that could read a public account - was withdrawn in December 2024**, and what replaced it
+needs a token belonging to the account owner. We do not have @aplusworldacademy's token and
+have no business asking for one; scraping the page would be against their terms and would
+break the first time the markup changed.
+
+So `data/posts.json` is the honest version: paste a link, give it a date and a line of text,
+and it appears in the ship's log beside the arrivals and departures, newest first.
+
+    {"t": "2026-09-08T14:30:00Z",
+     "url": "https://www.instagram.com/p/XXXXXXXXXXX/",
+     "text": "Alongside in Lerwick",
+     "by": "A+ World Academy"}
+
+Anything with a public address goes in, not only Instagram. The account itself is linked from
+the log's caption so a reader can always find the rest. **Only `https://` links are
+rendered** - an entry with `javascript:`, `data:`, plain `http:` or no date at all is dropped
+without comment, which the test checks one form at a time. That file is edited by hand in the
+repository, so the guard is belt and braces rather than a defence against strangers, but a
+link is a link.
+
 ## What was taken out, and why
 
 **Waves where she is now** and **Weather where she is now** were forecast strips running

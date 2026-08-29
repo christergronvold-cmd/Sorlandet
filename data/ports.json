@@ -1,496 +1,547 @@
 {
- "source": "A+ World Academy / Fullriggeren Sørlandet - 2026-2027 Voyage Plan (dated 2026.03.25)",
- "note": "The plan is tentative and may change due to weather, port conditions and operations. Port coordinates are approximate.",
- "ports": [
-  {
-   "name": "Kristiansand",
-   "country": "Norway",
-   "lat": 58.145,
-   "lon": 8.0,
-   "arrive": "2026-08-16",
-   "depart": "2026-08-17",
-   "events": [
-    "Pre-departure meeting 16th",
-    "Departure 17th"
-   ]
-  },
-  {
-   "name": "Lerwick",
-   "country": "United Kingdom",
-   "lat": 60.155,
-   "lon": -1.145,
-   "arrive": "2026-09-07",
-   "depart": "2026-09-10",
-   "waypoints": [
-    [
-     58.0,
-     8.0
-    ],
-    [
-     57.9,
-     6.9
-    ],
-    [
-     60.1,
-     -1.0
-    ],
-    [
-     60.0,
-     -1.1
-    ]
-   ]
-  },
-  {
-   "name": "Dublin",
-   "country": "Ireland",
-   "lat": 53.345,
-   "lon": -6.21,
-   "arrive": "2026-09-16",
-   "depart": "2026-09-20",
-   "waypoints": [
-    [
-     60.0,
-     -1.1
-    ],
-    [
-     59.7,
-     -1.3
-    ],
-    [
-     59.0,
-     -5.3
-    ],
-    [
-     57.2,
-     -7.1
-    ],
-    [
-     56.5,
-     -7.1
-    ],
-    [
-     55.6,
-     -6.5
-    ],
-    [
-     54.9,
-     -5.6
-    ],
-    [
-     54.4,
-     -5.3
-    ],
-    [
-     53.3,
-     -6.0
-    ]
-   ]
-  },
-  {
-   "name": "St. Malo",
-   "country": "France",
-   "lat": 48.645,
-   "lon": -2.02,
-   "arrive": "2026-09-26",
-   "depart": "2026-10-02",
-   "waypoints": [
-    [
-     53.3,
-     -6.0
-    ],
-    [
-     51.5,
-     -5.8
-    ],
-    [
-     50.0,
-     -5.8
-    ],
-    [
-     48.8,
-     -2.0
-    ]
-   ]
-  },
-  {
-   "name": "Vigo",
-   "country": "Spain",
-   "lat": 42.24,
-   "lon": -8.725,
-   "arrive": "2026-10-10",
-   "depart": "2026-10-14",
-   "waypoints": [
-    [
-     48.8,
-     -2.0
-    ],
-    [
-     49.0,
-     -4.0
-    ],
-    [
-     48.6,
-     -4.8
-    ],
-    [
-     43.0,
-     -9.4
-    ],
-    [
-     42.2,
-     -8.9
-    ]
-   ]
-  },
-  {
-   "name": "Funchal",
-   "country": "Madeira",
-   "lat": 32.645,
-   "lon": -16.91,
-   "arrive": "2026-10-22",
-   "depart": "2026-10-28",
-   "waypoints": [
-    [
-     42.2,
-     -8.9
-    ],
-    [
-     32.9,
-     -16.6
-    ],
-    [
-     32.7,
-     -16.6
-    ],
-    [
-     32.5,
-     -16.9
-    ]
-   ]
-  },
-  {
-   "name": "Sevilla",
-   "country": "Spain",
-   "lat": 37.385,
-   "lon": -6.0,
-   "arrive": "2026-11-05",
-   "depart": "2026-11-10",
-   "waypoints": [
-    [
-     32.5,
-     -16.9
-    ],
-    [
-     36.8,
-     -6.5
-    ]
-   ]
-  },
-  {
-   "name": "Las Palmas",
-   "country": "Gran Canaria",
-   "lat": 28.14,
-   "lon": -15.415,
-   "arrive": "2026-11-18",
-   "depart": "2026-12-04",
-   "events": [
-    "Parent teacher conferences 19 Nov",
-    "Students return 2 Dec"
-   ],
-   "waypoints": [
-    [
-     36.8,
-     -6.5
-    ],
-    [
-     28.1,
-     -15.3
-    ]
-   ]
-  },
-  {
-   "name": "Mindelo",
-   "country": "Cape Verde",
-   "lat": 16.885,
-   "lon": -24.99,
-   "arrive": "2026-12-13",
-   "depart": "2026-12-17",
-   "waypoints": [
-    [
-     28.1,
-     -15.3
-    ],
-    [
-     27.8,
-     -15.3
-    ],
-    [
-     17.0,
-     -24.9
-    ],
-    [
-     16.9,
-     -24.8
-    ]
-   ]
-  },
-  {
-   "name": "Fernando de Noronha",
-   "country": "Brazil",
-   "lat": -3.835,
-   "lon": -32.41,
-   "arrive": "2026-12-29",
-   "depart": "2027-01-02",
-   "waypoints": [
-    [
-     16.9,
-     -24.8
-    ],
-    [
-     -3.8,
-     -32.5
-    ]
-   ]
-  },
-  {
-   "name": "Paramaribo",
-   "country": "Suriname",
-   "lat": 5.82,
-   "lon": -55.155,
-   "arrive": "2027-01-15",
-   "depart": "2027-01-20",
-   "waypoints": [
-    [
-     -3.8,
-     -32.5
-    ],
-    [
-     6.1,
-     -54.3
-    ],
-    [
-     6.1,
-     -55.2
-    ]
-   ]
-  },
-  {
-   "name": "Bridgetown",
-   "country": "Barbados",
-   "lat": 13.1,
-   "lon": -59.63,
-   "arrive": "2027-01-26",
-   "depart": "2027-02-01",
-   "waypoints": [
-    [
-     6.1,
-     -55.2
-    ],
-    [
-     13.0,
-     -59.6
-    ]
-   ]
-  },
-  {
-   "name": "St. Martin",
-   "country": "France",
-   "lat": 18.07,
-   "lon": -63.085,
-   "arrive": "2027-02-05",
-   "depart": "2027-02-09",
-   "waypoints": [
-    [
-     13.0,
-     -59.6
-    ],
-    [
-     14.5,
-     -61.2
-    ],
-    [
-     17.4,
-     -62.6
-    ],
-    [
-     18.0,
-     -63.2
-    ],
-    [
-     18.1,
-     -63.2
-    ]
-   ]
-  },
-  {
-   "name": "Charleston",
-   "country": "USA",
-   "lat": 32.78,
-   "lon": -79.925,
-   "arrive": "2027-02-24",
-   "depart": "2027-03-02",
-   "waypoints": [
-    [
-     18.1,
-     -63.2
-    ],
-    [
-     32.7,
-     -79.8
-    ],
-    [
-     32.6,
-     -79.9
-    ]
-   ]
-  },
-  {
-   "name": "New York City",
-   "country": "USA",
-   "lat": 40.7,
-   "lon": -74.02,
-   "arrive": "2027-03-09",
-   "depart": "2027-03-24",
-   "events": [
-    "Parent teacher conferences 10 Mar",
-    "Students return 22 Mar"
-   ],
-   "waypoints": [
-    [
-     32.6,
-     -79.9
-    ],
-    [
-     35.2,
-     -75.4
-    ],
-    [
-     40.5,
-     -73.8
-    ]
-   ]
-  },
-  {
-   "name": "Horta",
-   "country": "Azores",
-   "lat": 38.535,
-   "lon": -28.625,
-   "arrive": "2027-04-14",
-   "depart": "2027-04-18",
-   "waypoints": [
-    [
-     40.5,
-     -73.8
-    ],
-    [
-     38.4,
-     -28.6
-    ]
-   ]
-  },
-  {
-   "name": "Scheveningen",
-   "country": "Netherlands",
-   "lat": 52.1,
-   "lon": 4.265,
-   "arrive": "2027-05-02",
-   "depart": "2027-05-18",
-   "events": [
-    "AP exams"
-   ],
-   "waypoints": [
-    [
-     38.4,
-     -28.6
-    ],
-    [
-     38.3,
-     -28.1
-    ],
-    [
-     38.5,
-     -27.7
-    ],
-    [
-     49.8,
-     -16.2
-    ],
-    [
-     49.8,
-     -5.2
-    ],
-    [
-     50.8,
-     1.0
-    ],
-    [
-     52.2,
-     4.2
-    ]
-   ]
-  },
-  {
-   "name": "Skagen",
-   "country": "Denmark",
-   "lat": 57.72,
-   "lon": 10.585,
-   "arrive": "2027-05-25",
-   "depart": "2027-05-28",
-   "waypoints": [
-    [
-     52.2,
-     4.2
-    ],
-    [
-     53.7,
-     5.0
-    ],
-    [
-     57.9,
-     9.3
-    ],
-    [
-     57.8,
-     10.7
-    ],
-    [
-     57.7,
-     10.7
-    ],
-    [
-     57.6,
-     10.6
-    ]
-   ]
-  },
-  {
-   "name": "Kristiansand",
-   "country": "Norway",
-   "lat": 58.145,
-   "lon": 8.0,
-   "arrive": "2027-05-29",
-   "depart": "2027-05-29",
-   "events": [
-    "Graduation 29 May"
-   ],
-   "waypoints": [
-    [
-     57.6,
-     10.6
-    ],
-    [
-     57.7,
-     10.7
-    ],
-    [
-     57.8,
-     10.7
-    ],
-    [
-     58.0,
-     8.0
-    ]
-   ]
-  }
- ]
+  "source": "A+ World Academy / Fullriggeren Sørlandet - 2026-2027 Voyage Plan (dated 2026.03.25)",
+  "note": "The plan is tentative and may change due to weather, port conditions and operations. Port coordinates are approximate.",
+  "ports": [
+    {
+      "name": "Kristiansand",
+      "country": "Norway",
+      "lat": 58.145,
+      "lon": 8.0,
+      "arrive": "2026-08-16",
+      "depart": "2026-08-17",
+      "events": [
+        "Pre-departure meeting 16th",
+        "Departure 17th"
+      ],
+      "cameras": [
+        {
+          "name": "Port of Kristiansand",
+          "url": "https://en.portofkristiansand.no/maritimt-og-trafikk/kai-og-terminaler/webkamera",
+          "view": "the port's own camera over the quays",
+          "by": "Port of Kristiansand / Fædrelandsvennen"
+        }
+      ]
+    },
+    {
+      "name": "Lerwick",
+      "country": "United Kingdom",
+      "lat": 60.155,
+      "lon": -1.145,
+      "arrive": "2026-09-07",
+      "depart": "2026-09-10",
+      "waypoints": [
+        [
+          58.0,
+          8.0
+        ],
+        [
+          57.9,
+          6.9
+        ],
+        [
+          60.1,
+          -1.0
+        ],
+        [
+          60.0,
+          -1.1
+        ]
+      ],
+      "cameras": [
+        {
+          "name": "Victoria Pier",
+          "url": "https://www.shetlandwebcams.com/victoria-pier/",
+          "view": "the pier visiting sail training ships berth at",
+          "by": "Shetland Webcams"
+        },
+        {
+          "name": "Esplanade",
+          "url": "https://www.shetlandwebcams.com/taxi-rank/",
+          "view": "the Esplanade and Victoria Pier from the other side",
+          "by": "Shetland Webcams"
+        },
+        {
+          "name": "Town Hall, east",
+          "url": "https://www.shetlandwebcams.com/town-hall-east/",
+          "view": "over the harbour towards Bressay — the way in",
+          "by": "Shetland Webcams"
+        },
+        {
+          "name": "Harbour north",
+          "url": "https://www.shetlandwebcams.com/lerwick-harbour-north/",
+          "view": "the north harbour",
+          "by": "Shetland Webcams"
+        }
+      ]
+    },
+    {
+      "name": "Dublin",
+      "country": "Ireland",
+      "lat": 53.345,
+      "lon": -6.21,
+      "arrive": "2026-09-16",
+      "depart": "2026-09-20",
+      "waypoints": [
+        [
+          60.0,
+          -1.1
+        ],
+        [
+          59.7,
+          -1.3
+        ],
+        [
+          59.0,
+          -5.3
+        ],
+        [
+          57.2,
+          -7.1
+        ],
+        [
+          56.5,
+          -7.1
+        ],
+        [
+          55.6,
+          -6.5
+        ],
+        [
+          54.9,
+          -5.6
+        ],
+        [
+          54.4,
+          -5.3
+        ],
+        [
+          53.3,
+          -6.0
+        ]
+      ],
+      "cameras": [
+        {
+          "name": "Dublin Port, three cameras",
+          "url": "https://www.dublinport.ie/webcam/",
+          "view": "Poolbeg lighthouse, the bay, and the Liffey towards the city",
+          "by": "Dublin Port Company",
+          "rewind_h": 12
+        }
+      ]
+    },
+    {
+      "name": "St. Malo",
+      "country": "France",
+      "lat": 48.645,
+      "lon": -2.02,
+      "arrive": "2026-09-26",
+      "depart": "2026-10-02",
+      "waypoints": [
+        [
+          53.3,
+          -6.0
+        ],
+        [
+          51.5,
+          -5.8
+        ],
+        [
+          50.0,
+          -5.8
+        ],
+        [
+          48.8,
+          -2.0
+        ]
+      ]
+    },
+    {
+      "name": "Vigo",
+      "country": "Spain",
+      "lat": 42.24,
+      "lon": -8.725,
+      "arrive": "2026-10-10",
+      "depart": "2026-10-14",
+      "waypoints": [
+        [
+          48.8,
+          -2.0
+        ],
+        [
+          49.0,
+          -4.0
+        ],
+        [
+          48.6,
+          -4.8
+        ],
+        [
+          43.0,
+          -9.4
+        ],
+        [
+          42.2,
+          -8.9
+        ]
+      ]
+    },
+    {
+      "name": "Funchal",
+      "country": "Madeira",
+      "lat": 32.645,
+      "lon": -16.91,
+      "arrive": "2026-10-22",
+      "depart": "2026-10-28",
+      "waypoints": [
+        [
+          42.2,
+          -8.9
+        ],
+        [
+          32.9,
+          -16.6
+        ],
+        [
+          32.7,
+          -16.6
+        ],
+        [
+          32.5,
+          -16.9
+        ]
+      ]
+    },
+    {
+      "name": "Sevilla",
+      "country": "Spain",
+      "lat": 37.385,
+      "lon": -6.0,
+      "arrive": "2026-11-05",
+      "depart": "2026-11-10",
+      "waypoints": [
+        [
+          32.5,
+          -16.9
+        ],
+        [
+          36.8,
+          -6.5
+        ]
+      ]
+    },
+    {
+      "name": "Las Palmas",
+      "country": "Gran Canaria",
+      "lat": 28.14,
+      "lon": -15.415,
+      "arrive": "2026-11-18",
+      "depart": "2026-12-04",
+      "events": [
+        "Parent teacher conferences 19 Nov",
+        "Students return 2 Dec"
+      ],
+      "waypoints": [
+        [
+          36.8,
+          -6.5
+        ],
+        [
+          28.1,
+          -15.3
+        ]
+      ]
+    },
+    {
+      "name": "Mindelo",
+      "country": "Cape Verde",
+      "lat": 16.885,
+      "lon": -24.99,
+      "arrive": "2026-12-13",
+      "depart": "2026-12-17",
+      "waypoints": [
+        [
+          28.1,
+          -15.3
+        ],
+        [
+          27.8,
+          -15.3
+        ],
+        [
+          17.0,
+          -24.9
+        ],
+        [
+          16.9,
+          -24.8
+        ]
+      ]
+    },
+    {
+      "name": "Fernando de Noronha",
+      "country": "Brazil",
+      "lat": -3.835,
+      "lon": -32.41,
+      "arrive": "2026-12-29",
+      "depart": "2027-01-02",
+      "waypoints": [
+        [
+          16.9,
+          -24.8
+        ],
+        [
+          -3.8,
+          -32.5
+        ]
+      ]
+    },
+    {
+      "name": "Paramaribo",
+      "country": "Suriname",
+      "lat": 5.82,
+      "lon": -55.155,
+      "arrive": "2027-01-15",
+      "depart": "2027-01-20",
+      "waypoints": [
+        [
+          -3.8,
+          -32.5
+        ],
+        [
+          6.1,
+          -54.3
+        ],
+        [
+          6.1,
+          -55.2
+        ]
+      ]
+    },
+    {
+      "name": "Bridgetown",
+      "country": "Barbados",
+      "lat": 13.1,
+      "lon": -59.63,
+      "arrive": "2027-01-26",
+      "depart": "2027-02-01",
+      "waypoints": [
+        [
+          6.1,
+          -55.2
+        ],
+        [
+          13.0,
+          -59.6
+        ]
+      ]
+    },
+    {
+      "name": "St. Martin",
+      "country": "France",
+      "lat": 18.07,
+      "lon": -63.085,
+      "arrive": "2027-02-05",
+      "depart": "2027-02-09",
+      "waypoints": [
+        [
+          13.0,
+          -59.6
+        ],
+        [
+          14.5,
+          -61.2
+        ],
+        [
+          17.4,
+          -62.6
+        ],
+        [
+          18.0,
+          -63.2
+        ],
+        [
+          18.1,
+          -63.2
+        ]
+      ]
+    },
+    {
+      "name": "Charleston",
+      "country": "USA",
+      "lat": 32.78,
+      "lon": -79.925,
+      "arrive": "2027-02-24",
+      "depart": "2027-03-02",
+      "waypoints": [
+        [
+          18.1,
+          -63.2
+        ],
+        [
+          32.7,
+          -79.8
+        ],
+        [
+          32.6,
+          -79.9
+        ]
+      ]
+    },
+    {
+      "name": "New York City",
+      "country": "USA",
+      "lat": 40.7,
+      "lon": -74.02,
+      "arrive": "2027-03-09",
+      "depart": "2027-03-24",
+      "events": [
+        "Parent teacher conferences 10 Mar",
+        "Students return 22 Mar"
+      ],
+      "waypoints": [
+        [
+          32.6,
+          -79.9
+        ],
+        [
+          35.2,
+          -75.4
+        ],
+        [
+          40.5,
+          -73.8
+        ]
+      ]
+    },
+    {
+      "name": "Horta",
+      "country": "Azores",
+      "lat": 38.535,
+      "lon": -28.625,
+      "arrive": "2027-04-14",
+      "depart": "2027-04-18",
+      "waypoints": [
+        [
+          40.5,
+          -73.8
+        ],
+        [
+          38.4,
+          -28.6
+        ]
+      ]
+    },
+    {
+      "name": "Scheveningen",
+      "country": "Netherlands",
+      "lat": 52.1,
+      "lon": 4.265,
+      "arrive": "2027-05-02",
+      "depart": "2027-05-18",
+      "events": [
+        "AP exams"
+      ],
+      "waypoints": [
+        [
+          38.4,
+          -28.6
+        ],
+        [
+          38.3,
+          -28.1
+        ],
+        [
+          38.5,
+          -27.7
+        ],
+        [
+          49.8,
+          -16.2
+        ],
+        [
+          49.8,
+          -5.2
+        ],
+        [
+          50.8,
+          1.0
+        ],
+        [
+          52.2,
+          4.2
+        ]
+      ]
+    },
+    {
+      "name": "Skagen",
+      "country": "Denmark",
+      "lat": 57.72,
+      "lon": 10.585,
+      "arrive": "2027-05-25",
+      "depart": "2027-05-28",
+      "waypoints": [
+        [
+          52.2,
+          4.2
+        ],
+        [
+          53.7,
+          5.0
+        ],
+        [
+          57.9,
+          9.3
+        ],
+        [
+          57.8,
+          10.7
+        ],
+        [
+          57.7,
+          10.7
+        ],
+        [
+          57.6,
+          10.6
+        ]
+      ]
+    },
+    {
+      "name": "Kristiansand",
+      "country": "Norway",
+      "lat": 58.145,
+      "lon": 8.0,
+      "arrive": "2027-05-29",
+      "depart": "2027-05-29",
+      "events": [
+        "Graduation 29 May"
+      ],
+      "waypoints": [
+        [
+          57.6,
+          10.6
+        ],
+        [
+          57.7,
+          10.7
+        ],
+        [
+          57.8,
+          10.7
+        ],
+        [
+          58.0,
+          8.0
+        ]
+      ],
+      "cameras": [
+        {
+          "name": "Port of Kristiansand",
+          "url": "https://en.portofkristiansand.no/maritimt-og-trafikk/kai-og-terminaler/webkamera",
+          "view": "the port's own camera over the quays",
+          "by": "Port of Kristiansand / Fædrelandsvennen"
+        }
+      ]
+    }
+  ]
 }

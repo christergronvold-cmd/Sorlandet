@@ -75,6 +75,25 @@
   .big small{font-size:14px; font-weight:500; color:var(--muted)}
   .arrow{display:inline-block; color:var(--accent)}
   .card.wide{grid-column:1/-1}
+  /* Folding cards. <details> does this natively - keyboard, screen readers and find-in-page
+     all work, and it needs no script to open and close. The script only remembers the
+     choice. The summary is styled to look exactly like the h2 it replaces, plus a chevron,
+     so a folded card and a plain one read as the same kind of thing. */
+  .card.fold{padding:0}
+  .card.fold > summary{
+    list-style:none; cursor:pointer; padding:14px 16px; display:flex; align-items:center;
+    gap:8px; border-radius:14px;
+  }
+  .card.fold > summary::-webkit-details-marker{display:none}
+  .card.fold > summary h2{margin:0}
+  .card.fold > summary::after{
+    content:"›"; margin-left:auto; color:var(--muted); font-size:19px; line-height:1;
+    transform:rotate(90deg); transition:transform .15s ease;
+  }
+  .card.fold[open] > summary::after{transform:rotate(-90deg)}
+  .card.fold > summary:hover h2, .card.fold > summary:focus-visible h2{color:var(--ink)}
+  .card.fold > summary .count{color:var(--muted); font-weight:600; font-size:11px}
+  .card.fold > .foldbody{padding:0 16px 14px}
   .fc{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch}
   .fc>div{
     flex:0 0 96px; text-align:center; border:1px solid var(--line); border-radius:11px;
@@ -337,8 +356,37 @@ const fmtTime = iso => iso
 const dayName = iso => new Date(iso + "T12:00:00Z")
   .toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-const wideCard = (title, html) => `<div class="card wide"><h2>${title}</h2>${html}</div>`;
+// Some cards are reference rather than an answer to "where is she": the log, the cameras,
+// the charts, the whole route, the share panel. They are worth having and not worth
+// scrolling past every time - and the page has grown long enough on a phone that scrolling
+// past them is most of what you do. So they fold.
+//
+// <details> rather than a div and a click handler: it opens and closes with no script at
+// all, the keyboard and screen readers get it for free, and find-in-page opens a closed
+// card to show the match instead of hiding it. `fold` is {key, open, note}; the key is what
+// the reader's choice is remembered under.
+const wideCard = (title, html, fold) => fold
+  ? `<details class="card wide fold" data-fold="${fold.key}"${fold.open ? " open" : ""}>
+       <summary><h2>${title}</h2>${
+         fold.note ? `<span class="count">${fold.note}</span>` : ""}</summary>
+       <div class="foldbody">${html}</div></details>`
+  : `<div class="card wide"><h2>${title}</h2>${html}</div>`;
 const card = (title, html) => `<div class="card"><h2>${title}</h2>${html}</div>`;
+
+// Remember which cards a reader folded away. Per browser, nothing sent anywhere, and the
+// page is fine if the store is unavailable - a private window, or storage switched off.
+function rememberFolds() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("folds") || "{}") || {}; } catch {}
+  for (const el of document.querySelectorAll("details[data-fold]")) {
+    const key = el.dataset.fold;
+    if (key in saved) el.open = !!saved[key];
+    el.addEventListener("toggle", () => {
+      saved[key] = el.open;
+      try { localStorage.setItem("folds", JSON.stringify(saved)); } catch {}
+    });
+  }
+}
 const row = (k, v) => `<div class="row"><span>${k}</span><span>${v}</span></div>`;
 
 // Great-circle distance in nautical miles - same formula as in update.py.
@@ -522,8 +570,30 @@ function voyageState(points, ports, todayISO) {
   return settle(i, end(ports[i]) < todayISO);
 }
 
-function milestones(points, ports, todayISO, sogFrom) {
+// Pictures and posts from the voyage, kept by hand in data/posts.json and folded into the
+// log beside the arrivals and departures.
+//
+// Not fetched from Instagram, and that is not laziness. The Basic Display API - the one that
+// could read a public account - was withdrawn in December 2024, and what replaced it needs a
+// token belonging to the account owner. We do not have @aplusworldacademy's token and have no
+// business asking for one, and scraping the page would be against their terms and would break
+// the first time the markup changed. A hand-kept list is the honest version: it works, it
+// never breaks, and anything with a public address goes in it, not only Instagram.
+function postMarks(postFile) {
   const out = [];
+  for (const q of (postFile?.posts || [])) {
+    // Only https, and only entries with a moment to place them at. These come from a file in
+    // the repository rather than from anything a reader can reach, but a link is a link.
+    if (!q || !q.t || typeof q.url !== "string" || !/^https:\/\//.test(q.url)) continue;
+    out.push({ t: q.t, ic: "\u{1F4F7}", href: q.url, clock: true,
+               text: (q.text || "A picture from on board")
+                     + (q.by ? ` \u2014 ${q.by}` : "") });
+  }
+  return out;
+}
+
+function milestones(points, ports, todayISO, sogFrom, postFile) {
+  const out = postMarks(postFile);
   if (points.length) {
     out.push({ t: points[0].t, ic: "⚓", text: "Tracking started" });
   }
@@ -709,6 +779,15 @@ function tally(el, views, live) {
   el.hidden = false;
 }
 
+// The Worker's address, however it was pasted in. The instructions say to leave off the
+// trailing slash and not to include /views or /count - but a warning in a text file is a
+// weaker thing than code that copes, and getting it wrong fails silently: the request 404s,
+// the page falls back to the hosted counter, and the number goes on looking stale for
+// reasons that have nothing to do with what was actually set up.
+function counterBase() {
+  return COUNTER_URL.replace(/\/+$/, "").replace(/\/(views|count)$/, "");
+}
+
 // The count, shown at the bottom of the page for everyone. Our own counter first; the
 // hosted one is the fallback while the Worker is not set up yet.
 async function showVisitorCount() {
@@ -719,8 +798,7 @@ async function showVisitorCount() {
     try {
       // One request per page load: it increments and answers with the new total, so there
       // is nothing to fetch twice and nothing to go stale between the two.
-      const r = await fetch(COUNTER_URL.replace(/\/+$/, "") + "/count",
-                            { cache: "no-store" });
+      const r = await fetch(counterBase() + "/count", { cache: "no-store" });
       if (r.ok) {
         const { views } = await r.json();
         if (Number.isFinite(views) && views >= 1) { tally(el, views, true); return; }
@@ -758,7 +836,7 @@ async function countCheck() {
   const loaded = window.__gcState || "not started";
   let total = "(not asked)";
   // /views rather than /count, so looking at the diagnostics does not add to the number.
-  const probe = COUNTER_URL ? COUNTER_URL.replace(/\/+$/, "") + "/views"
+  const probe = COUNTER_URL ? counterBase() + "/views"
               : COUNTER_CODE ? counterUrl() : null;
   if (probe) {
     try {
@@ -781,7 +859,7 @@ async function countCheck() {
     line("our own counter", COUNTER_URL || "(not set up - using the hosted one)",
          !COUNTER_URL) +
     line("asked", COUNTER_URL
-      ? COUNTER_URL.replace(/^https:\/\//, "").replace(/\/+$/, "") + "/count"
+      ? counterBase().replace(/^https:\/\//, "") + "/count"
       : (COUNTER_CODE ? counterUrl().replace(/^https:\/\//, "") : "(nothing)"), false) +
     line("public total says", total, /HTTP|failed/.test(total)) +
     `<div style="margin-top:8px;line-height:1.6">If everything above is fine and the total ` +
@@ -831,7 +909,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "c94daa447a";
+const BUILD = "ff76181864";
 
 async function checkForNewBuild() {
   try {
@@ -1990,7 +2068,8 @@ map.on("moveend zoomend", () => {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile, orbitFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile, orbitFile,
+         postFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -2000,9 +2079,10 @@ async function load() {
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/course.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/posts.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile);
+  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile, postFile);
   setupGrids(wind, waves);
   setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
@@ -2011,7 +2091,7 @@ async function load() {
   else showVisitorCount();
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, courseFile, orbitFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, courseFile, orbitFile, postFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -2386,19 +2466,90 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
   // ---- ship's log
   const marks = milestones(track.points || [], ports, todayISO,
-                           track.sog_provenance_from);
+                           track.sog_provenance_from, postFile);
   const logCard = marks.length ? wideCard("Ship's log", `
     <div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
       Arrivals and departures as her own track shows them, with the distances and the
       records she has set along the way. Greyed lines are from the schedule — ports she
-      called at before this page existed, or during a gap in coverage.
+      called at before this page existed, or during a gap in coverage.${
+        postFile?.source?.url ? ` Pictures from on board are added by hand; the crew post
+        theirs at <a href="${postFile.source.url}" target="_blank" rel="noopener"
+        >${postFile.source.name || "Instagram"}</a>.` : ""}
     </div>
     <ul class="log${marks.length > 9 ? " scroll" : ""}">${
     marks.map(m => `<li><time>${new Date(m.t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</time>
-      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${m.text}${
+      <span class="ic">${m.ic}</span><span${m.soft ? ' style="color:var(--muted)"' : ""}>${
+        m.href ? `<a href="${m.href}" target="_blank" rel="noopener">${m.text}</a>` : m.text}${
         m.clock ? ` <span style="color:var(--muted)">${new Date(m.t).toLocaleTimeString("en-GB",
           { hour: "2-digit", minute: "2-digit" })}</span>` : ""}</span></li>`).join("")
-  }</ul>`) : "";
+  }</ul>`, { key: "log", open: true,
+    note: `${marks.length} entr${marks.length === 1 ? "y" : "ies"}` }) : "";
+
+  // ---- the harbour cameras
+  //
+  // Linked, never embedded. Pulling somebody else's stream into this page is their bandwidth
+  // and their terms, and the addresses move without warning - it would die silently and take
+  // a while to notice. A link is honest, it survives, and it sends them the traffic they run
+  // the camera for.
+  //
+  // The port she is in, or heading for, comes first and says when: those are the minutes when
+  // there is actually something to see. The rest of the list stays, because a camera is worth
+  // knowing about before you need it.
+  const camPorts = ports.map((q, i) => ({ q, i })).filter(({ q }) => (q.cameras || []).length);
+  let cameraCard = "";
+  if (camPorts.length) {
+    const hereIdx = leg.inPort ? ports.indexOf(leg.inPort)
+                  : nextPort ? ports.indexOf(nextPort) : -1;
+    const order = [...camPorts].sort((a, b) =>
+      (a.i === hereIdx ? -1 : b.i === hereIdx ? 1 : a.i - b.i));
+    const when = ({ q, i }) => {
+      if (leg.inPort && i === hereIdx) return `<b style="color:var(--accent)">alongside now</b>`;
+      // She asked for a look back at Kristiansand. This is as close as it gets, and it is
+      // worth being plain about the limit: the camera is live, so it shows the quay as it is
+      // this minute, not as it was the morning she left.
+      if (i === 0 && i < leg.done) return "where she sailed from — the quay as it is now";
+      if (i < leg.done) return "astern";
+      if (nextPort && i === hereIdx) {
+        const days = Math.round((new Date(q.arrive + "T12:00:00Z") - Date.now()) / 864e5);
+        return days <= 0 ? "<b>due today</b>"
+             : `<b>due ${dayName(q.arrive)}</b>, in ${days} day${days === 1 ? "" : "s"}`;
+      }
+      return dayName(q.arrive);
+    };
+    cameraCard = wideCard("Harbour cameras", `
+      <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
+        Other people's cameras, looking at the quays she ties up to. They open in their own
+        windows — nothing here is copied or embedded. Whether she is in the frame is luck,
+        but arrival and departure are the moments worth trying.
+      </div>
+      <ul class="log">${order.map(({ q, i }) => `
+        <li${i < leg.done ? ' style="opacity:.55"' : ""}>
+          <time style="flex:0 0 108px">${q.name}</time>
+          <span class="ic">${leg.inPort && i === hereIdx ? "\u{1F441}\uFE0F"
+                            : i < leg.done ? "\u2713" : "\u{1F4F9}"}</span>
+          <span>${q.cameras.map(c =>
+            `<a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>` +
+            (c.view ? ` <span style="color:var(--muted)">— ${c.view}</span>` : "") +
+            (c.rewind_h ? ` <span style="color:var(--muted)">· rewindable ${c.rewind_h} h,
+              so an arrival can be watched after the fact</span>` : "") +
+            (c.by ? ` <span style="color:var(--muted)">· ${c.by}</span>` : "")
+          ).join("<br>")}
+          <div style="color:var(--muted);margin-top:2px">${when({ q, i })}</div></span>
+        </li>`).join("")}</ul>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:9px">
+        These are live views only. None of them keeps an archive, so they cannot be wound back
+        to show a departure that has already happened${
+          camPorts.some(({ q }) => (q.cameras || []).some(c => c.rewind_h))
+            ? " — except Dublin Port's, which can be rewound half a day" : ""}.
+      </div>`, {
+        key: "cameras",
+        // Shut while she is at sea, because then it is only reference. Open by itself the
+        // moment she is alongside somewhere with a camera on it - that is the whole reason
+        // the card exists, and a reader should not have to know to go looking.
+        open: !!(leg.inPort && (leg.inPort.cameras || []).length),
+        note: leg.inPort && (leg.inPort.cameras || []).length ? "she is alongside now"
+            : `${camPorts.reduce((n, { q }) => n + q.cameras.length, 0)} cameras` });
+  }
 
   // ---- charts
   const byDay = dailyDistance(track.points || []);
@@ -2436,7 +2587,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${barChart(waveRows, "m", 1, "--chart-c") || '<p style="margin:0">Builds up from today.</p>'}</div>
       <div class="chart"><h3>Highest speed</h3><p>fastest she reported each day, knots</p>
         ${barChart(sogRows, "kn", 1, "--chart-d") || '<p style="margin:0">Builds up from today.</p>'}</div>
-    </div>`) : "";
+    </div>`, { key: "charts", open: true, note: "last 14 days" }) : "";
 
   // Sentinel-2 true colour, 10 m per pixel, cropped to a square around where she was at
   // that scene's own timestamp. titiler does the crop and the brightness stretch
@@ -2550,7 +2701,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       sections.length ? `Seen from space · ${alongside.length + atSea.length}`
                       : "Seen from space",
       `<div style="font-size:13px;color:var(--muted);margin:-4px 0 ${
-        sections.length ? 14 : 0}px">${intro}</div>${sections.join("")}`);
+        sections.length ? 14 : 0}px">${intro}</div>${sections.join("")}`,
+      // Open when there are pictures - that is the payoff. Shut when the answer is "not
+      // yet", because a card whose whole content is an apology should not take a screen.
+      { key: "album", open: sections.length > 0,
+        note: sections.length ? "" : (nextWhen ? `next chance ${nextWhen}` : "nothing yet") });
   }
 
 
@@ -2565,7 +2720,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         <button id="copytext">Copy a message</button>
         <span id="copied" style="color:var(--accent);display:none"> copied</span>
       </div>
-    </div>`);
+    </div>`, { key: "share", open: false, note: "link, QR and a ready-made message" });
 
   document.getElementById("cards").innerHTML = [
     card("Position", waiting ? `
@@ -2606,14 +2761,17 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
     progressCard,
     logCard,
+    cameraCard,
     albumCard,
     chartsCard,
     aheadCard,
-    routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`) : "",
+    routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`,
+      { key: "route", open: false, note: `${ports.length} ports` }) : "",
     shareCard
   ].join("");
 
   wireSharing();
+  rememberFolds();
 
   document.getElementById("stamp").textContent = " The page refreshes itself every 5 minutes.";
 }
