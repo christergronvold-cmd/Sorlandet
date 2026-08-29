@@ -381,6 +381,31 @@ def _unwind(nodes: list, end: int, depart: datetime, goal: tuple) -> dict:
             "sog": None if n["sog"] is None else round(n["sog"], 1),
         })
 
+    # ...and then the last few miles into the harbour.
+    #
+    # The search stops as soon as it is within arrive_within_nm of the port, because an
+    # isochrone steps in whole hours and can never land exactly on a quay. That left the
+    # drawn course ending up to twelve miles offshore, which reads as a route that gives up
+    # short of where she is going.
+    #
+    # This last leg is NOT a sailing course and is not pretended to be: it carries no wind
+    # angle, no tack, no speed of its own, and is flagged so nothing downstream mistakes it
+    # for something the router worked out. It is simply the run in, which in a real ship is
+    # pilotage under engine and never was ours to plan.
+    if points:
+        last = points[-1]
+        rest = nm_between((last["lat"], last["lon"]), goal)
+        if rest > 0.5:
+            speed = last["sog"] or 6.0
+            points.append({
+                "lat": round(goal[0], 4), "lon": round(goal[1], 4),
+                "t": (depart + timedelta(hours=last["hours"] + rest / max(speed, 1.0)))
+                     .strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "hours": round(last["hours"] + rest / max(speed, 1.0), 1),
+                "course": None, "twa": None, "tws": None, "sog": None,
+                "final": True,
+            })
+
     # A tack or a gybe: the wind crosses from one side to the other.
     tacks = []
     for k in range(2, len(points)):
@@ -390,5 +415,5 @@ def _unwind(nodes: list, end: int, depart: datetime, goal: tuple) -> dict:
         if a * b < 0 and abs(a) + abs(b) > 40:
             tacks.append(k)
 
-    return {"points": points, "hours": round(chain[-1]["h"], 1), "tacks": tacks,
+    return {"points": points, "hours": round(points[-1]["hours"], 1), "tacks": tacks,
             "reached": True}

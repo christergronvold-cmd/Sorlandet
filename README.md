@@ -724,6 +724,38 @@ because true colour over open water is impossible to place otherwise.
 Zoom limits are real and enforced: 9 for the daily layers, 7 for GOES. Beyond that Leaflet
 upscales rather than showing a void.
 
+## Nothing in the job may block for ever
+
+On 29 August a run held the concurrency group for four hours and wrote nothing. The page
+froze mid-afternoon on the day she was closing on Lerwick, and nothing said so.
+
+The listener was not the cause. It is bounded by `LISTEN_SECONDS`, and every HTTP call in
+`update.py` carries a timeout. **git is the part with no clock on it**: a stalled `pull` or
+`push` waits until the job's own 350-minute limit, and meanwhile every hourly run queues
+behind `concurrency: position` and is cancelled an hour later by the next one. That is the
+signature to recognise - a column of "Update position" runs, each about 59 minutes, each
+cancelled, and one still in progress underneath them all.
+
+Four guards now, outermost first:
+
+| Guard | What it stops |
+|---|---|
+| `http.lowSpeedLimit 1000` / `http.lowSpeedTime 30` | git giving up on a transfer moving under 1 kB/s for half a minute |
+| `timeout 180` on every `git pull` and `git push` | a hung transfer that survives the above; three attempts, then the round moves on |
+| `timeout 2400` on each listening round | anything at all inside `update.py` overrunning its 29-minute window |
+| two killed rounds in a row ends the run | a systematically wedged runner sitting on the group; the chain starts a fresh one with a fresh network |
+
+A round that merely *fails* does not count towards that last one - only a round that had to
+be killed. Failures are ordinary; hangs are not.
+
+The shell in that step is the one piece of this project that only ever runs in production,
+so it is tested the same way as everything else. `/home/claude/t` extracts the `run:` block
+from the workflow, substitutes four-second clocks for the forty-minute ones, and runs it
+against a stub that hangs, fails or succeeds on command - checking that one hang is killed
+and the loop carries on, that two in a row end the run early, that plain failures do not
+trip the counter, and that a hanging git is killed and retried rather than blocking for
+ever.
+
 ## The course the wind would make fastest
 
 The dashed route to the next port assumes she closes on it steadily. She cannot: a
@@ -766,6 +798,14 @@ Lerwick that is roughly **39 hours against 264** - nine and a half days in hand.
 comparison explains what you see on the map: they are not making for Shetland, they are
 sailing a school ship around the North Sea with a fortnight to do it in. On a leg where the
 two numbers converge, she is on passage and the course estimate is worth watching.
+
+**The drawn course reaches the quay.** The isochrone search stops as soon as it is within
+twelve miles of the port, because it steps in whole hours and can never land on a berth -
+which left the line ending twelve miles offshore, reading as a route that gave up short of
+where she was going. The run in is now appended, and flagged `"final": true` with no wind
+angle, no tack and no speed of its own, because it is not a sailing course: those last miles
+are pilotage and never were ours to plan. The land-mask test excludes that one point on
+purpose - a harbour is against the land the mask is drawn from.
 
 Turn on **Course** above the map. A ring marks every tack, with the wind angle and which
 side it is on. It is recomputed from her current position on every run.
