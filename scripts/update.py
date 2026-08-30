@@ -1451,7 +1451,56 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
                 route[0] = (lat, lon)
                 route_basis = "course"
         if route is None:
-            route = sea_route((lat, lon), (port["lat"], port["lon"]))
+            # The fallback line needs the same pilotage the sailing course gets, and for the
+            # same reason. A* snaps the goal to the nearest navigable cell - the sea mask
+            # keeps six kilometres clear of land, so that cell is well offshore - and then
+            # the hop from it to the quay is appended unchecked. Coming at Lerwick from the
+            # north-east that hop goes straight over Bressay, and on 30 August it did:
+            # ahead.json drew her position, the 60.10/-1.00 waypoint, then the quay, with
+            # the island in between. This matters most exactly when it went wrong, because
+            # inside fifteen miles build_course stops writing a course at all and this line
+            # is the only one left on the map.
+            #
+            # So: aim the search at the first approach waypoint and walk the rest of the
+            # way in along the waypoints somebody already chose, in the plan's own order.
+            approach = []
+            for w in reversed(port.get("waypoints") or []):
+                if nm_between((float(w[0]), float(w[1])),
+                              (float(port["lat"]), float(port["lon"]))) > APPROACH_NM:
+                    break
+                approach.append((float(w[0]), float(w[1])))
+            approach.reverse()
+            goal_pt = (float(port["lat"]), float(port["lon"]))
+            head = sea_route((lat, lon), approach[0] if approach else goal_pt)
+
+            # Check the SEARCHED part, and only that part. sea_route appends its goal to
+            # the end of the A* path without checking the hop to it - the sea mask keeps
+            # six kilometres clear of land, so the last navigable cell can be a long way
+            # off and on the wrong side of an island. That hop is what drew a line over
+            # Bressay.
+            #
+            # The approach waypoints below are NOT checked, deliberately. They are pilotage
+            # somebody chose by hand for exactly the water this grid cannot represent:
+            # Lerwick Sound is about a kilometre wide against a six-kilometre mask, and the
+            # leg between the two approach marks passes through a cell the mask calls land
+            # or sea depending on which side of a boundary a sample happens to land.
+            # Checking them would throw away the only line that is actually right.
+            if head and len(head) > 1 and sea_grid():
+                import sailrouter as SR
+                at_sea = lambda la, lo: (lambda c: bool(c) and _is_sea(*c))(_cell(la, lo))
+                bad = next((k for k in range(1, len(head))
+                            if not SR.leg_clear(head[k - 1], head[k], at_sea,
+                                                free_from=(lat, lon))), None)
+                if bad is not None:
+                    print(f"  ! the route to the approach crosses land on leg {bad}"
+                          f" - not drawing a line", file=sys.stderr)
+                    head = None
+
+            if approach:
+                route = ((head[:-1] if len(head) > 1 else [(lat, lon)]) + approach + [goal_pt]
+                         if head else None)
+            else:
+                route = head
         if not route or len(route) < 2:
             print("  ! could not route to the next port", file=sys.stderr)
             return

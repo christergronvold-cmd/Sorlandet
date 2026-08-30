@@ -985,7 +985,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "8543508994";
+const BUILD = "8481657230";
 
 async function checkForNewBuild() {
   try {
@@ -1041,6 +1041,26 @@ baseLayer.addTo(map);
 const seamarks = L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {
   maxZoom: 18, opacity: 0.95, attribution: "© OpenSeaMap"
 });
+let shipAt = null;
+
+// Sea marks are drawn at chart scale, not at map scale. Switched on with the whole of
+// Shetland on the screen the layer loads correctly and shows nothing you can see: the
+// tile covering Lerwick at zoom 9 holds two marks the size of a full stop, and the light
+// sectors and buoy names only appear from about zoom 12. The button therefore looked
+// broken - it was working, there was simply nothing to see at that scale.
+//
+// So switching it on takes the map in to where the marks exist, centred on her, and the
+// button says so if you zoom back out.
+const SEAMARK_ZOOM = 13;
+
+function seamarkLabel() {
+  const b = document.getElementById("charttoggle");
+  if (!b) return;
+  const tooFar = show.chart && map.getZoom() < SEAMARK_ZOOM - 1;
+  b.textContent = show.chart ? (tooFar ? "Sea marks — zoom in" : "Sea marks ✓") : "Sea marks";
+  b.classList.toggle("on", show.chart);
+}
+map.on("zoomend", seamarkLabel);
 
 const shipIcon = (heading, ghost = false) => L.divIcon({
   className: ghost ? "ship-marker ghost-marker" : "ship-marker",
@@ -1640,7 +1660,15 @@ document.getElementById("windtime").addEventListener("input", e => {
     e.target.textContent = show[key] ? `${label} ✓` : label;
     if (key === "sat") { drawSatellite(); return; }
     if (key === "chart") {
-      if (show.chart) seamarks.addTo(map); else map.removeLayer(seamarks);
+      if (show.chart) {
+        seamarks.addTo(map);
+        if (map.getZoom() < SEAMARK_ZOOM) {
+          map.setView(shipAt || map.getCenter(), SEAMARK_ZOOM, { animate: true });
+        }
+      } else {
+        map.removeLayer(seamarks);
+      }
+      seamarkLabel();
       return;
     }
     drawGrids();
@@ -2360,6 +2388,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
   const nextPort = leg.to;
   if (p.lat !== undefined && !waiting) {
+    shipAt = [p.lat, p.lon];        // kept for the sea-marks zoom, below
     layers.push(L.marker([p.lat, p.lon], { icon: shipIcon(p.heading_deg ?? p.cog_deg) })
       .bindPopup(`<b>${d.ship}</b><br>${dms(p.lat, "lat")} ${dms(p.lon, "lon")}<br>${fmtTime(p.seen_utc)} UTC`)
       .addTo(map));
