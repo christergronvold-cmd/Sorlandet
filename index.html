@@ -295,6 +295,7 @@
     <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
     <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
     <button id="sattoggle" title="Swap the map for the actual satellite picture of her weather">Satellite</button>
+    <button id="charttoggle" title="Lay the sea marks over the map - buoys, beacons and lights">Sea marks</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
     <button id="nowbtn" title="Jump back to now" disabled>Now</button>
@@ -930,7 +931,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "5046403624";
+const BUILD = "5625157663";
 
 async function checkForNewBuild() {
   try {
@@ -975,6 +976,18 @@ const baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", 
 });
 baseLayer.addTo(map);
 
+// A chart is not a map, and the difference is what gets left out. OpenSeaMap publishes the
+// sea marks - buoys, beacons, light sectors, harbour marks, leading lines - as transparent
+// tiles meant to be laid over an ordinary map, which is exactly the shape of this problem:
+// the land keeps its streets and its quay names, and the water gains the marks she steers
+// by. A real chart basemap would do the opposite. On a paper chart the land is deliberately
+// close to blank - buff, with a few conspicuous objects - because a chart is a document
+// about the sea; swapping to one would take Lerwick's streets and the name of the pier off
+// the page at the exact moment a reader is trying to work out which quay she is on.
+const seamarks = L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {
+  maxZoom: 18, opacity: 0.95, attribution: "© OpenSeaMap"
+});
+
 const shipIcon = (heading, ghost = false) => L.divIcon({
   className: ghost ? "ship-marker ghost-marker" : "ship-marker",
   html: `<svg width="34" height="34" viewBox="0 0 34 34" style="transform:rotate(${heading ?? 0}deg)">
@@ -1013,7 +1026,8 @@ const scaleColor = (v, table) => {
 };
 
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true, weather: false, sat: false };
+let gridIndex = 0, show = { wind: true, waves: true, weather: false, sat: false,
+                            chart: false };
 
 // ---------------------------------------------------------------- satellite imagery
 // NASA's Global Imagery Browse Services serves the actual pictures, free and without a
@@ -1564,12 +1578,17 @@ document.getElementById("windtime").addEventListener("input", e => {
 });
 [["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"],
  ["weathertoggle", "weather", "Weather"],
- ["sattoggle", "sat", "Satellite"]].forEach(([id, key, label]) => {
+ ["sattoggle", "sat", "Satellite"],
+ ["charttoggle", "chart", "Sea marks"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
     show[key] = !show[key];
     e.target.classList.toggle("on", show[key]);
     e.target.textContent = show[key] ? `${label} ✓` : label;
     if (key === "sat") { drawSatellite(); return; }
+    if (key === "chart") {
+      if (show.chart) seamarks.addTo(map); else map.removeLayer(seamarks);
+      return;
+    }
     drawGrids();
     if (show[key]) refreshViewportGrids();
   });
@@ -2331,7 +2350,21 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         // and left here, and the two numbers sat on the same screen disagreeing.
         const along = alongLeg([[legStart.lat, legStart.lon], ...(nextPort.waypoints || []),
                                 [nextPort.lat, nextPort.lon]], [p.lat, p.lon]);
-        rows += row("Distance", `${N(Math.max(0, along.legLength - along.covered), 0)} nm to run`);
+        const toRun = Math.max(0, along.legLength - along.covered);
+        // Two honest answers to "how far is she", and they are not the same number. This one
+        // is what is left of the PLANNED TRACK - which swings south round Bressay before it
+        // turns back up to the quay, and which she is currently miles to one side of. The
+        // camera card, a few inches further down the same screen, gives the straight line,
+        // because a webcam does not care what the plan says. On the approach they differed
+        // by seven miles and read as a contradiction. So when they disagree by enough to
+        // notice, both are shown here, once, each saying what it is.
+        const crow = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
+        rows += row("Distance", `${N(toRun, 0)} nm to run${
+          Math.abs(toRun - crow) >= 3
+            ? ` <span style="color:var(--muted)" title="The first figure follows the planned\
+ track, round the waypoints. The second is the direct distance from where she is now.">·\
+ ${N(crow, 0)} nm straight line</span>`
+            : ""}`);
       }
       if (nextPort.events) rows += row("Programme", nextPort.events.join("<br>"));
     } else {
@@ -2356,7 +2389,19 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       rows += row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`);
       if (p.destination) rows += row("Reported destination", p.destination);
     }
-    rows += row("Data updated", ago(d.updated_utc));
+    // "Last seen" and this row are two different clocks, and reading them as one number is
+    // the easiest mistake on the page: 22:01 was her last AIS message, twenty-five minutes
+    // ago was the last time the job went looking. They disagree whenever a run heard
+    // nothing - which out here is most runs, because she is beyond the shore stations and
+    // the satellites pass when they pass. Two bare relative times that look like they
+    // contradict each other is worse than useless, so when they differ, say why.
+    const checkedMs = d.updated_utc ? new Date(d.updated_utc).getTime() : 0;
+    const heardMs = (!waiting && p && p.seen_utc) ? new Date(p.seen_utc).getTime() : 0;
+    const heardNothing = checkedMs && heardMs && checkedMs - heardMs > 10 * 6e4;
+    rows += row("Last checked", `${ago(d.updated_utc)}${heardNothing
+      ? ` <span style="color:var(--muted)" title="The page rebuilds itself every few minutes\
+ whether or not there is anything new. She has not been heard since the time above.">\
+· nothing new heard</span>` : ""}`);
     planCard = card("Voyage plan", rows).replace('class="card"', 'class="card plan"');
   }
 
@@ -2537,6 +2582,32 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // come in - so it appears when she is inside APPROACH_NM of a port that has one, or lying
   // alongside it, and is absent the rest of the time. The page knows both from AIS.
   const APPROACH_NM = 25;      // a few hours out, about when a ship is committed to the run in
+
+  // Which camera goes at the top depends on where she is, because they are not
+  // interchangeable. On the way in, the one that matters is the one she passes: everything
+  // entering Lerwick rounds Kirkabister Ness, and that is a single quarter of an hour with
+  // a bow wave under her. Once she is tied up it inverts - the entrance camera now looks at
+  // empty water, and the one worth having is the quay she is lying on, which will hold her
+  // for days. Statsraad Lehmkuhl sitting on Victoria Pier this week is what settled which
+  // quay that is. Cameras with no preference keep the order the plan lists them in.
+  // Lerwick has two ways in, on either side of the town, and which one she uses decides
+  // which camera is worth opening first. From the east or south she rounds Bressay and
+  // passes Kirkabister Ness, the light on the south side of the sound. From the north she
+  // never goes near it, and the camera at the north end of the harbour is the one she
+  // crosses. Getting this wrong sends a reader to a window looking at empty water for the
+  // one quarter of an hour that mattered.
+  const camOrder = (cams, alongside, fromNorth) => {
+    const side = fromNorth ? "north" : "south";
+    const rank = c => {
+      if (alongside) return c.best === "alongside" ? 0 : c.best ? 2 : 1;
+      if (c.entrance) return c.entrance === side ? 0 : 3;   // the wrong entrance is useless
+      if (c.best === "approach") return 1;
+      return c.best ? 2 : 1.5;
+    };
+    return cams.map((c, i) => [rank(c), i, c])
+               .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+               .map(x => x[2]);
+  };
   let cameraCard = "";
   const camPort = (leg.inPort && (leg.inPort.cameras || []).length) ? leg.inPort
                 : (nextPort && (nextPort.cameras || []).length
@@ -2546,15 +2617,18 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   if (camPort) {
     const alongside = camPort === leg.inPort;
     const off = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
+    // About a mile of slack, so a ship drifting either side of the latitude does not make
+    // the list flip back and forth between refreshes.
+    const fromNorth = !alongside && p.lat > camPort.lat + 0.02;
     cameraCard = wideCard(`Watch her into ${camPort.name}`, `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
         ${alongside
           ? `She is alongside in ${camPort.name} now.`
-          : `She is ${Math.round(off)} nm off ${camPort.name} and closing.`}
+          : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line and closing.`}
         These are other people's cameras, looking at the quays — they open in their own
         windows, nothing here is copied or embedded. Whether she is in the frame is luck.
       </div>
-      <ul class="log">${camPort.cameras.map(c => `
+      <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth).map(c => `
         <li><span class="ic">\u{1F4F9}</span>
           <span><a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>${
             c.view ? ` <span style="color:var(--muted)">— ${c.view}</span>` : ""}${
@@ -2762,6 +2836,14 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     </div>`, { key: "share", open: false, note: "link, QR and a ready-made message" });
 
   document.getElementById("cards").innerHTML = [
+    // The cameras go FIRST, above everything, on the few hours they exist at all.
+    //
+    // Every other card answers "where is she"; this one answers "can I see her, now". It is
+    // the only card on the page with a deadline - she passes Kirkabister Ness once, and a
+    // reader who scrolls past it has missed it. So on the approach it takes the top of the
+    // page, directly under the map, and the rest of the page shuffles down for those hours.
+    // The rest of the voyage it does not exist, and the page opens on the plan as before.
+    cameraCard,
     planCard,
     boardCard,
 
@@ -2793,7 +2875,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     progressCard,
     aheadCard,
     logCard,
-    cameraCard,
     albumCard,
     chartsCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`,

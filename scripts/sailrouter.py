@@ -283,6 +283,37 @@ class WindField:
 # ----------------------------------------------------------------- the router
 
 
+def leg_clear(a, b, is_sea, free_from=None, free_nm=6.0, sample_nm=2.0) -> bool:
+    """True when the WHOLE leg is water, not merely the point it ends on.
+
+    The search used to test the endpoint alone. Over open ocean that is the same question;
+    coming at Shetland from the west it is not. A three-hour step at eight knots is
+    twenty-four miles and Shetland is about fifteen miles across, so the search could put
+    one node in the Atlantic, the next in the North Sea, and sail her over Lerwick in
+    between - with both ends legitimately at sea. It did exactly that: a course drawn from
+    forty miles west crossed the mainland twice.
+
+    free_from is her actual position. The sea mask keeps six kilometres clear of land, so a
+    ship in or near a harbour sits inside it; samples that close to where she really is are
+    ignored, or nothing could ever leave port.
+    """
+    if not is_sea:
+        return True
+    d = nm_between(a, b)
+    if d <= 0:
+        return True
+    n = max(2, int(d / sample_nm) + 1)
+    brg = bearing(a, b)
+    for i in range(1, n + 1):
+        p = step_from(a, brg, d * i / n)
+        if is_sea(p[0], p[1]):
+            continue
+        if free_from and nm_between(p, free_from) <= free_nm:
+            continue
+        return False
+    return True
+
+
 def isochrone_route(start: tuple[float, float], goal: tuple[float, float],
                     depart: datetime, field: WindField,
                     is_sea=None, step_h: float = 3.0, max_hours: float = 240.0,
@@ -320,7 +351,11 @@ def isochrone_route(start: tuple[float, float], goal: tuple[float, float],
                     continue
                 dist = sog * step_h
                 pos = step_from((n["lat"], n["lon"]), course, dist)
+                # The endpoint first, because it is one lookup and rejects most of them,
+                # then the water in between - see leg_clear.
                 if is_sea and not is_sea(pos[0], pos[1]):
+                    continue
+                if not leg_clear((n["lat"], n["lon"]), pos, is_sea, free_from=start):
                     continue
                 candidates.append((pos, n["h"] + step_h, idx, course, tws, twa, sog))
 
