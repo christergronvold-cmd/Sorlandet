@@ -931,7 +931,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "5625157663";
+const BUILD = "8987136792";
 
 async function checkForNewBuild() {
   try {
@@ -2581,7 +2581,32 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // there while she is in the Caribbean. A camera is worth exactly one thing - watching her
   // come in - so it appears when she is inside APPROACH_NM of a port that has one, or lying
   // alongside it, and is absent the rest of the time. The page knows both from AIS.
-  const APPROACH_NM = 25;      // a few hours out, about when a ship is committed to the run in
+  // WHEN it appears is a harder question than it looks. The first rule was a plain radius -
+  // twenty-five miles - and that is wrong twice over. At five knots it puts the card up five
+  // HOURS before she is alongside, which is not a thing anyone is going to sit and watch.
+  // And it cannot tell coming in from milling about: she has eight days in hand and has been
+  // drifting around inside that radius for two of them, which would have left the card
+  // standing there for days until it meant nothing.
+  //
+  // What a reader actually wants is "she is about to come in". That is not a distance, it is
+  // a time, and it needs her to be CLOSING - so the trigger is the component of her speed
+  // that points at the port, and how many minutes of it are left.
+  const APPROACH_MIN = 40;     // minutes off, at the rate she is actually closing
+  const CLOSING_KN = 1.0;      // below this she is not coming in, she is loitering
+  const ALWAYS_NM = 3.0;       // ...but this close, show it whatever she is doing
+
+  // The rate she is closing on the port: her speed through the water resolved onto the
+  // bearing to it. Negative means she is going the other way.
+  function closingKn(from, to, cog, sog) {
+    if (!(sog > 0) || cog == null) return 0;
+    const la1 = from[0] * Math.PI / 180, la2 = to[0] * Math.PI / 180;
+    const dlon = (to[1] - from[1]) * Math.PI / 180;
+    const brg = (Math.atan2(Math.sin(dlon) * Math.cos(la2),
+                            Math.cos(la1) * Math.sin(la2) -
+                            Math.sin(la1) * Math.cos(la2) * Math.cos(dlon))
+                 * 180 / Math.PI + 360) % 360;
+    return sog * Math.cos((brg - cog) * Math.PI / 180);
+  }
 
   // Which camera goes at the top depends on where she is, because they are not
   // interchangeable. On the way in, the one that matters is the one she passes: everything
@@ -2609,11 +2634,25 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
                .map(x => x[2]);
   };
   let cameraCard = "";
+  let closing = 0, minsOut = null;
+  const coming = (() => {
+    if (waiting || !nextPort || !(nextPort.cameras || []).length || p.lat === undefined)
+      return false;
+    const off = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
+    if (off <= ALWAYS_NM) { minsOut = 0; return true; }
+    closing = closingKn([p.lat, p.lon], [nextPort.lat, nextPort.lon], p.cog_deg, p.sog_kn);
+    if (closing < CLOSING_KN) return false;          // loitering, or on her way elsewhere
+    // The fix this is computed from is not new. Out here it can be an hour and a half old,
+    // and even in good coverage the job publishes at the end of a half-hour round. So the
+    // minutes are counted from WHERE SHE HAS GOT TO BY NOW, not from where she was when
+    // somebody last heard her - otherwise the card says "forty minutes" about a ship that
+    // tied up twenty minutes ago, which is the one failure this card cannot afford.
+    const ageMin = p.seen_utc ? Math.max(0, (Date.now() - new Date(p.seen_utc)) / 6e4) : 0;
+    minsOut = Math.max(0, (off / closing) * 60 - ageMin);
+    return minsOut <= APPROACH_MIN;
+  })();
   const camPort = (leg.inPort && (leg.inPort.cameras || []).length) ? leg.inPort
-                : (nextPort && (nextPort.cameras || []).length
-                   && !waiting && p.lat !== undefined
-                   && nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]) <= APPROACH_NM)
-                  ? nextPort : null;
+                : coming ? nextPort : null;
   if (camPort) {
     const alongside = camPort === leg.inPort;
     const off = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
@@ -2624,9 +2663,14 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
         ${alongside
           ? `She is alongside in ${camPort.name} now.`
-          : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line and closing.`}
+          : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
+             ${N(closing)} knots — <b>about ${minsOut < 12 ? "ten minutes"
+               : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
+             out</b> at that rate. It is worth opening a window now.`}
         These are other people's cameras, looking at the quays — they open in their own
         windows, nothing here is copied or embedded. Whether she is in the frame is luck.
+        ${alongside ? "" : `Her position here was last heard ${ago(p.seen_utc)}, so she may
+        already be further in than this says.`}
       </div>
       <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth).map(c => `
         <li><span class="ic">\u{1F4F9}</span>
@@ -2642,7 +2686,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           : "These are live views only, with no archive — they cannot be wound back."}
       </div>`, {
         key: "cameras", open: true,
-        note: alongside ? "alongside now" : `${Math.round(off)} nm out` });
+        note: alongside ? "alongside now"
+                        : minsOut < 12 ? "coming in now" : `~${Math.round(minsOut / 5) * 5} min out` });
   }
 
   // ---- charts
