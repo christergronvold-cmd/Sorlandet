@@ -1054,7 +1054,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "8861602986";
+const BUILD = "7680008489";
 
 async function checkForNewBuild() {
   try {
@@ -2464,18 +2464,27 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     return " · at cruising speed";
   };
 
+  // Each tile says WHERE that forecast is for, not only when. The ladder no longer stops
+  // at her arrival - it carries on through the days she lies alongside and out onto the
+  // next leg - so "in 3 days" could be at sea, at a quay in Lerwick, or on the way to
+  // Dublin, and a wind speed means three different things in those three places.
+  const whereNote = pt => pt.where === "port" ? `in ${pt.port || ahead.to}`
+                        : pt.where === "onward" ? `to ${pt.port || ""}`
+                        : "";
   const aheadStrip = (ahead?.points || []).filter(pt => pt.hours > 0).map(pt => `
     <div><b class="plain">${pt.hours >= 48 ? `in ${Math.round(pt.hours / 24)} days` : `in ${pt.hours} h`}</b>
       <div class="ic">${WMO[pt.weather_code] || "🧭"}</div>
       <b class="plain" style="font-size:13px;color:var(--ink)">${N(pt.wind_ms, 0)}<span style="font-weight:400"> m/s</span></b>
       ${compass(pt.wind_dir)}<br>
-      <span style="color:var(--muted)">${pt.wave_m != null ? `${N(pt.wave_m)} m` : "–"}</span></div>`).join("");
+      <span style="color:var(--muted)">${pt.wave_m != null ? `${N(pt.wave_m)} m` : "–"}</span>${
+        whereNote(pt) ? `<br><span style="color:var(--muted);font-size:11px">${
+          whereNote(pt)}</span>` : ""}</div>`).join("");
 
   const aheadCard = aheadStrip ? wideCard(
     `On the way to ${ahead.to}`,
     `<div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
        ${Math.round(ahead.distance_nm)} nm to run${paceNote(ahead)} · forecast for where she
-       will be, not where she is${
+       will be, not where she is — including the days she is alongside${
          (ahead.points || []).some(x => x.hours > 120)
            ? " · beyond five days it is an outlook, not a forecast" : ""}
      </div><div class="fc">${aheadStrip}</div>`) : "";

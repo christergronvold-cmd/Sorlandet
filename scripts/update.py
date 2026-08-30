@@ -1133,11 +1133,56 @@ def positions_ahead(route: list, distance_at, hours: list, wait_h: float = 0.0) 
             if run + leg >= want:
                 f = (want - run) / leg if leg else 0
                 a, b = route[i], route[i + 1]
-                out.append({"hours": h,
+                out.append({"hours": h, "where": "sea",
                             "lat": round(a[0] + (b[0] - a[0]) * f, 4),
                             "lon": round(a[1] + (b[1] - a[1]) * f, 4)})
                 break
             run += leg
+    return out
+
+
+def positions_after_arrival(port: dict, ports: list, hours: list) -> list:
+    """Where she will be once this leg is over: alongside, then on her way again.
+
+    The ladder used to stop dead at her own arrival, and the card with it. Thirty miles off
+    Lerwick that left a single tile six hours out - the forecast for the week she is
+    actually going to spend there simply vanished, at the moment it became most useful.
+    A family looking at the coming days wants the weather where she will BE, and for four
+    of those days that is a quay in Shetland.
+
+    After she sails the plan is all we have: no course has been routed for the next leg
+    yet, so the position is walked along the straight line to the port after this one at
+    her cruising speed. Each point says which of the three it is, so the page can too.
+    """
+    if not hours:
+        return []
+    here = (float(port["lat"]), float(port["lon"]))
+    nxt = None
+    for i, q in enumerate(ports):
+        if q is port and i + 1 < len(ports):
+            nxt = ports[i + 1]
+            break
+    depart = None
+    if port.get("depart"):
+        try:
+            depart = parse_iso(port["depart"] + "T12:00:00Z")
+        except Exception:
+            depart = None
+
+    out = []
+    for h in hours:
+        when = now_utc() + timedelta(hours=h)
+        if depart and nxt and when > depart:
+            goal = (float(nxt["lat"]), float(nxt["lon"]))
+            total = nm_between(here, goal)
+            run = (when - depart).total_seconds() / 3600 * CRUISE_KN
+            f = min(1.0, run / total) if total else 1.0
+            out.append({"hours": h, "where": "onward", "port": nxt["name"],
+                        "lat": round(here[0] + (goal[0] - here[0]) * f, 4),
+                        "lon": round(here[1] + (goal[1] - here[1]) * f, 4)})
+        else:
+            out.append({"hours": h, "where": "port", "port": port["name"],
+                        "lat": round(here[0], 4), "lon": round(here[1], 4)})
     return out
 
 
@@ -1622,13 +1667,19 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
             if distance_at(h) >= legs:
                 eta_h = h
                 break
-        # Trim the ladder to this leg: never past her own arrival, nor past what the
-        # weather models will answer for.
-        limit = min(AHEAD_MAX_HOURS, eta_h + wait_h + 12)
-        hours = [h for h in AHEAD_LADDER if h <= limit]
+        # The ladder runs as far as the weather models will answer for, and no longer stops
+        # at her arrival: the hours after she gets there are spent at the quay, and the
+        # forecast for those is the one a family reads on a Wednesday to know what kind of
+        # week she is having. eta_h is still worked out - the card uses it - but it no
+        # longer truncates the ladder.
+        hours = [h for h in AHEAD_LADDER if h <= AHEAD_MAX_HOURS]
         if not hours:
             hours = [AHEAD_LADDER[0]]
         points = positions_ahead(route, distance_at, hours, wait_h)
+        done = {q["hours"] for q in points}
+        points += positions_after_arrival(port, plan.get("ports") or [],
+                                          [h for h in hours if h not in done])
+        points.sort(key=lambda q: q["hours"])
         ahead = fetch_ahead(points)
         write_json(AHEAD, {
             "generated_utc": iso(now_utc()),
