@@ -1,27 +1,27 @@
 {
- "generated_utc": "2026-08-30T15:09:20Z",
+ "generated_utc": "2026-08-30T15:38:51Z",
  "to": "Lerwick",
  "country": "United Kingdom",
- "distance_nm": 30.0,
- "direct_nm": 18.8,
+ "distance_nm": 30.6,
+ "direct_nm": 19.4,
  "route_basis": "course",
- "winding": 1.6,
+ "winding": 1.57,
  "tacks": [],
- "speed_kn": 5.1,
- "vmg_kn": 3.19,
+ "speed_kn": 4.6,
+ "vmg_kn": 2.92,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good",
  "due_utc": "2026-09-07T12:00:00Z",
- "eta_utc": "2026-08-30T21:09:20Z",
+ "eta_utc": "2026-08-30T22:38:51Z",
  "route": [
   [
-   60.1095,
-   -0.5234
+   60.0946,
+   -0.5073
   ],
   [
-   59.9908,
-   -0.7223
+   59.9773,
+   -0.7037
   ],
   [
    60.0,
@@ -36,16 +36,30 @@
   {
    "hours": 0,
    "time_utc": "2026-08-30T15:00:00Z",
-   "lat": 60.1095,
-   "lon": -0.5234,
+   "lat": 60.0946,
+   "lon": -0.5073,
    "wind_ms": 4.0,
    "wind_dir": 40,
    "gust_ms": 5.4,
-   "temp_c": 11.9,
+   "temp_c": 12.0,
    "weather_code": 1,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 1.06,
+   "wave_dir": 23,
+   "wave_period_s": 6.35
+  },
+  {
+   "hours": 6,
+   "time_utc": "2026-08-30T21:00:00Z",
+   "lat": 60.1059,
+   "lon": -1.1308,
+   "wind_ms": 3.6,
+   "wind_dir": 76,
+   "gust_ms": 5.0,
+   "temp_c": 11.4,
+   "weather_code": 3,
+   "wave_m": 0.38,
+   "wave_dir": 56,
+   "wave_period_s": 5.2
   }
  ]
 }
