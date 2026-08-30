@@ -1,6 +1,59 @@
 {
- "generated_utc": "2026-08-30T12:10:10Z",
+ "generated_utc": "2026-08-30T12:39:47Z",
  "to": "Lerwick",
- "note": "already within 15 nm of the port",
- "points": []
+ "depart_utc": "2026-08-30T12:39:46Z",
+ "reached": true,
+ "hours": 7.7,
+ "plan_hours": 191.3,
+ "direct_nm": 15.2,
+ "sailed_nm": 32.6,
+ "tacks": [],
+ "wind_kn": {
+  "min": 8.5,
+  "max": 8.5
+ },
+ "points": [
+  {
+   "lat": 60.1881,
+   "lon": -0.6395,
+   "t": "2026-08-30T12:39:46Z",
+   "hours": 0.0,
+   "course": null,
+   "twa": null,
+   "tws": null,
+   "sog": null
+  },
+  {
+   "lat": 60.0019,
+   "lon": -0.7051,
+   "t": "2026-08-30T15:39:46Z",
+   "hours": 3.0,
+   "course": 190,
+   "twa": 161,
+   "tws": 8.5,
+   "sog": 3.8
+  },
+  {
+   "lat": 60.0,
+   "lon": -1.1,
+   "t": "2026-08-30T18:46:57Z",
+   "hours": 6.1,
+   "course": null,
+   "twa": null,
+   "tws": null,
+   "sog": null,
+   "final": true
+  },
+  {
+   "lat": 60.155,
+   "lon": -1.145,
+   "t": "2026-08-30T20:19:48Z",
+   "hours": 7.7,
+   "course": null,
+   "twa": null,
+   "tws": null,
+   "sog": null,
+   "final": true
+  }
+ ]
 }
