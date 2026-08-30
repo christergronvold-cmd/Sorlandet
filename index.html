@@ -349,7 +349,6 @@
     <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
     <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
     <button id="sattoggle" title="Swap the map for the actual satellite picture of her weather">Satellite</button>
-    <button id="charttoggle" title="Lay the sea marks over the map - buoys, beacons and lights">Sea marks</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
     <button id="nowbtn" title="Jump back to now" disabled>Now</button>
@@ -985,7 +984,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "8481657230";
+const BUILD = "5896360755";
 
 async function checkForNewBuild() {
   try {
@@ -1041,26 +1040,22 @@ baseLayer.addTo(map);
 const seamarks = L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {
   maxZoom: 18, opacity: 0.95, attribution: "© OpenSeaMap"
 });
-let shipAt = null;
+seamarks.addTo(map);
 
-// Sea marks are drawn at chart scale, not at map scale. Switched on with the whole of
-// Shetland on the screen the layer loads correctly and shows nothing you can see: the
-// tile covering Lerwick at zoom 9 holds two marks the size of a full stop, and the light
-// sectors and buoy names only appear from about zoom 12. The button therefore looked
-// broken - it was working, there was simply nothing to see at that scale.
-//
-// So switching it on takes the map in to where the marks exist, centred on her, and the
-// button says so if you zoom back out.
-const SEAMARK_ZOOM = 13;
-
-function seamarkLabel() {
-  const b = document.getElementById("charttoggle");
-  if (!b) return;
-  const tooFar = show.chart && map.getZoom() < SEAMARK_ZOOM - 1;
-  b.textContent = show.chart ? (tooFar ? "Sea marks — zoom in" : "Sea marks ✓") : "Sea marks";
-  b.classList.toggle("on", show.chart);
-}
-map.on("zoomend", seamarkLabel);
+// They are simply ON, with no control. They began behind a button, and the button turned
+// out to be one that usually did nothing you could see: the marks are drawn at CHART
+// scale, so the tile over Lerwick at zoom 9 carries two of them the size of a full stop,
+// and light sectors, buoy names and harbour marks only appear from about zoom 12. They
+// also live on coasts, in channels and in harbour entrances - in open water there is
+// nothing to mark, so zoomed in on her in the middle of the North Sea the layer is
+// correctly empty. A control whose answer is "nothing happened" four times out of five is
+// worse than no control. Left on it costs one transparent tile per tile of map, and it is
+// there the moment it has anything to say - which is when she is in among the islands.
+// Worth knowing, if it ever looks like it is doing nothing: sea marks are drawn at CHART
+// scale. The tile covering Lerwick at zoom 9 holds two marks the size of a full stop; the
+// light sectors, buoy names and harbour marks appear from about zoom 12. And they are on
+// coasts, in channels and in harbour entrances - in open water there is nothing to mark,
+// so zoomed in on her in the middle of the North Sea the layer is correctly empty.
 
 const shipIcon = (heading, ghost = false) => L.divIcon({
   className: ghost ? "ship-marker ghost-marker" : "ship-marker",
@@ -1100,8 +1095,7 @@ const scaleColor = (v, table) => {
 };
 
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true, weather: false, sat: false,
-                            chart: false };
+let gridIndex = 0, show = { wind: true, waves: true, weather: false, sat: false };
 
 // ---------------------------------------------------------------- satellite imagery
 // NASA's Global Imagery Browse Services serves the actual pictures, free and without a
@@ -1280,6 +1274,7 @@ function drawSatellite() {
 
   if (!show.sat) {
     if (!map.hasLayer(baseLayer)) baseLayer.addTo(map);
+    if (!map.hasLayer(seamarks)) seamarks.addTo(map);
     badge.hidden = true;
     satBackoff = 0;
     return;
@@ -1319,6 +1314,8 @@ function drawSatellite() {
 
   satLayer.addTo(map);
   if (map.hasLayer(baseLayer)) map.removeLayer(baseLayer);
+  // Buoy symbols over a whole-continent weather picture are noise, not pilotage.
+  if (map.hasLayer(seamarks)) map.removeLayer(seamarks);
 
   // Coastlines, or a cloud picture over open water is impossible to place. GIBS wants a
   // plain date for this one, whatever the imagery underneath is stamped with.
@@ -1652,25 +1649,12 @@ document.getElementById("windtime").addEventListener("input", e => {
 });
 [["windtoggle", "wind", "Wind"], ["wavetoggle", "waves", "Waves"],
  ["weathertoggle", "weather", "Weather"],
- ["sattoggle", "sat", "Satellite"],
- ["charttoggle", "chart", "Sea marks"]].forEach(([id, key, label]) => {
+ ["sattoggle", "sat", "Satellite"]].forEach(([id, key, label]) => {
   document.getElementById(id).addEventListener("click", e => {
     show[key] = !show[key];
     e.target.classList.toggle("on", show[key]);
     e.target.textContent = show[key] ? `${label} ✓` : label;
     if (key === "sat") { drawSatellite(); return; }
-    if (key === "chart") {
-      if (show.chart) {
-        seamarks.addTo(map);
-        if (map.getZoom() < SEAMARK_ZOOM) {
-          map.setView(shipAt || map.getCenter(), SEAMARK_ZOOM, { animate: true });
-        }
-      } else {
-        map.removeLayer(seamarks);
-      }
-      seamarkLabel();
-      return;
-    }
     drawGrids();
     if (show[key]) refreshViewportGrids();
   });
@@ -2388,7 +2372,6 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
   const nextPort = leg.to;
   if (p.lat !== undefined && !waiting) {
-    shipAt = [p.lat, p.lon];        // kept for the sea-marks zoom, below
     layers.push(L.marker([p.lat, p.lon], { icon: shipIcon(p.heading_deg ?? p.cog_deg) })
       .bindPopup(`<b>${d.ship}</b><br>${dms(p.lat, "lat")} ${dms(p.lon, "lon")}<br>${fmtTime(p.seen_utc)} UTC`)
       .addTo(map));
@@ -2763,6 +2746,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     const side = fromNorth ? "north" : "south";
     const rank = c => {
       if (alongside) return c.best === "alongside" ? 0 : c.best ? 2 : 1;
+      // One camera outranks the entrance question entirely: the Boating Club view is
+      // steerable, and Andy at Shetland Webcams uses it to follow tall ships in and to get
+      // close-ups of the crew at the rail. A camera somebody is pointing at her beats a
+      // fixed one she may or may not cross, whichever way she comes.
+      if (c.lead) return -1;
       if (c.entrance) return c.entrance === side ? 0 : 3;   // the wrong entrance is useless
       if (c.best === "approach") return 1;
       return c.best ? 2 : 1.5;
@@ -2819,6 +2807,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
             c.by ? ` <span style="color:var(--muted)">· ${c.by}</span>` : ""}</span>
         </li>`).join("")}</ul>
       <div style="font-size:12.5px;color:var(--muted);margin-top:9px">
+        ${camPort.cameras.some(c => c.by === "Shetland Webcams")
+          ? `Cameras by <a href="https://www.shetlandwebcams.com" target="_blank"
+             rel="noopener">shetlandwebcams.com</a>, used with their permission. ` : ""}
         ${camPort.cameras.some(c => c.rewind_h)
           ? "These rewind, so an arrival can still be watched hours later."
           : "These are live views only, with no archive — they cannot be wound back."}
