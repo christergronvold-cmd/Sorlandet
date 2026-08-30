@@ -609,6 +609,21 @@ function dailyDistance(points) {
 // alongside averages a tenth of a knot; a ship passing averages her passage speed.
 const PORT_NM = 5, PORT_DWELL_H = 2.5, PORT_CALM_KN = 2.0, PORT_REJOIN_H = 6;
 
+// ...and being AT a port is not the same as being alongside in it. Sørlandet is due to
+// anchor off Lerwick for a week before she berths on 6 September, and five miles of radius
+// cannot tell the two apart: the log would have announced "Arrived Lerwick" the day she
+// dropped the hook, the plan card would have read "In port now", and the camera section
+// would have sat open for six days saying she was alongside. All of it wrong, and wrong on
+// a page a hundred and forty families read.
+//
+// Geometry can tell them apart, because a quay is where the port IS and an anchorage is
+// out in the approaches. Inside this radius she is at the berth; outside it but inside
+// PORT_NM, and not moving, she is lying at anchor.
+const BERTH_NM = 0.8;
+
+// How long she has to lie off before it counts as waiting rather than as coming in.
+const ANCHOR_WAIT_H = 6;
+
 function portStays(points, ports) {
   if (!points.length || !ports.length) return [];
   // Ports are identified by their INDEX on the route, never by name: this voyage ends where
@@ -650,7 +665,11 @@ function portStays(points, ports) {
       last.out = pt.t;
     } else {
       stays.push({ pi, port: ports[pi].name, country: ports[pi].country,
-                   in: pt.t, out: pt.t, dist: 0, span: 0 });
+                   in: pt.t, out: pt.t, dist: 0, span: 0, berthIn: null });
+    }
+    const cur = stays[stays.length - 1];
+    if (!cur.berthIn && nm([pt.lat, pt.lon], [ports[pi].lat, ports[pi].lon]) <= BERTH_NM) {
+      cur.berthIn = pt.t;                       // the first fix actually at the quay
     }
     prev = pt;
   }
@@ -660,6 +679,7 @@ function portStays(points, ports) {
     if (v.span > 0 && v.dist / v.span >= PORT_CALM_KN) return false;  // passing through
     // A stay she has not ended: the last one, with her still inside it.
     v.ended = !(i === stays.length - 1 && stillThere === v.pi);
+    v.berthed = !!v.berthIn;
     return true;
   });
 }
@@ -667,8 +687,20 @@ function portStays(points, ports) {
 function portCalls(points, ports) {
   const out = [];
   for (const v of portStays(points, ports)) {
-    out.push({ t: v.in, ic: "\u{1F3D9}\uFE0F", port: v.port, clock: true,
-               text: `Arrived ${v.port}, ${v.country}` });
+    // She lay off before she came in, and both are worth a line - the week at anchor is
+    // most of what the families will actually watch. But only if she really WAITED: every
+    // arrival crosses the five-mile radius an hour or so before it reaches the quay, and
+    // an hour of running in is not an anchorage. Six hours is.
+    const waited = v.berthIn && v.berthIn !== v.in &&
+      (new Date(v.berthIn) - new Date(v.in)) >= ANCHOR_WAIT_H * 36e5;
+    if (waited) {
+      out.push({ t: v.in, ic: "\u2693", port: v.port, clock: true,
+                 text: `Anchored off ${v.port}` });
+    }
+    out.push({ t: v.berthIn || v.in, ic: v.berthed ? "\u{1F3D9}\uFE0F" : "\u2693",
+               port: v.port, clock: true,
+               text: v.berthed ? `Arrived ${v.port}, ${v.country}`
+                               : `Anchored off ${v.port}, ${v.country}` });
     if (v.ended) {
       out.push({ t: v.out, ic: "\u26F5", port: v.port, clock: true,
                  text: `Left ${v.port}` });
@@ -697,13 +729,16 @@ function voyageState(points, ports, todayISO) {
   const stays = portStays(points || [], ports);
   let last = null;
   for (const v of stays) if (last === null || v.pi >= last.pi) last = v;
-  const settle = (i, ended) => ({
+  const settle = (i, ended, berthed) => ({
     to: ports[i + 1] || null,
     inPort: ended ? null : ports[i],
+    // Alongside, or lying off it waiting for a berth. The page must never say the first
+    // when it means the second - see BERTH_NM.
+    berthed: !ended && berthed !== false,
     done: ended ? i + 1 : i,
     basis: last ? "track" : "plan",
   });
-  if (last) return settle(last.pi, last.ended);
+  if (last) return settle(last.pi, last.ended, last.berthed);
 
   // Nothing observed. Fall back to the calendar - but read the same shape out of it, so
   // the fallback cannot say she is alongside in Lerwick and also on her way to Lerwick.
@@ -1019,7 +1054,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "5145425408";
+const BUILD = "2032691828";
 
 async function checkForNewBuild() {
   try {
@@ -2428,7 +2463,14 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
 
     let rows = "";
     if (inPort) {
-      rows += row("In port now", `<b>${inPort.name}</b>, ${inPort.country}`);
+      // Alongside and lying at anchor off the place are not the same fact, and she is due
+      // to spend the better part of a week doing the second before she does the first.
+      rows += leg.berthed
+        ? row("In port now", `<b>${inPort.name}</b>, ${inPort.country}`)
+        : row("At anchor off", `<b>${inPort.name}</b>, ${inPort.country}`);
+      if (!leg.berthed && inPort.arrive) {
+        rows += row("Alongside", `${dayName(inPort.arrive)} (planned)`);
+      }
       rows += row("Departs", dayName(inPort.depart));
     } else if (from && nextPort) {
       rows += row("Leg", `${from.name} → <b>${nextPort.name}</b>`);
@@ -2800,7 +2842,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     if (waiting || !nextPort || !(nextPort.cameras || []).length || p.lat === undefined)
       return false;
     const off = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
-    if (off <= ALWAYS_NM) { minsOut = 0; return true; }
+    // ...and the same for the floor: within three miles she is about to come in, UNLESS
+    // she is anchored there and going nowhere.
+    const anchored = leg.inPort === nextPort && !leg.berthed && !(p.sog_kn > CLOSING_KN);
+    if (off <= ALWAYS_NM && !anchored) { minsOut = 0; return true; }
     closing = closingKn([p.lat, p.lon], [nextPort.lat, nextPort.lon], p.cog_deg, p.sog_kn);
     if (closing < CLOSING_KN) return false;          // loitering, or on her way elsewhere
     // The fix this is computed from is not new. Out here it can be an hour and a half old,
@@ -2812,7 +2857,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     minsOut = Math.max(0, (off / closing) * 60 - ageMin);
     return minsOut <= APPROACH_MIN;
   })();
-  const camPort = (leg.inPort && (leg.inPort.cameras || []).length) ? leg.inPort
+  // Lying at anchor is not "alongside", and it must not hold the section open. She is due
+  // to swing off Lerwick for the better part of a week; the ALWAYS_NM floor below would
+  // have kept the cameras on the page every one of those days until nobody looked at them.
+  const camPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length)
+                    ? leg.inPort
                 : coming ? nextPort : null;
   // Hoisted: the live view above the map is built further down and needs the same three
   // answers. Block-scoped inside the card, they were simply missing there - and a
