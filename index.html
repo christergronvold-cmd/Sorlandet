@@ -98,6 +98,40 @@
     letter-spacing:.06em; text-transform:uppercase;
   }
   .wgroup + .wgroup{padding-top:2px}
+  /* The live view, above the map, on the hour or so she is actually coming in. It is the
+     only thing on the page that is worth more than the map itself, and only then. */
+  .feed{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    box-shadow:var(--shadow); overflow:hidden; margin:0 0 12px;
+  }
+  .feed .bar{
+    display:flex; align-items:center; gap:8px; padding:9px 12px;
+    border-bottom:1px solid var(--line); font-size:13px;
+  }
+  .feed .bar b{font-size:13.5px}
+  .feed .live{
+    display:inline-flex; align-items:center; gap:5px; font-weight:650; font-size:11.5px;
+    letter-spacing:.04em; text-transform:uppercase; color:#b4231f;
+  }
+  .feed .live i{
+    width:7px; height:7px; border-radius:50%; background:#b4231f; font-style:normal;
+    animation:pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .feed .bar .when{margin-left:auto; color:var(--muted); white-space:nowrap}
+  .feed .stage{position:relative; aspect-ratio:16/9; background:#0b1118}
+  .feed .stage iframe{width:100%; height:100%; border:0; display:block}
+  .feed .stage .stand{
+    position:absolute; inset:0; display:flex; flex-direction:column; gap:10px;
+    align-items:center; justify-content:center; text-align:center; padding:18px;
+    color:#c8d6e2;
+  }
+  .feed .stage .stand p{margin:0; font-size:13px; max-width:34em; line-height:1.5}
+  .feed .stage .stand a{
+    display:inline-block; padding:9px 16px; border-radius:999px; font-weight:650;
+    font-size:14px; background:var(--accent); color:#fff; text-decoration:none;
+  }
+  .feed .foot{padding:8px 12px; font-size:12px; color:var(--muted)}
   #map{
     height:min(56vh,480px); border-radius:14px; border:1px solid var(--line);
     box-shadow:var(--shadow); background:var(--panel); z-index:0;
@@ -342,6 +376,7 @@
     share icon, then “Add to Home Screen”.
   </div>
   <div class="kpi" id="kpi" hidden></div>
+  <div class="feed" id="feed" hidden></div>
   <div id="map"></div>
 
   <div class="windbar" id="windbar" hidden>
@@ -984,7 +1019,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "5896360755";
+const BUILD = "5145425408";
 
 async function checkForNewBuild() {
   try {
@@ -2779,13 +2814,18 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   })();
   const camPort = (leg.inPort && (leg.inPort.cameras || []).length) ? leg.inPort
                 : coming ? nextPort : null;
+  // Hoisted: the live view above the map is built further down and needs the same three
+  // answers. Block-scoped inside the card, they were simply missing there - and a
+  // ReferenceError inside the render leaves the whole page half-drawn without a word.
+  let alongside = false, fromNorth = false, camOff = 0;
   if (camPort) {
-    const alongside = camPort === leg.inPort;
-    const off = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
+    alongside = camPort === leg.inPort;
+    const off = camOff = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
     // About a mile of slack, so a ship drifting either side of the latitude does not make
     // the list flip back and forth between refreshes.
-    const fromNorth = !alongside && p.lat > camPort.lat + 0.02;
-    cameraCard = wideCard(`Watch her into ${camPort.name}`, `
+    fromNorth = !alongside && p.lat > camPort.lat + 0.02;
+    // The live view above the map is the headline now, so this is the rest of them.
+    cameraCard = wideCard(`More cameras in ${camPort.name}`, `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
         ${alongside
           ? `She is alongside in ${camPort.name} now.`
@@ -2793,8 +2833,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
              ${N(closing)} knots — <b>about ${minsOut < 12 ? "ten minutes"
                : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
              out</b> at that rate. It is worth opening a window now.`}
-        These are other people's cameras, looking at the quays — they open in their own
-        windows, nothing here is copied or embedded. Whether she is in the frame is luck.
+        These are other people's cameras, looking at the same water from other angles, and
+        they open in their own windows. Whether she is in the frame is luck.
         ${alongside ? "" : `Her position here was last heard ${ago(p.seen_utc)}, so she may
         already be further in than this says.`}
       </div>
@@ -2817,6 +2857,44 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         key: "cameras", open: true,
         note: alongside ? "alongside now"
                         : minsOut < 12 ? "coming in now" : `~${Math.round(minsOut / 5) * 5} min out` });
+  }
+
+  // ---- the live view, above the map
+  //
+  // The one thing on this page worth more than the map, for the one hour it is worth
+  // anything at all. Same trigger as the camera list below: she has to be coming in.
+  //
+  // Shetland Webcams protect their streams - third parties were embedding them to sell
+  // advertising against, so the direct addresses are closed. Andy has offered to whitelist
+  // this domain. Until that is in place a camera has no "stream" in the plan, and the box
+  // shows what it honestly can: which camera to open and a button that opens it in their
+  // own window, where their sponsors and their donate link are. The day a stream address
+  // exists it goes in ports.json and the same box plays it - nothing else changes.
+  const feedEl = document.getElementById("feed");
+  if (camPort) {
+    const lead = camOrder(camPort.cameras, alongside, fromNorth)[0];
+    const when = alongside ? "alongside now"
+      : minsOut < 12 ? "coming in now" : `about ${Math.round(minsOut / 5) * 5} min out`;
+    feedEl.innerHTML = `
+      <div class="bar">
+        <span class="live"><i></i>live</span>
+        <b>${lead.name}</b>
+        <span class="when">${when}</span>
+      </div>
+      <div class="stage">${lead.stream
+        ? `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
+                  referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`
+        : `<div class="stand">
+             <p>${lead.view ? lead.view[0].toUpperCase() + lead.view.slice(1) + "." : ""}
+                It opens in its own window at Shetland Webcams.</p>
+             <a href="${lead.url}" target="_blank" rel="noopener">Watch ${lead.name}</a>
+           </div>`}</div>
+      <div class="foot">${lead.by ? `${lead.by} · ` : ""}whether she is in the frame is
+        luck — the cameras below look at the same water from other angles.</div>`;
+    feedEl.hidden = false;
+  } else {
+    feedEl.hidden = true;
+    feedEl.innerHTML = "";
   }
 
   // ---- charts
