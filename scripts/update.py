@@ -550,8 +550,24 @@ def fetch_weather(lat: float, lon: float) -> dict:
 # --------------------------------------------------------- wind and wave grids
 
 
-GRID_CELLS = int(os.environ.get("GRID_CELLS", "5"))        # 5 x 5 points
-GRID_SPAN_NM = float(os.environ.get("GRID_SPAN_NM", "360"))  # box side in nautical miles
+# The page used to thicken this grid in the browser: every reader's map fetched its own
+# lattice from Open-Meteo for whatever was on screen. Ninety locations, four variables and
+# five days per fetch, on every pan and on every five-minute refresh, from every open tab -
+# and on 30 August it spent the whole daily allowance and came back 429 for the rest of the
+# day. The wind simply vanished off the map.
+#
+# One fetch here serves all hundred and forty families instead. So this grid is now dense
+# enough to be the only one: 9 x 9 over 300 nm is a point every 37 miles, which is what the
+# map shows when it is looking at her.
+GRID_CELLS = int(os.environ.get("GRID_CELLS", "9"))        # 9 x 9 points
+GRID_SPAN_NM = float(os.environ.get("GRID_SPAN_NM", "300"))  # box side in nautical miles
+
+# ...and it is not refetched every round. A forecast is reissued every few hours, and she
+# makes 40 nm in seven of them; asking every 29 minutes buys nothing and costs eighty-one
+# locations a time. Refetch when the file is old, or when she has sailed out of the middle
+# of it - whichever comes first.
+GRID_MAX_AGE_MIN = float(os.environ.get("GRID_MAX_AGE_MIN", "75"))
+GRID_MOVE_NM = float(os.environ.get("GRID_MOVE_NM", "40"))
 GRID_HOURS = int(os.environ.get("GRID_HOURS", "72"))       # how far ahead
 GRID_STEP = int(os.environ.get("GRID_STEP", "1"))          # hours between steps
 
@@ -601,6 +617,29 @@ def _series(values: list, idx: list[int], nd: int | None) -> list:
         v = values[k] if k < len(values) and values[k] is not None else None
         out.append(v if v is None else (int(v) if nd is None else round(v, nd)))
     return out
+
+
+def _grid_still_good(path, lat: float, lon: float) -> str | None:
+    """Why the grid on disk does not need replacing, or None if it does.
+
+    Age and distance, nothing else. If the file is unreadable or has no centre - which is
+    every file written before this existed - it is refetched, once.
+    """
+    try:
+        old = read_json(path, None)
+        if not old or not old.get("cells"):
+            return None
+        centre = old.get("centre")
+        if not centre:
+            return None
+        age_min = (now_utc() - parse_iso(old["generated_utc"])).total_seconds() / 60
+        moved = nm_between((float(centre[0]), float(centre[1])), (lat, lon))
+        if age_min >= GRID_MAX_AGE_MIN or moved >= GRID_MOVE_NM:
+            return None
+        return (f"is {age_min:.0f} min old and she has moved {moved:.0f} nm from its "
+                f"middle - kept")
+    except Exception:
+        return None
 
 
 def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
@@ -2004,8 +2043,13 @@ def main() -> int:
     sun = fetch_sun_moon(lat, lon, points)
 
     for kind, path in (("wind", WIND), ("waves", WAVES)):
+        keep = _grid_still_good(path, lat, lon)
+        if keep:
+            print(f"  -> {kind} grid {keep}")
+            continue
         grid = fetch_grid(lat, lon, kind)
         if grid:
+            grid["centre"] = [round(lat, 3), round(lon, 3)]
             write_json(path, grid)
         else:
             print(f"  -> no {kind} grid this run, keeping the previous one")

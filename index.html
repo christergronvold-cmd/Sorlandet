@@ -1054,7 +1054,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "2032691828";
+const BUILD = "8861602986";
 
 async function checkForNewBuild() {
   try {
@@ -1701,6 +1701,19 @@ function setupGrids(wind, waves) {
   gridIndex = (gridPinned && selectedTime) ? indexForTime(times, selectedTime)
                                            : nowIndexOf(times);
   slider.value = gridIndex;
+  // What the reader is actually looking at: how many points, and when the job fetched them.
+  const live = document.getElementById("windlive");
+  if (live) {
+    const g = wind || waves;
+    const cells = (g && g.cells || []).length;
+    live.hidden = !cells;
+    live.textContent = `${cells} point grid`;
+    live.title = g && g.generated_utc
+      ? `Fetched once for everyone by the job at ${
+          g.generated_utc.replace("T", " ").replace("Z", " UTC")}, centred on where she `
+        + `was then. No forecast request is made by your browser.`
+      : "The forecast grid the job writes along with her position.";
+  }
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
   drawGrids();
   drawRewind();
@@ -1726,7 +1739,6 @@ document.getElementById("windtime").addEventListener("input", e => {
     e.target.textContent = show[key] ? `${label} ✓` : label;
     if (key === "sat") { drawSatellite(); return; }
     drawGrids();
-    if (show[key]) refreshViewportGrids();
   });
 });
 
@@ -2049,55 +2061,7 @@ document.getElementById("nowbtn").addEventListener("click", () => {
 });
 
 
-// ---------------------------------------------------- grid that follows the map
-// The files written by the job cover a fixed 360 x 360 nm box around the ship, which
-// looks dense when zoomed out and sparse when zoomed in. So when the map moves, the
-// page asks Open-Meteo for a grid matching what is actually on screen. The file grid
-// stays the fallback: it works offline and shows instantly.
-// The glyphs are all drawn into one canvas now (see GlyphLayer), so the old reason to keep
-// the grid small - one DOM node per arrow, repositioned on every pan - is gone. Density is
-// now set by what a reader can tell apart: a glyph stack is about 40 px wide and 50 px
-// tall, so aim for one every 64 px across and 78 px down.
-//
-// The map's shape matters as much as its size. A phone map is 356 x 471 and wants a square
-// grid; a desktop map is 1006 x 478 and wants many columns and few rows. A square grid on
-// the desktop put nine rows into 478 px and the temperatures landed on the wave heights.
-// The cap on the total is for the API - that many points go into one Open-Meteo request -
-// not for the browser, which no longer cares.
-const GLYPH_X = 64, GLYPH_Y = 78, MAX_NODES = 84;
 
-function gridShape() {
-  const size = map.getSize();
-  let cols = Math.min(14, Math.max(3, Math.round(size.x / GLYPH_X)));
-  let rows = Math.min(10, Math.max(3, Math.round(size.y / GLYPH_Y)));
-  while (cols * rows > MAX_NODES) { if (cols >= rows) cols--; else rows--; }
-  return { rows, cols };
-}
-const viewportCache = new Map();
-let viewportTimer = null, viewportLive = false;
-
-// Spaced evenly across the screen, not evenly across latitude. Those are the same thing
-// only on a small map. Zoomed out to the whole voyage - 10 N to 62 N - Mercator stretches
-// the top of the map to twice the scale of the bottom, so an even grid of latitudes came
-// out as widely spaced rows in the tropics and rows almost touching up by Norway. The
-// density target is a pixel distance, so ask the projection for pixel positions.
-function gridFromScreen(map, rows, cols) {
-  const size = map.getSize();
-  // The floors keep the first cell clear of Leaflet's zoom control in the top-left corner,
-  // and keep the bottom row's wave height from being cut off by the edge of the map.
-  const padX = Math.max(size.x * 0.08, 52), padY = Math.max(size.y * 0.08, 44);
-  const stepX = cols > 1 ? (size.x - 2 * padX) / (cols - 1) : 0;
-  const stepY = rows > 1 ? (size.y - 2 * padY) / (rows - 1) : 0;
-  const lats = [], lons = [];
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      const ll = map.containerPointToLatLng([padX + j * stepX, padY + i * stepY]);
-      lats.push(Math.max(-89, Math.min(89, ll.lat)).toFixed(3));
-      lons.push((((ll.lng + 180) % 360 + 360) % 360 - 180).toFixed(3));
-    }
-  }
-  return { lats, lons };
-}
 
 // The slider spans REWIND_HOURS behind us as well as the forecast ahead, so the same
 // arrows can be wound back to the weather she actually sailed through.
@@ -2126,88 +2090,19 @@ function nowIndexOf(times) {
   return best;
 }
 
-async function fetchViewportGrid(kind, bounds) {
-  const { rows, cols } = gridShape();
-  const { lats, lons } = gridFromScreen(map, rows, cols);
-  const base = kind === "wind"
-    ? "https://api.open-meteo.com/v1/forecast?"
-    : "https://marine-api.open-meteo.com/v1/marine?";
-  const params = new URLSearchParams({
-    latitude: lats.join(","), longitude: lons.join(","),
-    hourly: kind === "wind" ? "wind_speed_10m,wind_direction_10m,weather_code,temperature_2m"
-                            : "wave_height,wave_direction,wave_period",
-    past_days: String(Math.max(1, Math.ceil(REWIND_HOURS / 24))),
-    forecast_days: String(Math.max(2, Math.ceil((AHEAD_HOURS_UI + 48) / 24))), timezone: "UTC"
-  });
-  if (kind === "wind") params.set("wind_speed_unit", "ms");
-
-  const res = await fetch(base + params.toString());
-  if (!res.ok) throw new Error(`${kind} grid: HTTP ${res.status}`);
-  const data = await res.json();
-  const blocks = Array.isArray(data) ? data : [data];
-  const allTimes = blocks[0]?.hourly?.time || [];
-  if (!allTimes.length) throw new Error(`${kind} grid: no hourly times`);
-  const { idx, times } = pickTimes(allTimes);
-
-  const cells = [];
-  blocks.forEach(b => {
-    const h = b.hourly || {};
-    if (kind === "wind") {
-      if (!h.wind_speed_10m) return;
-      cells.push({
-        lat: +(+b.latitude).toFixed(3), lon: +(+b.longitude).toFixed(3),
-        ws: idx.map(k => h.wind_speed_10m[k] ?? null),
-        wd: idx.map(k => h.wind_direction_10m?.[k] ?? null),
-        wc: idx.map(k => h.weather_code?.[k] ?? null),
-        t2: idx.map(k => h.temperature_2m?.[k] ?? null)
-      });
-    } else {
-      if (!h.wave_height || h.wave_height.every(v => v === null)) return;   // land cell
-      cells.push({
-        lat: +(+b.latitude).toFixed(3), lon: +(+b.longitude).toFixed(3),
-        hs: idx.map(k => h.wave_height[k] ?? null),
-        wd: idx.map(k => h.wave_direction?.[k] ?? null),
-        tp: idx.map(k => h.wave_period?.[k] ?? null)
-      });
-    }
-  });
-  if (!cells.length) throw new Error(`${kind} grid: no usable cells`);
-  return { times, step_hours: 3, cells, viewport: true };
-}
-
-function boundsKey(b) {
-  const { rows, cols } = gridShape();
-  return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]
-    .map(v => v.toFixed(1)).join(",") + `@${rows}x${cols}`;
-}
-
-async function refreshViewportGrids() {
-  // The sky glyphs come out of the wind block (weather code and temperature live there),
-  // so Weather on its own is also a reason to fetch it.
-  if (!show.wind && !show.waves && !show.weather) return;
-  const b = map.getBounds();
-  const key = boundsKey(b);
-  const wanted = [["wind", show.wind || show.weather], ["waves", show.waves]]
-    .filter(([, on]) => on);
-
-  for (const [kind] of wanted) {
-    const cacheKey = kind + "|" + key;
-    try {
-      let grid = viewportCache.get(cacheKey);
-      if (!grid) {
-        grid = await fetchViewportGrid(kind, b);
-        viewportCache.set(cacheKey, grid);
-        if (viewportCache.size > 24) viewportCache.delete(viewportCache.keys().next().value);
-      }
-      gridData[kind] = grid;
-      viewportLive = true;
-    } catch (err) {
-      console.warn(err);                      // keep whatever we already had
-    }
-  }
-  syncSlider();
-  drawGrids();
-}
+// The grid comes from a FILE, and only from a file.
+//
+// It used to be thickened in the browser: every reader's map asked Open-Meteo for its own
+// lattice of whatever was on screen - ninety locations, four variables, five days - on
+// every pan and on every five-minute refresh, from every open tab. On 30 August that spent
+// the whole daily allowance and the service answered 429 for the rest of the day, which on
+// the map looked like the wind vanishing: arrows drew during a zoom and disappeared the
+// moment the gesture ended.
+//
+// The job fetches it once instead, for everybody: 9 x 9 over 300 nm centred on her, a
+// point every 37 miles, refreshed when it is over an hour old or she has sailed 40 nm out
+// of the middle of it. One request serves a hundred and forty families rather than one
+// request serving one map view, and there is no allowance left to spend.
 
 // Nearest step to a given moment. Used whenever the time axis changes underneath us:
 // the file grids and the viewport grids do not start at the same hour, so carrying the
@@ -2222,26 +2117,6 @@ function indexForTime(times, isoTime) {
   }
   return best;
 }
-
-function syncSlider() {
-  const times = (gridData.wind || gridData.waves)?.times || [];
-  const slider = document.getElementById("windtime");
-  if (!times.length) return;
-  slider.max = times.length - 1;
-  // Keep the moment, not the index: re-anchor to now, or to whatever hour the user chose.
-  gridIndex = (gridPinned && selectedTime) ? indexForTime(times, selectedTime)
-                                           : nowIndexOf(times);
-  slider.value = gridIndex;
-  const live = document.getElementById("windlive");
-  if (live) live.hidden = !viewportLive;
-  document.getElementById("windwhen").textContent = gridLabel(gridIndex);
-  drawRewind();
-}
-
-map.on("moveend zoomend", () => {
-  clearTimeout(viewportTimer);
-  viewportTimer = setTimeout(refreshViewportGrids, 700);
-});
 
 let layers = [];
 async function load() {
@@ -2260,7 +2135,6 @@ async function load() {
   ]);
   render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile);
   setupGrids(wind, waves);
-  setTimeout(refreshViewportGrids, 900);   // then upgrade to what is on screen
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
   // ?countcheck swaps the count for a diagnosis of why it is what it is.
   if (/(^|[?&])countcheck($|[=&])/.test(location.search)) setTimeout(countCheck, 1200);
