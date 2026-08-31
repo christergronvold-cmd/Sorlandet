@@ -1077,7 +1077,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788169506";
+const BUILD = "1788173519";
 
 async function checkForNewBuild() {
   try {
@@ -3083,9 +3083,19 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // Lying at anchor is not "alongside", and it must not hold the section open. She is due
   // to swing off Lerwick for the better part of a week; the ALWAYS_NM floor below would
   // have kept the cameras on the page every one of those days until nobody looked at them.
+  // ?preview opens the section on demand, whatever the ship is doing. It exists because
+  // the people who most need to check this thing works - Andy, who lends us the stream,
+  // and whoever is testing before the day - can only ever look at it when it is shut. It
+  // is off by default, has to be typed into the address, and says on its face that it is a
+  // preview, so nobody arrives at it by accident and thinks she is coming in.
+  const preview = new URLSearchParams(location.search).has("preview")
+                  && !(leg.inPort && leg.berthed) && !coming;
   const camPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length)
                     ? leg.inPort
-                : coming ? nextPort : null;
+                : coming ? nextPort
+                : preview ? ((nextPort && (nextPort.cameras || []).length) ? nextPort
+                             : (plan.ports || []).find(q => (q.cameras || []).length) || null)
+                : null;
   // Hoisted: the live view above the map is built further down and needs the same three
   // answers. Block-scoped inside the card, they were simply missing there - and a
   // ReferenceError inside the render leaves the whole page half-drawn without a word.
@@ -3099,7 +3109,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     // The live view above the map is the headline now, so this is the rest of them.
     cameraCard = wideCard(`More cameras in ${camPort.name}`, `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
-        ${alongside
+        ${preview
+          ? `<b>Preview.</b> She is not on the approach yet — this is what the section looks
+             like when she is. It opens on its own about half an hour out.`
+          : alongside
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
              ${N(closing)} knots — <b>about ${minsOut < 12 ? "ten minutes"
@@ -3107,8 +3120,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
              out</b> at that rate. It is worth opening a window now.`}
         These are other people's cameras, looking at the same water from other angles, and
         they open in their own windows. Whether she is in the frame is luck.
-        ${alongside ? "" : `Her position here was last heard ${ago(p.seen_utc)}, so she may
-        already be further in than this says.`}
+        ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
+        so she may already be further in than this says.`}
       </div>
       <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth).map(c => `
         <li><span class="ic">\u{1F4F9}</span>
@@ -3127,8 +3140,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           : "These are live views only, with no archive — they cannot be wound back."}
       </div>`, {
         key: "cameras", open: true,
-        note: alongside ? "alongside now"
-                        : minsOut < 12 ? "coming in now" : `~${Math.round(minsOut / 5) * 5} min out` });
+        note: preview ? "preview"
+            : alongside ? "alongside now"
+            : minsOut < 12 ? "coming in now" : `~${Math.round(minsOut / 5) * 5} min out` });
   }
 
   // ---- the live view, above the map
@@ -3145,7 +3159,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const feedEl = document.getElementById("feed");
   if (camPort) {
     const lead = camOrder(camPort.cameras, alongside, fromNorth)[0];
-    const when = alongside ? "alongside now"
+    const when = preview ? "preview \u2014 not on the approach yet"
+      : alongside ? "alongside now"
       : minsOut < 12 ? "coming in now" : `about ${Math.round(minsOut / 5) * 5} min out`;
     // The page re-renders on a timer and on every new fix. Rebuilding this box each time
     // would tear the video element out and start the stream again from nothing - a black
