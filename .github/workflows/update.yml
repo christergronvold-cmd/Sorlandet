@@ -87,7 +87,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install websockets pillow
+        run: |
+          pip install websockets pillow
+          # One frame off a live HLS stream while she is coming in. ubuntu-latest ships
+          # ffmpeg; the job checks for it and simply does not capture if it is missing,
+          # so this line failing must never take the position updates down with it.
+          ffmpeg -version >/dev/null 2>&1 || sudo apt-get install -y -qq ffmpeg || true
 
       - name: Listen, save, repeat
         env:
