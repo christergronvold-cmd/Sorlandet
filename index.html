@@ -318,6 +318,11 @@
   .album{display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   /* Port calls are the ones worth looking at, so they get bigger tiles. */
   .album.wide{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  /* Pictures from the shore. Unlike the satellite crops these are photographs of a ship,
+     so they get the shape of one and are never cropped square. */
+  .album.shore{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .album.shore img{aspect-ratio:16/9}
+  .album.shore a::after, .album.shore .xhair{display:none}
   .albumh{font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
     margin:18px 0 6px; font-weight:650}
   .albumh:first-of-type{margin-top:0}
@@ -1077,7 +1082,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788191002";
+const BUILD = "1788191604";
 
 async function checkForNewBuild() {
   try {
@@ -2443,7 +2448,8 @@ function indexForTime(times, isoTime) {
 let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
-  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile, orbitFile] = await Promise.all([
+  const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile,
+         orbitFile, shoreFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -2453,9 +2459,10 @@ async function load() {
     fetch("data/ahead.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/course.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null),
+    fetch("data/shore.json" + bust).then(r => r.json()).catch(() => null)
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile);
+  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile, shoreFile);
   setupGrids(wind, waves);
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
   // ?countcheck swaps the count for a diagnosis of why it is what it is.
@@ -2463,7 +2470,8 @@ async function load() {
   else showVisitorCount();
 }
 
-function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null, wakeFile, courseFile, orbitFile) {
+function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null,
+                wakeFile, courseFile, orbitFile, shoreFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -3362,6 +3370,59 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       </figure>`;
   }
 
+  // ---- seen from the shore
+  //
+  // The satellite album is six pixels of ship. This one is a photograph of her, and on 31
+  // August 2026 it earned its place: Andy at Shetland Webcams caught her standing in
+  // towards Lerwick under full sail and sent the frame over. That is worth more to a
+  // parent than anything else on this page.
+  //
+  // Every frame in data/shore.json is there because its owner allowed it. Andy has given
+  // permission for still frames on condition of a link and a mention, which is what the
+  // credit line under the pictures is. Nothing is scraped, and nothing gets saved off a
+  // camera on our own initiative - a live view belongs to whoever runs the camera.
+  let shoreCard = "";
+  {
+    const frames = ((shoreFile && shoreFile.frames) || []).filter(f => f && f.file);
+    if (frames.length) {
+      const byNewest = frames.slice().sort((a, b) => (b.t || "").localeCompare(a.t || ""));
+      const hosts = [...new Set(byNewest.map(f => f.by).filter(Boolean))];
+      shoreCard = wideCard(`Seen from the shore \u00b7 ${byNewest.length}`, `
+        <div style="font-size:13px;color:var(--muted);margin:-4px 0 14px">
+          Somebody on land, or a camera on a headland, with her actually in the frame. These
+          are kept here because they do not last: a webcam holds a day at most, and then the
+          moment is gone.
+        </div>
+        <div class="album shore">${byNewest.map(f => {
+          const t = f.t ? new Date(f.t) : null;
+          const where = f.camera && f.url
+            ? `<a href="${f.url}" target="_blank" rel="noopener">${f.camera}</a>`
+            : (f.camera || "");
+          return `
+          <figure>
+            <a href="${f.file}" target="_blank" rel="noopener"
+               title="Open the full frame">
+              <img loading="lazy" src="${f.file}"
+                   alt="${(f.camera || "A camera") + " frame of Sorlandet"}">
+            </a>
+            <figcaption>
+              ${t ? `<b>${t.toLocaleDateString("en-GB",
+                       { day: "numeric", month: "short", timeZone: f.tz || undefined })}</b>
+                     ${t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit",
+                       timeZone: f.tz || undefined })}${f.tz ? " local" : ""}`
+                  : ""}${where ? ` \u00b7 ${where}` : ""}
+              ${f.caption ? `<br><span style="color:var(--muted)">${f.caption}</span>` : ""}
+            </figcaption>
+          </figure>`; }).join("")}</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
+          ${hosts.includes("Shetland Webcams")
+            ? `Frames by <a href="https://www.shetlandwebcams.com" target="_blank"
+                 rel="noopener">shetlandwebcams.com</a>, kept here with their permission. `
+            : ""}Their cameras, their pictures.
+        </div>`, { key: "shore", open: true, note: `${byNewest.length} so far` });
+    }
+  }
+
   let albumCard = "";
   if (!waiting) {
     const alongside = orbitHits.filter(h => portAt(h.t)).slice(0, 12);
@@ -3505,6 +3566,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     progressCard,
     aheadCard,
     logCard,
+    shoreCard,
     albumCard,
     chartsCard,
     routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`,
