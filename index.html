@@ -1097,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788204062";
+const BUILD = "1788205684";
 
 async function checkForNewBuild() {
   try {
@@ -2560,7 +2560,7 @@ let layers = [];
 async function load() {
   const bust = "?v=" + Date.now();
   const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile,
-         orbitFile, shoreFile] = await Promise.all([
+         orbitFile, shoreFile, pendingFile] = await Promise.all([
     fetch("data/latest.json" + bust).then(r => r.json()),
     fetch("data/track.json" + bust).then(r => r.json()).catch(() => ({ points: [] })),
     fetch("data/ports.json" + bust).then(r => r.json()).catch(() => ({ ports: [] })),
@@ -2571,9 +2571,14 @@ async function load() {
     fetch("data/wake.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/course.json" + bust).then(r => r.json()).catch(() => null),
     fetch("data/orbit.json" + bust).then(r => r.json()).catch(() => null),
-    fetch("data/shore.json" + bust).then(r => r.json()).catch(() => null)
+    fetch("data/shore.json" + bust).then(r => r.json()).catch(() => null),
+    // Only fetched when somebody is actually reviewing. Nobody else pays for it.
+    (/(^|[?&])review($|[=&])/.test(location.search)
+      ? fetch("data/pending.json" + bust).then(r => r.json()).catch(() => null)
+      : Promise.resolve(null))
   ]);
-  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile, shoreFile);
+  render(latest, track, plan, history, ahead, wakeFile, courseFile, orbitFile, shoreFile,
+         pendingFile);
   setupGrids(wind, waves);
   setTimeout(checkForNewBuild, 4000);      // and quietly check we are not a stale copy
   // ?countcheck swaps the count for a diagnosis of why it is what it is.
@@ -2582,7 +2587,7 @@ async function load() {
 }
 
 function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = null,
-                wakeFile, courseFile, orbitFile, shoreFile) {
+                wakeFile, courseFile, orbitFile, shoreFile, pendingFile) {
   let p = d.position || {};
   const w = d.weather || {}, sea = w.sea || {}, air = w.air || {};
 
@@ -3575,6 +3580,43 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     } catch (e) { return guess; }
   };
 
+  // ---- awaiting review, on ?review only
+  //
+  // The job photographs her by itself while she is coming in, because nobody can promise to
+  // be awake at 06:40 on a Sunday. But an automatic camera pointed at somebody else's
+  // stream must not publish straight to a page a hundred and forty families read: what it
+  // catches might be fog, a ferry, or nothing at all, and the permission we have is for
+  // frames of Sorlandet. So the frames wait in images/shore/pending, which the album does
+  // not read, and this card - only ever visible to somebody who typed ?review - is where
+  // they are looked at. Publishing one is a rename, and it is already named for it.
+  let reviewCard = "";
+  if (pendingFile) {
+    const waiting = ((pendingFile.frames) || []).filter(f => f && f.file);
+    reviewCard = wideCard(`Awaiting your review · ${waiting.length}`, waiting.length ? `
+      <div style="font-size:13px;color:var(--muted);margin:-4px 0 14px">
+        The job took these by itself while she was closing on the port. <b>None of them are
+        on the page.</b> To publish one, rename it in GitHub from
+        <code>images/shore/pending/…</code> to <code>images/shore/…</code> — the name is
+        already right for the album. Delete the rest.
+      </div>
+      <div class="album shore">${waiting.map(f => {
+        const name = f.file.split("/").pop();
+        return `
+        <figure>
+          <a href="${f.file}" target="_blank" rel="noopener" title="Open the full frame">
+            <img loading="lazy" src="${f.file}" alt="Captured frame ${name}">
+          </a>
+          <figcaption><b>${name.replace(/\.jpg$/, "")}</b>
+            <br><span style="color:var(--muted)">${f.kb} kB · publish as
+            <code>images/shore/${name}</code></span>
+          </figcaption>
+        </figure>`; }).join("")}</div>`
+      : `<div style="font-size:13px;color:var(--muted)">Nothing waiting. The job only takes
+         pictures while she is inside the approaches and actually closing on the port, so
+         this stays empty through a week at anchor.</div>`,
+      { key: "review", open: true, note: waiting.length ? "not published" : "empty" });
+  }
+
   // ---- seen from the shore
   //
   // The satellite album is six pixels of ship. This one is a photograph of her, and on 31
@@ -3797,6 +3839,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     progressCard,
     aheadCard,
     logCard,
+    reviewCard,
     shoreCard,
     albumCard,
     chartsCard,

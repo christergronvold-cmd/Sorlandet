@@ -16,12 +16,13 @@ check that the page works before getting a key.
 from __future__ import annotations
 
 import json
-import subprocess
-import unicodedata
 import math
 import os
+import shutil
 import ssl
+import subprocess
 import sys
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -1984,6 +1985,172 @@ def shrink_frame(path: Path) -> Path:
     return out
 
 
+# Accents are folded rather than treated as punctuation, and the result is plain ASCII.
+#
+# Two reasons, and both were bugs. Matching: Shetland Webcams call the camera "Fjara
+# SeaLevel Cam" with a ring over the a, and a filename anybody types says "fjara" - without
+# folding, the ring acted as a separator, the camera slugged to "fjar", and a correctly
+# named frame was published with no link to the camera that took it. Naming: the job builds
+# filenames from the same names, and it wrote "2026-08-31-2031-fjara.jpg" with the ring
+# still in it - a non-ASCII path in an <img src>, which is a percent-encoding argument
+# waiting to happen on somebody's phone. Norwegian names on a Norwegian voyage: this is the
+# common case here, not the exotic one.
+FOLD = {"\u00e6": "ae", "\u00f8": "o", "\u00e5": "a", "\u00fc": "u", "\u00df": "ss",
+        "\u0153": "oe", "\u00f0": "d", "\u00fe": "th", "\u0142": "l"}
+
+
+def ascii_slug(text: str) -> str:
+    flat = unicodedata.normalize("NFKD", (text or "").lower())
+    keep = []
+    for ch in flat:
+        if unicodedata.combining(ch):
+            continue                           # the ring, the acute, the umlaut: dropped
+        ch = FOLD.get(ch, ch)
+        keep.append(ch if ch.isalnum() and ch.isascii() else "-")
+    return "-".join(p for p in "".join(keep).split("-") if p)
+
+
+PENDING_DIR = SHORE_DIR / "pending"
+PENDING = DATA / "pending.json"
+CAPTURE_NM = 9.0            # the same "inside the approaches" figure the page uses
+CAPTURE_EVERY_S = 300       # a frame from each camera every five minutes
+CAPTURE_MAX_ROUND = 24      # ...and never more than this many in one round of the job
+PENDING_MAX = 240           # if nobody reviews them, stop growing rather than fill the repo
+
+
+def capture_port(position: dict, plan: dict) -> dict | None:
+    """The port she is closing on and can be photographed at, or None.
+
+    Andy gave permission for still frames on condition of a link and a mention, and Christer
+    has the rewind subscription - but neither of them can be watching at 06:40 on a Sunday,
+    which is the sort of hour a ship actually arrives. So the job watches instead.
+
+    The rule is deliberately narrow: she has to be CLOSING on the port at better than a
+    knot, and be inside the approaches. That is "under innseiling" and nothing else. It
+    matters that it cannot mean anything else: she lay at anchor off Lerwick from 31 August
+    to 6 September, a mile off a camera, and a rule based on distance alone would have taken
+    a picture every five minutes for six days - some thousand frames of a ship not moving,
+    on somebody else's bandwidth, for a folder nobody could then review.
+    """
+    lat, lon = position.get("lat"), position.get("lon")
+    if lat is None or lon is None:
+        return None
+    # A fix old enough that we no longer know where she is cannot start a capture.
+    try:
+        age_min = (now_utc() - parse_iso(position["seen_utc"])).total_seconds() / 60
+    except Exception:
+        age_min = 0.0
+    if age_min > 180:
+        return None
+    sog = position.get("sog_kn")
+    cog = position.get("cog_deg")
+    if sog is None or cog is None:
+        return None
+    for port in (plan.get("ports") or []):
+        cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+        if not cams:
+            continue
+        off = nm_between((lat, lon), (port["lat"], port["lon"]))
+        if off > CAPTURE_NM:
+            continue
+        # Closing rate: her speed projected onto the bearing to the port.
+        brg = bearing((lat, lon), (port["lat"], port["lon"]))
+        closing = sog * math.cos(math.radians((brg - cog + 540) % 360 - 180))
+        if closing < 1.0:
+            continue
+        print(f"* she is {off:.1f} nm from {port['name']}, closing at {closing:.1f} kn "
+              f"- capturing from {len(cams)} camera(s)")
+        return port
+    return None
+
+
+def grab_frame(url: str, dest: Path) -> bool:
+    """One frame off a live HLS stream, via ffmpeg. Isolated so a test can replace it."""
+    if not shutil.which("ffmpeg"):
+        print("  ! no ffmpeg on this runner - cannot capture frames")
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        out = subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-nostdin",
+             "-user_agent", CONTACT_UA,
+             "-i", url, "-frames:v", "1", "-q:v", "3", str(dest)],
+            capture_output=True, text=True, timeout=40)
+    except Exception as exc:
+        print(f"  ! {dest.name}: {exc}")
+        return False
+    if out.returncode != 0 or not dest.exists() or dest.stat().st_size < 8000:
+        if dest.exists():
+            dest.unlink()
+        print(f"  ! {dest.name}: ffmpeg gave nothing back ({(out.stderr or '').strip()[:120]})")
+        return False
+    return True
+
+
+def capture_frames(seconds: int) -> None:
+    """Grab a frame from every streamable camera, every few minutes, while she comes in.
+
+    Runs in a thread beside the AIS listeners, so it costs the job no extra time. Frames
+    land in images/shore/pending, which the album does NOT read: Christer looks at them
+    first. Nothing reaches the page - a hundred and forty families - until a person has
+    seen it. Publishing is a rename, and the file is already named for it.
+    """
+    plan = read_json(DATA / "ports.json", {}) or {}
+    port = capture_port(read_json(LATEST, {}).get("position") or {}, plan)
+    if not port:
+        return
+    cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+    tz = port.get("tz")
+    taken, deadline = 0, now_utc() + timedelta(seconds=max(0, seconds - 30))
+    while now_utc() < deadline and taken < CAPTURE_MAX_ROUND:
+        held = len([p for p in PENDING_DIR.glob("*.jpg")]) if PENDING_DIR.is_dir() else 0
+        if held >= PENDING_MAX:
+            print(f"  ! {held} frames already waiting to be looked at - stopping there")
+            return
+        stamp = now_utc()
+        if tz:
+            # The album's convention is the clock on the shore, because that is the clock
+            # printed in the corner of the frame - so the file is named in it, and a frame
+            # published later needs no editing at all.
+            try:
+                from zoneinfo import ZoneInfo
+                stamp = stamp.astimezone(ZoneInfo(tz))
+            except Exception:
+                pass
+        for cam in cams:
+            slug_name = ascii_slug(cam.get("short") or cam["name"])
+            dest = PENDING_DIR / f"{stamp.strftime('%Y-%m-%d-%H%M')}-{slug_name}.jpg"
+            if dest.exists():
+                continue
+            if grab_frame(cam["hls"], dest):
+                taken += 1
+                print(f"  captured {dest.name} ({dest.stat().st_size // 1024} kB)")
+    if taken:
+        print(f"* captured {taken} frame(s) into {PENDING_DIR.relative_to(ROOT)}")
+
+
+def build_pending() -> None:
+    """Index the frames waiting to be looked at, so ?review can show them on a phone."""
+    frames = []
+    if PENDING_DIR.is_dir():
+        for path in sorted(PENDING_DIR.iterdir()):
+            if path.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+                continue
+            frames.append({"file": f"images/shore/pending/{path.name}",
+                           "kb": path.stat().st_size // 1024})
+    frames.sort(key=lambda f: f["file"], reverse=True)
+    payload = {
+        "note": ("Frames the job took by itself while she was coming in. NOTHING here is on "
+                 "the page. To publish one, rename it in GitHub from "
+                 "images/shore/pending/NAME to images/shore/NAME - it is already named for "
+                 "the album. Delete the rest."),
+        "frames": frames,
+    }
+    if read_json(PENDING, None) != payload:
+        write_json(PENDING, payload)
+        print(f"* wrote {PENDING.name} ({len(frames)} awaiting review)")
+
+
 def git_added(path: Path) -> str | None:
     """When this file first appeared in the repository, as an ISO instant in UTC.
 
@@ -2039,24 +2206,7 @@ def build_shore() -> None:
         for cam in (port.get("cameras") or []):
             cams.append((port, cam))
 
-    # Accents have to be folded rather than treated as punctuation. "Fjara" is what anybody
-    # types for a file, and Shetland Webcams call the camera "Fjara SeaLevel Cam" with a
-    # ring over the a - without this the ring became a separator, the camera slugged to
-    # "fjar", and a correctly named frame was published with no link to the camera that
-    # took it. Norwegian names on a Norwegian voyage: this is the common case, not the
-    # exotic one.
-    FOLD = {"\u00e6": "ae", "\u00f8": "o", "\u00e5": "a", "\u00fc": "u", "\u00df": "ss",
-            "\u0153": "oe", "\u00f0": "d", "\u00fe": "th", "\u0142": "l"}
-
-    def slug(text: str) -> str:
-        flat = unicodedata.normalize("NFKD", (text or "").lower())
-        keep = []
-        for ch in flat:
-            if unicodedata.combining(ch):
-                continue                       # the ring, the acute, the umlaut: dropped
-            ch = FOLD.get(ch, ch)
-            keep.append(ch if ch.isalnum() else "-")
-        return "-".join(p for p in "".join(keep).split("-") if p)
+    slug = ascii_slug
 
     old = {f.get("file"): f for f in ((read_json(SHORE, {}) or {}).get("frames") or [])}
     frames, warned = [], []
@@ -2186,6 +2336,11 @@ def main() -> int:
         bw_thread = threading.Thread(
             target=collect_from_barentswatch, args=(LISTEN_SECONDS, pot, lock), daemon=True)
         bw_thread.start()
+
+        # ...and, if she is on the run in, a third thread taking pictures of her.
+        cap_thread = threading.Thread(target=capture_frames, args=(LISTEN_SECONDS,),
+                                      daemon=True)
+        cap_thread.start()
 
         position, ais_points = fetch_position_from_aisstream(api_key)
         bw_thread.join(timeout=30)
@@ -2406,6 +2561,7 @@ def main() -> int:
     build_ahead(lat, lon, position.get("sog_kn"), points)
     build_orbit(points)
     build_shore()
+    build_pending()
     update_history(weather, points, collected)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
