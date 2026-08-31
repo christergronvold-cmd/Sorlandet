@@ -1082,7 +1082,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788193107";
+const BUILD = "1788195845";
 
 async function checkForNewBuild() {
   try {
@@ -3033,6 +3033,22 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // What a reader actually wants is "she is about to come in". That is not a distance, it is
   // a time, and it needs her to be CLOSING - so the trigger is the component of her speed
   // that points at the port, and how many minutes of it are left.
+  // Old enough that presenting it as "now" is a small lie. Half an hour is about the
+  // longest a reading can be treated as current on a page that refreshes every five
+  // minutes and a job that publishes every thirty.
+  const STALE_MIN = 35;
+  // And the point past which a countdown made from that fix is not worth printing. The
+  // minutes are worked out by carrying her forward from where she was last heard, which is
+  // sound arithmetic for a fix twenty minutes old and fiction for one three hours old: on
+  // 31 August it carried a ship that had quietly anchored straight past the quay and the
+  // page said "coming in now" all afternoon. Past this age the page stops counting and
+  // says only what it can defend - that she is close enough to be in shot.
+  const UNTIMED_MIN = 90;
+  // The label is about seventy pixels wide on a phone, so the age has to fit in a couple
+  // of characters: "3 h", not "3 hours ago".
+  const agoShort = m => m < 60 ? `${Math.round(m)}m` : `${Math.round(m / 60)}h`;
+  const fixAgeMin = p.seen_utc ? Math.max(0, (Date.now() - new Date(p.seen_utc)) / 6e4) : 0;
+
   const APPROACH_MIN = 40;     // minutes off, at the rate she is actually closing
   const CLOSING_KN = 1.0;      // below this she is not coming in, she is loitering
   const ALWAYS_NM = 3.0;       // ...but this close, show it whatever she is doing
@@ -3093,7 +3109,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       // steerable, and Andy at Shetland Webcams uses it to follow tall ships in and to get
       // close-ups of the crew at the rail. A camera somebody is pointing at her beats a
       // fixed one she may or may not cross, whichever way she comes.
-      if (c.lead) return -1;
+      // A default camera still loses to the entrance rule. Kirkabister is the default
+      // because it frames her beautifully against the hill behind the town - but it looks
+      // at the SOUTH entrance, and on a northern approach it is a window onto empty water,
+      // which is the one thing this ordering exists to prevent. So a default that declares
+      // an entrance only leads when that entrance is the one in play.
+      if (c.lead && (!c.entrance || c.entrance === side)) return -1;
       if (c.entrance) return c.entrance === side ? 0 : 3;   // the wrong entrance is useless
       if (c.best === "approach") return 1;
       return c.best ? 2 : 1.5;
@@ -3104,6 +3125,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   };
   let cameraCard = "";
   let closing = 0, minsOut = null;
+  const timedFix = () => minsOut != null && fixAgeMin <= UNTIMED_MIN;
   const coming = (() => {
     if (waiting || !nextPort || !(nextPort.cameras || []).length || p.lat === undefined)
       return false;
@@ -3178,7 +3200,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // ReferenceError inside the render leaves the whole page half-drawn without a word.
   let alongside = false, fromNorth = false, camOff = 0;
   if (camPort) {
-    alongside = camPort === leg.inPort;
+    // "Alongside" means tied up at the quay, and nothing else. It used to mean "camPort is
+    // the port she is at", which quietly became true the moment she anchored off Lerwick -
+    // and that flipped the camera ranking into its quay-side order, which looks at the
+    // berth she is not on yet and ignores the default camera entirely.
+    alongside = !lyingOff && camPort === leg.inPort;
     const off = camOff = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
     // About a mile of slack, so a ship drifting either side of the latitude does not make
     // the list flip back and forth between refreshes.
@@ -3196,9 +3222,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           : alongside
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
-             ${N(closing)} knots${minsOut > APPROACH_MIN
-               ? ` — <b>hours off at that rate, but near enough to be in shot</b>. A tall
-                   ship under sail is visible from these lenses well before she is close.`
+             ${N(closing)} knots${!timedFix() || minsOut > APPROACH_MIN
+               ? ` — <b>near enough to be in shot</b>${timedFix()
+                   ? ", though hours off at that rate" : ""}. A tall ship under sail is
+                   visible from these lenses well before she is close.`
                : ` — <b>about ${minsOut < 12 ? "ten minutes"
                    : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
                    out</b> at that rate. It is worth opening a window now.`}`}
@@ -3230,8 +3257,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         note: preview ? "preview"
             : lyingOff ? `lying off ${camPort.name}`
             : alongside ? "alongside now"
+            : !timedFix() || minsOut > APPROACH_MIN ? "in sight"
             : minsOut < 12 ? "coming in now"
-            : minsOut > APPROACH_MIN ? "in sight"
             : `~${Math.round(minsOut / 5) * 5} min out` });
   }
 
@@ -3259,8 +3286,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     const when = preview ? "preview \u2014 not on the approach yet"
       : lyingOff ? "at anchor \u2014 tap to watch"
       : alongside ? "alongside now"
+      : !timedFix() || minsOut > APPROACH_MIN ? "close enough to be in shot"
       : minsOut < 12 ? "coming in now"
-      : minsOut > APPROACH_MIN ? "close enough to be in shot"
       : `about ${Math.round(minsOut / 5) * 5} min out`;
     // The page re-renders on a timer and on every new fix. Rebuilding this box each time
     // would tear the video element out and start the stream again from nothing - a black
@@ -3594,7 +3621,17 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     kpi.hidden = true;
   } else {
     kpi.innerHTML = [
-      tile(N(p.sog_kn), "kn", "Speed"),
+      // The speed is the speed at the last fix, and out here that can be three hours ago.
+      // On 31 August she anchored off Lerwick and the strip went on saying 2.8 knots for
+      // the rest of the afternoon, because 2.8 knots is what she was doing when a satellite
+      // last heard her. The number was not wrong; the label was. A reading this old is a
+      // reading about the PAST, and the label now says so - a figure that admits its age
+      // is worth more than a figure that looks live and is not.
+      tile(N(p.sog_kn), "kn", fixAgeMin > STALE_MIN ? `Speed ${agoShort(fixAgeMin)}` : "Speed",
+           fixAgeMin > STALE_MIN
+             ? `Her speed when she was last heard, ${ago(p.seen_utc)} - not her speed now. `
+               + "She may have stopped, anchored or got under way since."
+             : ""),
       tile(N(air.wind_ms), "m/s", "Wind"),
       tile(N(sea.wave_height_m), "m", "Sea"),
       // The sky rides in the top corner rather than beside the reading: "12 °C" says how
