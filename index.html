@@ -1077,7 +1077,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788173519";
+const BUILD = "1788191002";
 
 async function checkForNewBuild() {
   try {
@@ -3015,6 +3015,28 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const APPROACH_MIN = 40;     // minutes off, at the rate she is actually closing
   const CLOSING_KN = 1.0;      // below this she is not coming in, she is loitering
   const ALWAYS_NM = 3.0;       // ...but this close, show it whatever she is doing
+  // And a rule that only evidence could have written. On 31 August Andy sent a frame from
+  // the Kirkabister camera with Sorlandet under sail in Bressay Sound, plain as day - and
+  // the section on this page was shut. The arithmetic was right and the rule was wrong:
+  // she was seven and a half miles from the quay making two and a half knots, so "forty
+  // minutes out" was three hours away, while the camera already had her filling a third
+  // of the frame. A rule in minutes is a rule about a ship doing eight knots. A camera
+  // does not care how fast she is going, only how far off she is, and a tall ship under
+  // sail is visible from these lenses a long way out. So: close enough to be SEEN is its
+  // own reason to open the section, as long as she is actually working her way in.
+  //
+  // Why nine miles, measured from the quay: the cameras do not sit on the quay. Lerwick's
+  // look out over the whole sound, and the southern entrance she came through today is
+  // about five miles south of the berth. At the 13:25 fix she was 7.7 miles from the quay
+  // and already inside the sound - and on camera. Nine miles is "inside the approaches",
+  // which is the thing that actually decides whether a lens can find her.
+  //
+  // The cost of this is honest and worth stating: on a slow day the section can now open
+  // a couple of hours before she is alongside, rather than the half hour that was asked
+  // for. It is bounded by the rule above - she has to be MAKING her way in at better than
+  // a knot - so it cannot sit open through a week at anchor. If it still feels too eager,
+  // this one number is the dial.
+  const CAM_SEE_NM = 9.0;
 
   // The rate she is closing on the port: her speed through the water resolved onto the
   // bearing to it. Negative means she is going the other way.
@@ -3078,7 +3100,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     // tied up twenty minutes ago, which is the one failure this card cannot afford.
     const ageMin = p.seen_utc ? Math.max(0, (Date.now() - new Date(p.seen_utc)) / 6e4) : 0;
     minsOut = Math.max(0, (off / closing) * 60 - ageMin);
-    return minsOut <= APPROACH_MIN;
+    // Either she is nearly there in TIME, or she is near enough to be in a lens. The
+    // second is what carries a ship ghosting in under sail: at two and a half knots
+    // "forty minutes" is a mile and a half, and by then she has already sailed past
+    // Kirkabister in full view of it.
+    return minsOut <= APPROACH_MIN || off <= CAM_SEE_NM;
   })();
   // Lying at anchor is not "alongside", and it must not hold the section open. She is due
   // to swing off Lerwick for the better part of a week; the ALWAYS_NM floor below would
@@ -3115,9 +3141,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           : alongside
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
-             ${N(closing)} knots — <b>about ${minsOut < 12 ? "ten minutes"
-               : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
-             out</b> at that rate. It is worth opening a window now.`}
+             ${N(closing)} knots${minsOut > APPROACH_MIN
+               ? ` — <b>hours off at that rate, but near enough to be in shot</b>. A tall
+                   ship under sail is visible from these lenses well before she is close.`
+               : ` — <b>about ${minsOut < 12 ? "ten minutes"
+                   : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
+                   out</b> at that rate. It is worth opening a window now.`}`}
         These are other people's cameras, looking at the same water from other angles, and
         they open in their own windows. Whether she is in the frame is luck.
         ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
@@ -3142,7 +3171,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         key: "cameras", open: true,
         note: preview ? "preview"
             : alongside ? "alongside now"
-            : minsOut < 12 ? "coming in now" : `~${Math.round(minsOut / 5) * 5} min out` });
+            : minsOut < 12 ? "coming in now"
+            : minsOut > APPROACH_MIN ? "in sight"
+            : `~${Math.round(minsOut / 5) * 5} min out` });
   }
 
   // ---- the live view, above the map
@@ -3161,7 +3192,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     const lead = camOrder(camPort.cameras, alongside, fromNorth)[0];
     const when = preview ? "preview \u2014 not on the approach yet"
       : alongside ? "alongside now"
-      : minsOut < 12 ? "coming in now" : `about ${Math.round(minsOut / 5) * 5} min out`;
+      : minsOut < 12 ? "coming in now"
+      : minsOut > APPROACH_MIN ? "close enough to be in shot"
+      : `about ${Math.round(minsOut / 5) * 5} min out`;
     // The page re-renders on a timer and on every new fix. Rebuilding this box each time
     // would tear the video element out and start the stream again from nothing - a black
     // rectangle and two seconds of buffering, every few minutes, during the one hour it
