@@ -1,0 +1,207 @@
+name: Update position
+
+# GitHub's scheduler never fired for this repository, so the run does not rely on it.
+# Each run works for about five hours and then starts its successor, forming a chain
+# that keeps going on its own. The hourly cron is kept only as a backstop in case the
+# chain is ever broken.
+#
+# THE BACKSTOP HAS TO STAND DOWN. With the concurrency group at workflow level, an hourly
+# cron firing while the chain is working did not stop - it QUEUED. On 30 August that left
+# run #77 sitting Pending behind #76 for a quarter of an hour, and it is what has been
+# building a pile of pending-then-cancelled runs all week: a queued run is cancelled the
+# moment a newer one arrives, so the queue churns and occasionally the chain's own
+# successor is the one that gets cancelled. That is how it went silent for two hours.
+#
+# Worse than queuing would be NOT queuing: a second run that simply started alongside the
+# chain would chain in its turn, and then there are two chains, each dispatching a
+# successor every five hours.
+#
+# So the cron now runs a guard job first - outside the concurrency group, so it is never
+# queued - which asks whether any run of this workflow is already working. If one is, the
+# backstop stands down and does nothing at all. If none is, the chain is broken and this
+# run becomes the new chain, which is exactly what a backstop is for.
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "How many hours to keep listening (max 5.5)"
+        required: false
+        default: "5.5"
+      chain:
+        description: "Start the next run when this one ends"
+        required: false
+        default: "yes"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  # Deliberately NOT in the concurrency group: a guard that queues is not a guard.
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "started by hand or by the chain - going ahead"
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Any run of this workflow that is already working, other than this one.
+          busy=$(gh run list --repo "$GITHUB_REPOSITORY" \
+                   --workflow "Update position" --status in_progress \
+                   --json databaseId \
+                   --jq "[.[] | select(.databaseId != ${{ github.run_id }})] | length" \
+                 || echo 0)
+          echo "other runs already working: ${busy:-0}"
+          if [ "${busy:-0}" -gt 0 ]; then
+            echo "the chain is alive - the hourly backstop stands down"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "nothing is running - the backstop takes over as the chain"
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+  update:
+    needs: guard
+    if: needs.guard.outputs.go == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency:
+      group: position
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install websockets
+
+      - name: Listen, save, repeat
+        env:
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
+          LISTEN_SECONDS: "1740"
+          CONTACT_UA: "sorlandet-tracker (github actions)"
+        run: |
+          # Nothing in this step may block for ever.
+          #
+          # On 29 August a run held the concurrency group for four hours and wrote nothing.
+          # The listener was not the problem - it is bounded by LISTEN_SECONDS and every
+          # HTTP call in update.py carries a timeout. git is the part with no clock on it:
+          # a stalled `pull` or `push` waits until the job's own 350-minute limit, and
+          # meanwhile every hourly run queues behind the concurrency group and is cancelled
+          # an hour later. The page just stops, on the day it matters, and nothing says so.
+          #
+          # Three guards below, outermost first: git gives up on a dead transfer, each git
+          # command has a hard ceiling, and each listening round has one too. If two rounds
+          # in a row have to be killed the run ends early rather than sitting on the group -
+          # a fresh run gets a fresh network and a fresh token.
+          ROUND_TIMEOUT=2400        # 40 min: a 29-minute listen plus room for the router
+          GIT_TIMEOUT=180
+
+          git config user.name "sorlandet-bot"
+          git config user.email "bot@users.noreply.github.com"
+          # give up on a transfer moving less than 1 kB/s for half a minute
+          git config http.lowSpeedLimit 1000
+          git config http.lowSpeedTime 30
+
+          save() {
+            if [ -n "$(git status --porcelain data/)" ]; then
+              git add data/
+              git commit -m "$1 $(date -u +'%Y-%m-%d %H:%M UTC')"
+              for attempt in 1 2 3; do
+                if timeout "$GIT_TIMEOUT" git pull --rebase --autostash origin main \
+                   && timeout "$GIT_TIMEOUT" git push; then
+                  return 0
+                fi
+                echo "::warning::push attempt $attempt stalled or failed, retrying"
+                git rebase --abort 2>/dev/null || true
+                sleep 5
+              done
+              echo "::warning::could not push this round; the next one will carry it"
+            else
+              echo "nothing new to save"
+            fi
+            return 0
+          }
+
+          # A quick pass first. update.py spends its whole listening window before it
+          # writes anything, so without this a restart shows no change for 29 minutes -
+          # weather, route and forecast included, however fresh the code is. Twenty
+          # seconds is enough to refresh everything that does not depend on hearing her.
+          echo "::group::Quick first pass"
+          LISTEN_SECONDS=20 timeout --kill-after=30 600 python3 scripts/update.py \
+            || echo "quick pass failed or timed out, carrying on"
+          save "Refresh"
+          echo "::endgroup::"
+
+          HOURS="${{ inputs.hours || '5.5' }}"
+          ROUNDS=$(python3 -c "print(max(1, min(11, round(float('$HOURS') * 2))))")
+          echo "Running $ROUNDS rounds of 29 minutes"
+
+          stalls=0
+          for round in $(seq 1 "$ROUNDS"); do
+            echo "::group::Round $round of $ROUNDS"
+            set +e
+            timeout --kill-after=60 "$ROUND_TIMEOUT" python3 scripts/update.py
+            rc=$?
+            set -e
+            # 124 is timeout's own code; 137 means it had to send KILL as well.
+            if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+              stalls=$((stalls + 1))
+              echo "::warning::round $round was still running after ${ROUND_TIMEOUT}s and was killed ($stalls in a row)"
+            elif [ "$rc" -ne 0 ]; then
+              echo "round $round failed (exit $rc), carrying on"
+              stalls=0
+            else
+              stalls=0
+            fi
+            save "Position"
+            echo "::endgroup::"
+            if [ "$stalls" -ge 2 ]; then
+              echo "::warning::two rounds in a row had to be killed - ending this run early so the chain starts a fresh one"
+              break
+            fi
+          done
+
+      # Always, even if the listening step failed - a broken round must not break the chain.
+      - name: Start the next run
+        if: always()
+        env:
+          TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          CHAIN: ${{ inputs.chain || 'yes' }}
+        run: |
+          if [ "$CHAIN" != "yes" ]; then
+            echo "Chaining switched off for this run."; exit 0
+          fi
+          if [ -z "$TOKEN" ]; then
+            echo "No DISPATCH_TOKEN secret - the chain stops here."
+            echo "Add one to make this run for ever; see README."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/out.txt -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/update.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"hours":"5.5","chain":"yes"}}')
+          if [ "$code" = "204" ]; then
+            echo "Next run requested - the chain continues."
+          else
+            echo "Could not start the next run (HTTP $code):"; cat /tmp/out.txt
+            echo "The page will show that the updater has stopped."
+          fi

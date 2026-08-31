@@ -2073,6 +2073,25 @@ def main() -> int:
         except Exception:
             pass
 
+    # ---- what the crew typed in: destination, ETA, draught
+    #
+    # This is AIS message 5, the voyage record a mate fills in on the bridge - and it is
+    # exactly what MarineTraffic shows as "ETA". It arrives only when a receiver that
+    # carries message 5 hears her, which out here is seldom, and it was being thrown away
+    # in between: the position record it rides on is replaced by the next fix from any
+    # other source, and the voyage data died with it.
+    #
+    # It does not change like a position does. She keeps the same destination for a week.
+    # So it is kept beside the position rather than inside it, carried forward from the
+    # last time anybody heard it, with the hour it was heard so the page can say how old
+    # the claim is.
+    voyage = dict((previous.get("voyage") or {}) if previous else {})
+    fresh = {k: position.get(k) for k in ("destination", "eta_text", "draught_m")
+             if position.get(k)}
+    if fresh:
+        voyage.update(fresh)
+        voyage["heard_utc"] = position.get("seen_utc") or iso(now_utc())
+
     # Older points were stored with full float precision - up to sixteen digits of noise
     # on a position an AIS receiver knows to a few metres. Round the lot on the way out.
     for q in points:
@@ -2130,6 +2149,7 @@ def main() -> int:
             "fresh_fix": fresh_fix,
             "demo": demo,
             "position": position,
+            "voyage": voyage or None,
             "weather": weather,
             "sun": sun or {},
             "stats": {

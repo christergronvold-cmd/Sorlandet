@@ -1054,7 +1054,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "7680008489";
+const BUILD = "4720852963";
 
 async function checkForNewBuild() {
   try {
@@ -2409,7 +2409,25 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       rows += row("Last seen", fmtTime(p.seen_utc));
       rows += row("Speed", `${N(p.sog_kn)} knots${p.sog_derived ? ' <span title="This position came from a feed that sends no speed, so it is worked out from the step between two fixes - a curve reads low.">(worked out from her track)</span>' : ""}`);
       rows += row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`);
-      if (p.destination) rows += row("Reported destination", p.destination);
+      // What the crew typed into the AIS set - destination, and the ETA that tracking
+      // sites show as "ETA". It is not a computed figure and it is not always fresh: a
+      // mate sets it on departure and it stands until somebody changes it. So it is
+      // labelled as theirs, and dated, and it sits apart from anything this page works
+      // out for itself.
+      const voy = d.voyage || {};
+      if (voy.destination) rows += row("Reported destination", voy.destination);
+      if (voy.eta_text) {
+        const m = /^(\d{2})\.(\d{2}) (\d{2}):(\d{2})$/.exec(voy.eta_text);
+        const MON = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                     "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
+        const pretty = m ? `${+m[1]} ${MON[+m[2]] || m[2]} ${m[3]}:${m[4]}` : voy.eta_text;
+        rows += row("Their own ETA", `${pretty} <span style="color:var(--muted)"
+          title="From AIS message 5 - the voyage record the crew fill in on the bridge. It\
+ is what MarineTraffic shows as ETA. Set by hand, in UTC, and it stands until somebody\
+ changes it.">· as the crew set it${voy.heard_utc
+            ? `, ${ago(voy.heard_utc)}` : ""}</span>`);
+      }
+      if (voy.draught_m) rows += row("Reported draught", `${N(voy.draught_m)} m`);
     }
     // "Last seen" and this row are two different clocks, and reading them as one number is
     // the easiest mistake on the page: 22:01 was her last AIS message, twenty-five minutes
