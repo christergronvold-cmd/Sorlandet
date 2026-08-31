@@ -3,7 +3,23 @@ name: Update position
 # GitHub's scheduler never fired for this repository, so the run does not rely on it.
 # Each run works for about five hours and then starts its successor, forming a chain
 # that keeps going on its own. The hourly cron is kept only as a backstop in case the
-# chain is ever broken and the scheduler happens to be working that day.
+# chain is ever broken.
+#
+# THE BACKSTOP HAS TO STAND DOWN. With the concurrency group at workflow level, an hourly
+# cron firing while the chain is working did not stop - it QUEUED. On 30 August that left
+# run #77 sitting Pending behind #76 for a quarter of an hour, and it is what has been
+# building a pile of pending-then-cancelled runs all week: a queued run is cancelled the
+# moment a newer one arrives, so the queue churns and occasionally the chain's own
+# successor is the one that gets cancelled. That is how it went silent for two hours.
+#
+# Worse than queuing would be NOT queuing: a second run that simply started alongside the
+# chain would chain in its turn, and then there are two chains, each dispatching a
+# successor every five hours.
+#
+# So the cron now runs a guard job first - outside the concurrency group, so it is never
+# queued - which asks whether any run of this workflow is already working. If one is, the
+# backstop stands down and does nothing at all. If none is, the chain is broken and this
+# run becomes the new chain, which is exactly what a backstop is for.
 
 on:
   schedule:
@@ -23,14 +39,46 @@ permissions:
   contents: write
   actions: write
 
-concurrency:
-  group: position
-  cancel-in-progress: false
-
 jobs:
+  # Deliberately NOT in the concurrency group: a guard that queues is not a guard.
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "started by hand or by the chain - going ahead"
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Any run of this workflow that is already working, other than this one.
+          busy=$(gh run list --repo "$GITHUB_REPOSITORY" \
+                   --workflow "Update position" --status in_progress \
+                   --json databaseId \
+                   --jq "[.[] | select(.databaseId != ${{ github.run_id }})] | length" \
+                 || echo 0)
+          echo "other runs already working: ${busy:-0}"
+          if [ "${busy:-0}" -gt 0 ]; then
+            echo "the chain is alive - the hourly backstop stands down"
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "nothing is running - the backstop takes over as the chain"
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+          fi
+
   update:
+    needs: guard
+    if: needs.guard.outputs.go == 'yes'
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    concurrency:
+      group: position
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
