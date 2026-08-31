@@ -1054,7 +1054,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "4720852963";
+const BUILD = "1466858260";
 
 async function checkForNewBuild() {
   try {
@@ -1467,6 +1467,10 @@ function atPoint(map, lat, lon) { return map.latLngToContainerPoint([lat, lon]);
 // first version tested a 40 px radius from the CELL centre, which on a grid whose cells are
 // 55 px apart meant almost every pixel of the map was "over" something and the box never
 // went away. A box round each glyph's own ink is what "over the symbol" actually means.
+// How far apart the arrows are drawn, in screen pixels. Sixty is about what the old
+// cell-based layout came out at on a phone when the grid happened to line up well.
+const GLYPH_GAP_PX = 60;
+
 const GLYPH_AT = {
   wind:  { dx: -10, dy:   6, w: 11, up: 13, down: 13 },
   waves: { dx:  10, dy:   5, w: 11, up: 11, down: 22 },  // down covers the height beneath
@@ -1564,9 +1568,95 @@ function drawSky(ctx, x, y, code, temp) {
   ctx.restore();
 }
 
-// Only what is on screen, and never two glyphs on top of each other: the stored 5 x 5 file
-// grid and a dense viewport grid can both feed this, so thin by screen distance rather
-// than by array index.
+// ------------------------------------------------- reading the field BETWEEN the cells
+//
+// The grid is a lattice 38 nm apart. That is ample at ocean scale and hopeless at harbour
+// scale: zoomed in on Bressay it puts one arrow on the whole screen, because only one cell
+// falls inside the view. Drawing only where a cell happens to land is the wrong way round.
+//
+// A wind field is smooth, and the model underneath is already on a 10-25 km mesh, so the
+// arrows are drawn on a SCREEN lattice at whatever spacing reads well, and the field is
+// read between the cells. That is what every weather map does, and it invents no precision
+// the model does not already imply.
+//
+// Direction has to be interpolated as a VECTOR. Averaging 350 and 10 degrees arithmetically
+// gives 180 - a wind blowing exactly backwards - so speed and direction are taken apart
+// into components, interpolated, and put back together. The magnitude is interpolated as a
+// scalar rather than taken from the resulting vector: where two corners disagree about
+// direction the vector sum is shorter than either, and the arrow would under-read the wind.
+function fieldLookup(grid) {
+  if (!grid || !grid.cells) return null;
+  if (grid.__lut) return grid.__lut;
+  const lats = [...new Set(grid.cells.map(c => c.lat))].sort((a, b) => a - b);
+  const lons = [...new Set(grid.cells.map(c => c.lon))].sort((a, b) => a - b);
+  const at = new Map(grid.cells.map(c => [`${c.lat},${c.lon}`, c]));
+  grid.__lut = { lats, lons, at };
+  return grid.__lut;
+}
+
+function fieldSpan(arr, v) {
+  if (!arr.length || v < arr[0] || v > arr[arr.length - 1]) return null;
+  let i = 0;
+  while (i < arr.length - 2 && arr[i + 1] < v) i++;
+  const lo = arr[i], hi = arr[i + 1];
+  return { lo, hi, f: hi === lo ? 0 : (v - lo) / (hi - lo) };
+}
+
+// keys: {mag, dir} plus any extra scalars to carry along.
+function sampleField(grid, lat, lon, i, keys, extras = []) {
+  const lut = fieldLookup(grid);
+  if (!lut) return null;
+  const a = fieldSpan(lut.lats, lat), b = fieldSpan(lut.lons, lon);
+  if (!a || !b) return null;
+  const corners = [];
+  for (const la of [a.lo, a.hi]) {
+    for (const lo of [b.lo, b.hi]) {
+      const c = lut.at.get(`${la},${lo}`);
+      if (!c) return null;                 // a corner missing: land, or off the edge
+      corners.push(c);
+    }
+  }
+  const w = [(1 - a.f) * (1 - b.f), (1 - a.f) * b.f, a.f * (1 - b.f), a.f * b.f];
+  let u = 0, v = 0, mag = 0;
+  const out = {};
+  for (const k of extras) out[k] = 0;
+  for (let k = 0; k < 4; k++) {
+    const c = corners[k];
+    const m = c[keys.mag]?.[i], d = c[keys.dir]?.[i];
+    if (m == null || d == null) return null;
+    const r = d * Math.PI / 180;
+    u += w[k] * m * Math.sin(r);
+    v += w[k] * m * Math.cos(r);
+    mag += w[k] * m;
+    for (const e of extras) {
+      const val = c[e]?.[i];
+      if (val == null) { out[e] = null; } else if (out[e] !== null) { out[e] += w[k] * val; }
+    }
+  }
+  out[keys.mag] = mag;
+  out[keys.dir] = (Math.atan2(u, v) * 180 / Math.PI + 360) % 360;
+  return out;
+}
+
+// Points on a screen lattice, with the field read at each. gapPx is the spacing the arrows
+// are drawn at, so density is a display decision now rather than an accident of where the
+// forecast happened to be sampled.
+function fieldSamples(map, size, gapPx, grid, i, keys, extras = []) {
+  const out = [];
+  if (!grid) return out;
+  const half = gapPx / 2;
+  for (let y = half; y < size.y; y += gapPx) {
+    for (let x = half; x < size.x; x += gapPx) {
+      const ll = map.containerPointToLatLng([x, y]);
+      const c = sampleField(grid, ll.lat, ll.lng, i, keys, extras);
+      if (c) out.push({ c, pt: { x, y } });
+    }
+  }
+  return out;
+}
+
+// Sky glyphs stay on the stored cells: a WMO code is a category, not a quantity, and
+// interpolating "overcast" with "light rain" means nothing.
 function visibleCells(map, grid, size, minGapPx) {
   const out = [], taken = [];
   for (const c of (grid?.cells || [])) {
@@ -1595,19 +1685,17 @@ function drawGlyphs(ctx, map, size) {
     }
   }
   if (gridData.waves && show.waves) {
-    for (const { c, pt } of visibleCells(map, gridData.waves, size, 44)) {
-      const hs = c.hs?.[i], wd = c.wd?.[i], tp = c.tp?.[i];
-      if (hs == null || wd == null) continue;
-      drawWave(ctx, pt.x, pt.y, hs, wd);
-      drawn.waves.push({ pt, hs, wd, tp });
+    for (const { c, pt } of fieldSamples(map, size, GLYPH_GAP_PX, gridData.waves, i,
+                                         { mag: "hs", dir: "wd" }, ["tp"])) {
+      drawWave(ctx, pt.x, pt.y, c.hs, c.wd);
+      drawn.waves.push({ pt, hs: c.hs, wd: c.wd, tp: c.tp });
     }
   }
   if (gridData.wind && show.wind) {
-    for (const { c, pt } of visibleCells(map, gridData.wind, size, 44)) {
-      const ws = c.ws?.[i], wd = c.wd?.[i];
-      if (ws == null || wd == null) continue;
-      drawWind(ctx, pt.x, pt.y, ws, wd);
-      drawn.wind.push({ pt, ws, wd });
+    for (const { c, pt } of fieldSamples(map, size, GLYPH_GAP_PX, gridData.wind, i,
+                                         { mag: "ws", dir: "wd" })) {
+      drawWind(ctx, pt.x, pt.y, c.ws, c.wd);
+      drawn.wind.push({ pt, ws: c.ws, wd: c.wd });
     }
   }
 }
