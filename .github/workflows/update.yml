@@ -87,7 +87,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install websockets
+        run: pip install websockets pillow
 
       - name: Listen, save, repeat
         env:
@@ -120,8 +120,11 @@ jobs:
           git config http.lowSpeedTime 30
 
           save() {
-            if [ -n "$(git status --porcelain data/)" ]; then
-              git add data/
+            # images/shore too: the job rewrites an oversized snapshot into something a
+            # phone can afford, and staging only data/ would commit an album entry pointing
+            # at a file that never got pushed.
+            if [ -n "$(git status --porcelain data/ images/)" ]; then
+              git add data/ images/
               git commit -m "$1 $(date -u +'%Y-%m-%d %H:%M UTC')"
               for attempt in 1 2 3; do
                 if timeout "$GIT_TIMEOUT" git pull --rebase --autostash origin main \
