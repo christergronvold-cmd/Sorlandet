@@ -1082,7 +1082,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788191604";
+const BUILD = "1788193107";
 
 async function checkForNewBuild() {
   try {
@@ -1527,6 +1527,19 @@ function feedTeardown() {
   if (feedTimer) { clearTimeout(feedTimer); feedTimer = null; }
   if (feedVis) { document.removeEventListener("visibilitychange", feedVis); feedVis = null; }
   if (feedHls) { try { feedHls.destroy(); } catch (e) {} feedHls = null; }
+}
+
+// Days at anchor: the stream is there, and it starts when somebody asks for it. One tap,
+// and from then on it behaves exactly as it does on the approach.
+function feedStandby(stage, lead, port) {
+  if (!stage) return;
+  stage.innerHTML = `
+    <div class="stand">
+      <p>She is lying at anchor off ${port ? port.name : "the port"}, in shot from this
+         camera. The live view does not start on its own while she is just swinging there.</p>
+      <a href="#" role="button">Watch ${lead.name}</a>
+    </div>`;
+  stage.querySelector("a").onclick = e => { e.preventDefault(); feedPlay(stage, lead); };
 }
 
 // The fallback, and also the box as it was before Andy answered.
@@ -3114,6 +3127,35 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     // Kirkabister in full view of it.
     return minsOut <= APPROACH_MIN || off <= CAM_SEE_NM;
   })();
+  // She has stopped, close in, with cameras looking at her. This is the state the page
+  // spent the whole of September in: anchored off Lerwick from 31 August, alongside on the
+  // 6th. Neither of the two answers the page had was right for it. "Coming in" is false -
+  // she is not going anywhere. But shutting the section is worse, because she is sitting a
+  // mile off the sea-level camera in plain view, and a parent who looks at teatime should
+  // be able to see her.
+  //
+  // So there is a third state. The cameras stay reachable, the card is FOLDED rather than
+  // open, and the live view does not start itself: it shows what it is and waits to be
+  // asked. That last part is not politeness, it is Andy's bandwidth - autoplaying his
+  // stream above the map on every load, for six days, to a hundred and forty families, is
+  // not what he lent it to us for.
+  // Which port she is lying off, or null. It has to ask leg.inPort first and nextPort
+  // second, and that order is the whole trick: once she has sat off Lerwick long enough to
+  // register as a stay, "nextPort" is DUBLIN. A version of this that measured the distance
+  // to nextPort found her four hundred miles from the cameras and shut the section - while
+  // she swung at anchor a mile off them.
+  const lyingOffPort = (() => {
+    if (coming || waiting) return null;
+    if (leg.inPort && leg.berthed) return null;                // alongside is its own state
+    if (p.lat === undefined || !(p.sog_kn <= CLOSING_KN)) return null;   // still making way
+    for (const q of [leg.inPort, nextPort]) {
+      if (!q || !(q.cameras || []).length) continue;
+      if (nm([p.lat, p.lon], [q.lat, q.lon]) <= CAM_SEE_NM) return q;
+    }
+    return null;
+  })();
+  const lyingOff = !!lyingOffPort;
+
   // Lying at anchor is not "alongside", and it must not hold the section open. She is due
   // to swing off Lerwick for the better part of a week; the ALWAYS_NM floor below would
   // have kept the cameras on the page every one of those days until nobody looked at them.
@@ -3127,6 +3169,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const camPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length)
                     ? leg.inPort
                 : coming ? nextPort
+                : lyingOffPort ? lyingOffPort
                 : preview ? ((nextPort && (nextPort.cameras || []).length) ? nextPort
                              : (plan.ports || []).find(q => (q.cameras || []).length) || null)
                 : null;
@@ -3146,6 +3189,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         ${preview
           ? `<b>Preview.</b> She is not on the approach yet — this is what the section looks
              like when she is. It opens on its own about half an hour out.`
+          : lyingOff
+          ? `She is <b>lying off ${camPort.name}</b>, ${off < 1.2 ? "about a mile"
+               : Math.round(off) + " nm"} out and not going anywhere — anchored, in shot from
+             the cameras below. Worth a look at any point over the next few days.`
           : alongside
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
@@ -3156,7 +3203,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
                    : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
                    out</b> at that rate. It is worth opening a window now.`}`}
         These are other people's cameras, looking at the same water from other angles, and
-        they open in their own windows. Whether she is in the frame is luck.
+        they open in their own windows. Whether she is in the frame is luck${lyingOff
+          ? " — better luck than usual while she is lying there" : ""}.
         ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
         so she may already be further in than this says.`}
       </div>
@@ -3176,8 +3224,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           ? "These rewind, so an arrival can still be watched hours later."
           : "These are live views only, with no archive — they cannot be wound back."}
       </div>`, {
-        key: "cameras", open: true,
+        // Folded while she swings at anchor: it is worth having, but not worth a screen
+        // every day for a week. Open the moment she is actually doing something.
+        key: "cameras", open: !lyingOff,
         note: preview ? "preview"
+            : lyingOff ? `lying off ${camPort.name}`
             : alongside ? "alongside now"
             : minsOut < 12 ? "coming in now"
             : minsOut > APPROACH_MIN ? "in sight"
@@ -3197,8 +3248,16 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // the camera and a button that opens Andy's own window.
   const feedEl = document.getElementById("feed");
   if (camPort) {
-    const lead = camOrder(camPort.cameras, alongside, fromNorth)[0];
+    // The list below is ranked by which camera is worth WATCHING. This box can only show
+    // one we are allowed to PLAY, and today that is exactly one of the seven. So it takes
+    // the best playable camera rather than the best camera - otherwise the ranking quietly
+    // hands the live box a camera with no stream and the page loses the picture entirely.
+    // Caught by the anchored case: with her lying in the harbour the ranking correctly put
+    // a sea-level camera first, and that camera is a link, not a stream.
+    const ordered = camOrder(camPort.cameras, alongside, fromNorth);
+    const lead = ordered.find(c => c.hls || c.stream) || ordered[0];
     const when = preview ? "preview \u2014 not on the approach yet"
+      : lyingOff ? "at anchor \u2014 tap to watch"
       : alongside ? "alongside now"
       : minsOut < 12 ? "coming in now"
       : minsOut > APPROACH_MIN ? "close enough to be in shot"
@@ -3209,7 +3268,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     // matters. So the box is built once per camera and only the words are updated after
     // that. `key` changes when the camera she is worth watching changes, which is exactly
     // when the picture SHOULD be replaced: the entrance camera giving way to the quay.
-    const key = `${lead.name}|${lead.hls || lead.stream || lead.url}`;
+    // The mode is part of the key. Without it, a box built in standby while she swung at
+    // anchor would still be sitting there waiting to be tapped an hour later when she was
+    // actually under way for the quay - the one moment it must be playing by itself.
+    const mode = lyingOff ? "standby" : preview ? "preview" : "live";
+    const key = `${lead.name}|${lead.hls || lead.stream || lead.url}|${mode}`;
     if (feedKey !== key) {
       feedKey = key;
       feedTeardown();
@@ -3222,7 +3285,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         <div class="stage"></div>
         <div class="foot"></div>`;
       const stage = feedEl.querySelector(".stage");
-      if (lead.hls) feedPlay(stage, lead);
+      if (lead.hls && lyingOff) feedStandby(stage, lead, camPort);
+      else if (lead.hls) feedPlay(stage, lead);
       else if (lead.stream) stage.innerHTML =
         `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
                  referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`;
