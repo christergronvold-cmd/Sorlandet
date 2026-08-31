@@ -1097,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788197984";
+const BUILD = "1788199365";
 
 async function checkForNewBuild() {
   try {
@@ -3224,7 +3224,45 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   let cameraCard = "";
   let closing = 0, minsOut = null;
   const timedFix = () => minsOut != null && fixAgeMin <= UNTIMED_MIN;
+
+  // Something the ship's own transponder tells the world and our sources do not pass on.
+  //
+  // On 31 August at 15:16 she arrived at Lerwick Roads and her AIS navigational status went
+  // from "under way sailing" to "at anchor". Every commercial AIS site shows it. We do read
+  // that field where we get it, but only the two values that say motor or sail, and the one
+  // source that can hear her at Shetland at all - the foundation's satellite feed - does
+  // not carry it. So the page was left inferring from speed, and the only speed it had was
+  // three hours old and said 2.8 knots, which is how it came to announce "coming in now"
+  // about a ship that had been lying to her anchor since teatime.
+  //
+  // This is the human override for exactly that: a fact somebody watched happen, written
+  // into the plan. It is not a licence to make things up - it yields to evidence in both
+  // directions. A FRESH fix showing her making way cancels it on the spot, and it expires
+  // on its own date, so it cannot outlive the thing it describes.
+  const declaredAnchor = (() => {
+    if (leg.inPort && leg.berthed) return null;             // alongside is its own answer
+    // Reality first: if we have heard her recently and she is moving, she is moving.
+    if (fixAgeMin <= STALE_MIN && p.sog_kn > CLOSING_KN) return null;
+    const now = Date.now();
+    for (const q of (plan.ports || [])) {
+      const s = q.lying_off;
+      if (!s || !(q.cameras || []).length) continue;
+      if (s.from && now < new Date(s.from).getTime()) continue;
+      // Through the end of the stated day: she berths ON that date, and the berth is
+      // recognised by geometry the moment she is alongside.
+      if (s.until && now > new Date(s.until + "T23:59:59Z").getTime()) continue;
+      // And she has to be THERE. A note saying "at anchor off Lerwick" cannot survive a
+      // position twelve miles away, however stale that position is - the note describes a
+      // ship lying off a town, and a ship twelve miles out is not lying off it. Without
+      // this the declaration quietly became "she is at Lerwick" for the whole window,
+      // wherever she actually was.
+      if (p.lat !== undefined && nm([p.lat, p.lon], [q.lat, q.lon]) > CAM_SEE_NM) continue;
+      return q;
+    }
+    return null;
+  })();
   const coming = (() => {
+    if (declaredAnchor) return false;         // she is at anchor; she is not coming in
     if (waiting || !nextPort || !(nextPort.cameras || []).length || p.lat === undefined)
       return false;
     const off = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
@@ -3266,6 +3304,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // she swung at anchor a mile off them.
   const lyingOffPort = (() => {
     if (coming || waiting) return null;
+    if (declaredAnchor) return declaredAnchor;
     if (leg.inPort && leg.berthed) return null;                // alongside is its own state
     if (p.lat === undefined || !(p.sog_kn <= CLOSING_KN)) return null;   // still making way
     for (const q of [leg.inPort, nextPort]) {
@@ -3314,9 +3353,17 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           ? `<b>Preview.</b> She is not on the approach yet — this is what the section looks
              like when she is. It opens on its own about half an hour out.`
           : lyingOff
-          ? `She is <b>lying off ${camPort.name}</b>, ${off < 1.2 ? "about a mile"
-               : Math.round(off) + " nm"} out and not going anywhere — anchored, in shot from
-             the cameras below. Worth a look at any point over the next few days.`
+          ? `She is <b>lying off ${camPort.name}</b>${declaredAnchor ? "" : `, ${off < 1.2
+               ? "about a mile" : Math.round(off) + " nm"} out`} and not going anywhere —
+             anchored, in shot from the cameras below. Worth a look at any point over the
+             next few days.${declaredAnchor && declaredAnchor.lying_off.until
+               ? ` She is due alongside on ${new Date(declaredAnchor.lying_off.until
+                   + "T12:00:00Z").toLocaleDateString("en-GB",
+                   { day: "numeric", month: "long" })}.` : ""}${
+             declaredAnchor && declaredAnchor.lying_off.source
+               ? ` <span style="color:var(--muted)">(From ${declaredAnchor.lying_off.source}
+                   — her satellite positions out here are hours apart and cannot show
+                   it.)</span>` : ""}`
           : alongside
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
