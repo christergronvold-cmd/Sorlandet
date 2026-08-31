@@ -121,6 +121,29 @@
   .feed .bar .when{margin-left:auto; color:var(--muted); white-space:nowrap}
   .feed .stage{position:relative; aspect-ratio:16/9; background:#0b1118}
   .feed .stage iframe{width:100%; height:100%; border:0; display:block}
+  .feed .stage video{
+    width:100%; height:100%; display:block; object-fit:cover; background:#0b1118;
+  }
+  /* While the stream is opening. A black rectangle with no words in it reads as broken,
+     and this box only ever appears in the one hour somebody is watching for a ship. */
+  .feed .stage .wait{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    gap:9px; color:#8ea3b5; font-size:13px; pointer-events:none; text-align:center;
+    padding:16px;
+  }
+  .feed .stage .wait i{
+    width:13px; height:13px; border-radius:50%; border:2px solid #33475c;
+    border-top-color:#7fb2d8; animation:spin 900ms linear infinite; font-style:normal;
+    flex:none;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .feed .stage .snd{
+    position:absolute; right:9px; bottom:9px; padding:6px 11px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.22); background:rgba(6,12,18,.62); color:#e6eef5;
+    font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+  }
+  .feed .stage .snd:hover{background:rgba(6,12,18,.82)}
   .feed .stage .stand{
     position:absolute; inset:0; display:flex; flex-direction:column; gap:10px;
     align-items:center; justify-content:center; text-align:center; padding:18px;
@@ -1054,7 +1077,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788162963";
+const BUILD = "1788169506";
 
 async function checkForNewBuild() {
   try {
@@ -1471,6 +1494,175 @@ function atPoint(map, lat, lon) { return map.latLngToContainerPoint([lat, lon]);
 // cell-based layout came out at on a phone when the grid happened to line up well.
 const GLYPH_GAP_PX = 60;
 
+// ---- the live stream
+//
+// Andy at Shetland Webcams gave us a direct HLS address for the Boating Club camera off
+// their backup CDN, because their main site sits behind a CloudFront distribution he
+// cannot easily let a third party embed. Verified from this domain before it went in:
+// the manifest answers 200 with CORS, so do the rendition playlists and the segments, and
+// the stream carries four renditions - 240, 360, 540 and 720.
+//
+// Two things about it matter more than the code:
+//
+// 1. It is a favour, not a service. The credit line and the link to shetlandwebcams.com
+//    are the condition it came with. They stay.
+// 2. It must never be the reason the page looks broken. Every failure - the library not
+//    loading, the CDN saying no, a stream that connects and then sends nothing - lands on
+//    the same honest fallback: the name of the camera and a button that opens Andy's own
+//    window, where his sponsors and his donate link are. That was the whole box before
+//    today, so the floor cannot fall below what we already had.
+const HLS_JS = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js";
+const FEED_WAIT_MS = 14000;      // black for longer than this and we stop pretending
+let feedKey = null;              // which camera the box is currently built around
+let feedHls = null, feedTimer = null, feedVis = null;
+
+function feedTeardown() {
+  // Order matters: kill the watchdog first, or it fires against a detached element and
+  // rewrites a box that a later render has already replaced.
+  if (feedTimer) { clearTimeout(feedTimer); feedTimer = null; }
+  if (feedVis) { document.removeEventListener("visibilitychange", feedVis); feedVis = null; }
+  if (feedHls) { try { feedHls.destroy(); } catch (e) {} feedHls = null; }
+}
+
+// The fallback, and also the box as it was before Andy answered.
+function feedStand(stage, lead, why) {
+  if (!stage) return;
+  stage.innerHTML = `
+    <div class="stand">
+      <p>${why || (lead.view ? lead.view[0].toUpperCase() + lead.view.slice(1) + "." : "")}
+         It opens in its own window at Shetland Webcams.</p>
+      <a href="${lead.url}" target="_blank" rel="noopener">Watch ${lead.name}</a>
+    </div>`;
+}
+
+function feedPlay(stage, lead) {
+  const v = document.createElement("video");
+  v.muted = true;                // the only way a browser will start it unasked
+  v.autoplay = true;
+  v.playsInline = true;          // or iOS throws it into its own fullscreen player
+  v.preload = "auto";
+  v.setAttribute("disablepictureinpicture", "");
+  v.title = `${lead.name} live`;
+  stage.innerHTML = "";
+  stage.appendChild(v);
+  const wait = document.createElement("div");
+  wait.className = "wait";
+  wait.innerHTML = `<i></i><span>opening ${lead.name}\u2026</span>`;
+  stage.appendChild(wait);
+
+  const settled = () => {
+    if (!stage.isConnected) return;
+    wait.remove();
+    if (feedTimer) { clearTimeout(feedTimer); feedTimer = null; }
+    if (stage.querySelector(".snd")) return;
+    // The camera has a microphone on it. Muted is the only state autoplay allows, so the
+    // choice has to be the reader's - and worth offering, because what you want from a
+    // ship coming alongside is the sound of it.
+    const b = document.createElement("button");
+    b.className = "snd";
+    b.type = "button";
+    b.textContent = "Sound on";
+    b.onclick = () => {
+      v.muted = !v.muted;
+      b.textContent = v.muted ? "Sound on" : "Sound off";
+      if (!v.muted) v.play().catch(() => {});
+    };
+    stage.appendChild(b);
+  };
+  v.addEventListener("loadeddata", settled, { once: true });
+  v.addEventListener("playing", settled, { once: true });
+
+  // Connected, then silent. A live stream that stalls looks exactly like a working page
+  // with a dead camera, so put a name to it and give the reader Andy's window instead.
+  feedTimer = setTimeout(() => {
+    if (!stage.isConnected) return;
+    if (v.readyState >= 2) return;
+    feedTeardown();
+    feedStand(stage, lead, "The live stream is not coming through just now.");
+  }, FEED_WAIT_MS);
+
+  const start = () => {
+    const p = v.play();
+    if (p && p.catch) p.catch(() => {
+      // Some browsers refuse even a muted autoplay. Not a failure - it just needs a tap.
+      wait.remove();
+      const t = document.createElement("div");
+      t.className = "stand";
+      t.innerHTML = `<a href="#" role="button">Play ${lead.name}</a>`;
+      t.querySelector("a").onclick = e => { e.preventDefault(); t.remove(); v.play().catch(() => {}); };
+      stage.appendChild(t);
+    });
+  };
+
+  // iPhones and Safari play HLS natively and do it on less battery than a JavaScript
+  // player can. Everything else needs hls.js.
+  const nativeOk = !!v.canPlayType("application/vnd.apple.mpegurl");
+  const apple = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (/Safari/.test(navigator.userAgent) && !/Chrom|Android|Edg|OPR/.test(navigator.userAgent));
+  if (nativeOk && apple) {
+    v.src = lead.hls;
+    v.addEventListener("error", () => {
+      feedTeardown();
+      feedStand(stage, lead, "The live stream would not open in this browser.");
+    }, { once: true });
+    start();
+    return;
+  }
+
+  const attach = () => {
+    if (!stage.isConnected) return;
+    if (typeof Hls === "undefined" || !Hls.isSupported()) {
+      if (nativeOk) { v.src = lead.hls; start(); return; }
+      feedTeardown();
+      feedStand(stage, lead, "This browser cannot play the live stream.");
+      return;
+    }
+    // capLevelToPlayerSize is the one setting that matters to the people reading this.
+    // The stream offers 720p; a phone showing it in a 360-pixel box has no use for that
+    // and most of these families are on mobile data. Let the box decide the rendition.
+    const hls = new Hls({
+      capLevelToPlayerSize: true,
+      backBufferLength: 30,
+      maxBufferLength: 12,
+      manifestLoadingMaxRetry: 2,
+      levelLoadingMaxRetry: 2,
+      fragLoadingMaxRetry: 3,
+    });
+    feedHls = hls;
+    hls.on(Hls.Events.ERROR, (_e, data) => {
+      if (!data.fatal) return;
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details !== "manifestLoadError") {
+        hls.startLoad();          // one attempt to ride out a dropped segment
+        return;
+      }
+      feedTeardown();
+      feedStand(stage, lead, "The live stream is not answering just now.");
+    });
+    hls.loadSource(lead.hls);
+    hls.attachMedia(v);
+    start();
+    // A live stream left running in a background tab quietly eats a phone's data plan
+    // for hours. Nobody is watching a hidden tab, so stop pulling segments.
+    feedVis = () => {
+      if (!feedHls) return;
+      if (document.hidden) feedHls.stopLoad();
+      else { feedHls.startLoad(); v.play().catch(() => {}); }
+    };
+    document.addEventListener("visibilitychange", feedVis);
+  };
+
+  if (typeof Hls !== "undefined") { attach(); return; }
+  const s = document.createElement("script");
+  s.src = HLS_JS;
+  s.onload = attach;
+  s.onerror = () => {
+    if (nativeOk) { v.src = lead.hls; start(); return; }
+    feedTeardown();
+    feedStand(stage, lead, "The video player could not be loaded.");
+  };
+  document.head.appendChild(s);
+}
+
 const GLYPH_AT = {
   wind:  { dx: -10, dy:   6, w: 11, up: 13, down: 13 },
   waves: { dx:  10, dy:   5, w: 11, up: 11, down: 22 },  // down covers the height beneath
@@ -1661,16 +1853,35 @@ function sampleField(grid, lat, lon, i, keys, extras = []) {
   return out;
 }
 
-// Points on a screen lattice, with the field read at each. gapPx is the spacing the arrows
-// are drawn at, so density is a display decision now rather than an accident of where the
-// forecast happened to be sampled.
+// An even lattice of sample points, so density is a display decision rather than an
+// accident of where the forecast happened to be sampled.
+//
+// The lattice is laid out in LAYER coordinates, not screen ones, and that is the whole
+// point. Leaflet's layer coordinates are fixed to the ground at a given zoom: panning
+// moves the viewport across them, it does not change them. A lattice measured from the
+// corner of the screen instead - which is what this did first - puts every arrow at a
+// fixed pixel position, and the arrows then sit still while the sea slides underneath
+// them. The map moves and the weather does not, which is worse than useless: it reads as
+// wind that is stuck to the phone rather than to a place.
+//
+// So: snap the origin down to a whole multiple of the spacing in layer coordinates, walk
+// the lattice that covers the viewport, and read the field at the latitude and longitude
+// each node actually falls on. A node keeps its ground position for as long as the zoom
+// holds, so on a pan the arrows travel with the water they describe, and the lattice
+// re-anchors a whole cell at a time at the edges - nothing shuffles about in the middle.
 function fieldSamples(map, size, gapPx, grid, i, keys, extras = []) {
   const out = [];
   if (!grid) return out;
+  const o = map.containerPointToLayerPoint([0, 0]);
+  const x0 = Math.floor(o.x / gapPx) * gapPx;
+  const y0 = Math.floor(o.y / gapPx) * gapPx;
   const half = gapPx / 2;
-  for (let y = half; y < size.y; y += gapPx) {
-    for (let x = half; x < size.x; x += gapPx) {
-      const ll = map.containerPointToLatLng([x, y]);
+  for (let ly = y0; ly <= o.y + size.y + gapPx; ly += gapPx) {
+    for (let lx = x0; lx <= o.x + size.x + gapPx; lx += gapPx) {
+      const x = lx - o.x, y = ly - o.y;
+      // Half a cell of margin, so an arrow does not appear cut in half at the edge.
+      if (x < -half || y < -half || x > size.x + half || y > size.y + half) continue;
+      const ll = map.layerPointToLatLng([lx, ly]);
       const c = sampleField(grid, ll.lat, ll.lng, i, keys, extras);
       if (c) out.push({ c, pt: { x, y } });
     }
@@ -2926,34 +3137,56 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // anything at all. Same trigger as the camera list below: she has to be coming in.
   //
   // Shetland Webcams protect their streams - third parties were embedding them to sell
-  // advertising against, so the direct addresses are closed. Andy has offered to whitelist
-  // this domain. Until that is in place a camera has no "stream" in the plan, and the box
-  // shows what it honestly can: which camera to open and a button that opens it in their
-  // own window, where their sponsors and their donate link are. The day a stream address
-  // exists it goes in ports.json and the same box plays it - nothing else changes.
+  // advertising against, so the direct addresses are closed. Andy opened one for us: the
+  // Boating Club camera, off their backup CDN, on the understanding that it is credited
+  // and linked. That address lives in ports.json as "hls" and nothing else in here knows
+  // about it; a camera without one still shows what it honestly can, which is the name of
+  // the camera and a button that opens Andy's own window.
   const feedEl = document.getElementById("feed");
   if (camPort) {
     const lead = camOrder(camPort.cameras, alongside, fromNorth)[0];
     const when = alongside ? "alongside now"
       : minsOut < 12 ? "coming in now" : `about ${Math.round(minsOut / 5) * 5} min out`;
-    feedEl.innerHTML = `
-      <div class="bar">
-        <span class="live"><i></i>live</span>
-        <b>${lead.name}</b>
-        <span class="when">${when}</span>
-      </div>
-      <div class="stage">${lead.stream
-        ? `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
-                  referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`
-        : `<div class="stand">
-             <p>${lead.view ? lead.view[0].toUpperCase() + lead.view.slice(1) + "." : ""}
-                It opens in its own window at Shetland Webcams.</p>
-             <a href="${lead.url}" target="_blank" rel="noopener">Watch ${lead.name}</a>
-           </div>`}</div>
-      <div class="foot">${lead.by ? `${lead.by} · ` : ""}whether she is in the frame is
-        luck — the cameras below look at the same water from other angles.</div>`;
+    // The page re-renders on a timer and on every new fix. Rebuilding this box each time
+    // would tear the video element out and start the stream again from nothing - a black
+    // rectangle and two seconds of buffering, every few minutes, during the one hour it
+    // matters. So the box is built once per camera and only the words are updated after
+    // that. `key` changes when the camera she is worth watching changes, which is exactly
+    // when the picture SHOULD be replaced: the entrance camera giving way to the quay.
+    const key = `${lead.name}|${lead.hls || lead.stream || lead.url}`;
+    if (feedKey !== key) {
+      feedKey = key;
+      feedTeardown();
+      feedEl.innerHTML = `
+        <div class="bar">
+          <span class="live"><i></i>live</span>
+          <b>${lead.name}</b>
+          <span class="when">${when}</span>
+        </div>
+        <div class="stage"></div>
+        <div class="foot"></div>`;
+      const stage = feedEl.querySelector(".stage");
+      if (lead.hls) feedPlay(stage, lead);
+      else if (lead.stream) stage.innerHTML =
+        `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
+                 referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`;
+      else feedStand(stage, lead);
+      // Andy's terms for the stream, and they are cheap: a link and a mention. The credit
+      // goes under the picture whether it is playing or fell back to the link.
+      feedEl.querySelector(".foot").innerHTML = `
+        ${lead.by === "Shetland Webcams"
+          ? `<a href="https://www.shetlandwebcams.com" target="_blank"
+               rel="noopener">shetlandwebcams.com</a> — their camera, shown with their
+             permission. `
+          : lead.by ? `${lead.by} · ` : ""}Whether she is in the frame is luck.`;
+    } else {
+      const w = feedEl.querySelector(".bar .when");
+      if (w) w.textContent = when;
+    }
     feedEl.hidden = false;
   } else {
+    feedKey = null;
+    feedTeardown();
     feedEl.hidden = true;
     feedEl.innerHTML = "";
   }
