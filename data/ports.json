@@ -48,7 +48,8 @@
           "by": "Shetland Webcams",
           "best": "approach",
           "hls": "https://zetcast-eu.b-cdn.net/cf_lbc/LerwickBoatingClubABR/playlist.m3u8",
-          "hls_by": "Shetland Webcams, with Andy's permission"
+          "hls_by": "Shetland Webcams, with Andy's permission",
+          "short": "Boating Club"
         },
         {
           "name": "Fjarå SeaLevel Cam",
@@ -57,7 +58,9 @@
           "by": "Shetland Webcams",
           "best": "alongside",
           "hls": "https://zetcast-eu.b-cdn.net/cf_fjara/FjaraABR/playlist.m3u8",
-          "hls_by": "Shetland Webcams, with Andy's permission"
+          "hls_by": "Shetland Webcams, with Andy's permission",
+          "lead": true,
+          "short": "Fjarå"
         },
         {
           "name": "Kirkabister Ness",
@@ -69,21 +72,23 @@
           "hls": "https://zetcast-eu.b-cdn.net/cf_kirkabister_hd/stream_1080p/playlist.m3u8",
           "hls_by": "Shetland Webcams, with Andy's permission",
           "hls_single": true,
-          "lead": true
+          "short": "Kirkabister"
         },
         {
           "name": "Victoria Pier",
           "url": "https://www.shetlandwebcams.com/victoria-pier/",
           "view": "looks straight at the quay visiting sail training ships lie at",
           "by": "Shetland Webcams",
-          "best": "alongside"
+          "best": "alongside",
+          "short": "Victoria Pier"
         },
         {
           "name": "Esplanade",
           "url": "https://www.shetlandwebcams.com/taxi-rank/",
           "view": "the square above the pier — the berth, and Bressay behind it",
           "by": "Shetland Webcams",
-          "best": "alongside"
+          "best": "alongside",
+          "short": "Esplanade"
         },
         {
           "name": "Town Hall, east",
@@ -91,7 +96,8 @@
           "view": "over the harbour towards Bressay — the way in",
           "by": "Shetland Webcams",
           "best": "approach",
-          "entrance": "south"
+          "entrance": "south",
+          "short": "Town Hall"
         },
         {
           "name": "Harbour north",
@@ -99,7 +105,8 @@
           "view": "points north out the entrance, then pans in — the way she comes if she arrives from the north",
           "by": "Shetland Webcams",
           "best": "approach",
-          "entrance": "north"
+          "entrance": "north",
+          "short": "Harbour N"
         }
       ],
       "tz": "Europe/London"

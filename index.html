@@ -154,6 +154,21 @@
     display:inline-block; padding:9px 16px; border-radius:999px; font-weight:650;
     font-size:14px; background:var(--accent); color:#fff; text-decoration:none;
   }
+  /* The camera switcher. Three streams now, and which one is worth watching changes with
+     the weather rather than with the ship - the long view across the sound is useless in
+     fog, and the sea-level camera is the one that still has her. */
+  .feed .cams{
+    display:flex; gap:6px; padding:8px 12px; overflow-x:auto; scrollbar-width:none;
+    border-top:1px solid var(--line);
+  }
+  .feed .cams::-webkit-scrollbar{display:none}
+  .feed .cams button{
+    flex:none; padding:6px 12px; border-radius:999px; border:1px solid var(--line);
+    background:transparent; color:var(--ink); font:inherit; font-size:12.5px;
+    font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  .feed .cams button:hover{border-color:var(--accent)}
+  .feed .cams button.on{background:var(--accent); border-color:var(--accent); color:#fff}
   .feed .foot{padding:8px 12px; font-size:12px; color:var(--muted)}
   #map{
     height:min(56vh,480px); border-radius:14px; border:1px solid var(--line);
@@ -1082,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788195845";
+const BUILD = "1788197984";
 
 async function checkForNewBuild() {
   try {
@@ -1520,6 +1535,13 @@ const HLS_JS = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"
 const FEED_WAIT_MS = 14000;      // black for longer than this and we stop pretending
 let feedKey = null;              // which camera the box is currently built around
 let feedHls = null, feedTimer = null, feedVis = null;
+// Which camera the reader picked, and whether they have asked for a picture at all. Both
+// belong to the reader, not to the ship. On the evening of 31 August the long view across
+// Bressay Sound went to fog while she lay at anchor, and the sea-level camera was the only
+// one that still had her in it - which no default written in Norway can know an hour ahead.
+// So the reader chooses, and the choice is remembered.
+let feedPick = null, feedAsked = false, feedArgs = null;
+try { feedPick = localStorage.getItem("sorlandet.cam") || null; } catch (e) {}
 
 function feedTeardown() {
   // Order matters: kill the watchdog first, or it fires against a detached element and
@@ -1539,7 +1561,83 @@ function feedStandby(stage, lead, port) {
          camera. The live view does not start on its own while she is just swinging there.</p>
       <a href="#" role="button">Watch ${lead.name}</a>
     </div>`;
-  stage.querySelector("a").onclick = e => { e.preventDefault(); feedPlay(stage, lead); };
+  stage.querySelector("a").onclick = e => {
+    e.preventDefault();
+    feedAsked = true;              // ...and it stays asked, through every later render
+    feedPlay(stage, lead);
+  };
+}
+
+// The box itself. It lives out here rather than inside render() because the reader can
+// change which camera it shows, and a chip tap has to be able to rebuild it without a whole
+// new render - and without the ship's position deciding to put the old camera back.
+function buildFeed(args) {
+  if (args) feedArgs = args;
+  const a = feedArgs;
+  const el = document.getElementById("feed");
+  if (!el) return;
+  if (!a || !a.port || !a.ordered || !a.ordered.length) {
+    feedKey = null; feedTeardown();
+    el.hidden = true; el.innerHTML = "";
+    return;
+  }
+  // Only cameras we are allowed to play can go in this box. The list in the card below
+  // stays ranked by which camera is worth WATCHING; this is the same ranking filtered to
+  // what we can actually show, so it cannot quietly hand the live box a camera that is only
+  // a link. Caught by the anchored case: with her lying in the harbour the ranking
+  // correctly put a sea-level camera first, and at the time that camera had no stream.
+  const playable = a.ordered.filter(c => c.hls || c.stream);
+  const lead = playable.find(c => c.name === feedPick) || playable[0] || a.ordered[0];
+  // Standby is for a ship swinging at anchor that nobody has asked to see. Once the reader
+  // HAS asked - the Watch button, or any chip - it plays, and keeps playing through every
+  // later render; otherwise the next refresh puts the lid back on.
+  const mode = (a.lyingOff && !feedAsked) ? "standby" : a.preview ? "preview" : "live";
+  const key = `${lead.name}|${lead.hls || lead.stream || lead.url}|${mode}`;
+  if (feedKey !== key) {
+    feedKey = key;
+    feedTeardown();
+    el.innerHTML = `
+      <div class="bar">
+        <span class="live"><i></i>live</span>
+        <b>${lead.name}</b>
+        <span class="when">${a.when}</span>
+      </div>
+      <div class="stage"></div>
+      ${playable.length > 1 ? `<div class="cams">${playable.map(c =>
+        `<button type="button" data-cam="${c.name}"${c === lead ? ' class="on"' : ""}
+                 aria-pressed="${c === lead}">${c.short || c.name}</button>`).join("")}</div>`
+        : ""}
+      <div class="foot"></div>`;
+    const stage = el.querySelector(".stage");
+    if (lead.hls && mode === "standby") feedStandby(stage, lead, a.port);
+    else if (lead.hls) feedPlay(stage, lead);
+    else if (lead.stream) stage.innerHTML =
+      `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
+               referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`;
+    else feedStand(stage, lead);
+    const cams = el.querySelector(".cams");
+    if (cams) cams.onclick = e => {
+      const b = e.target.closest("button[data-cam]");
+      if (!b) return;
+      feedPick = b.dataset.cam;
+      feedAsked = true;                     // picking a camera IS asking for a picture
+      try { localStorage.setItem("sorlandet.cam", feedPick); } catch (err) {}
+      buildFeed();
+    };
+    // Andy's terms for the stream, and they are cheap: a link and a mention.
+    el.querySelector(".foot").innerHTML = `
+      ${lead.by === "Shetland Webcams"
+        ? `<a href="https://www.shetlandwebcams.com" target="_blank"
+             rel="noopener">shetlandwebcams.com</a> — their camera, shown with their
+           permission. `
+        : lead.by ? `${lead.by} · ` : ""}Whether she is in the frame is thanks to Andy${
+        playable.length > 1 ? " — try another camera if this one has lost her to the fog"
+                            : ""}.`;
+  } else {
+    const w = el.querySelector(".bar .when");
+    if (w) w.textContent = a.when;
+  }
+  el.hidden = false;
 }
 
 // The fallback, and also the box as it was before Andy answered.
@@ -3230,8 +3328,8 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
                    : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
                    out</b> at that rate. It is worth opening a window now.`}`}
         These are other people's cameras, looking at the same water from other angles, and
-        they open in their own windows. Whether she is in the frame is luck${lyingOff
-          ? " — better luck than usual while she is lying there" : ""}.
+        they open in their own windows. Whether she is in the frame is thanks to Andy${
+          lyingOff ? ", who has been steering one of them at her" : ""}.
         ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
         so she may already be further in than this says.`}
       </div>
@@ -3273,71 +3371,26 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // and linked. That address lives in ports.json as "hls" and nothing else in here knows
   // about it; a camera without one still shows what it honestly can, which is the name of
   // the camera and a button that opens Andy's own window.
-  const feedEl = document.getElementById("feed");
+  // The live view above the map. render() works out the facts; buildFeed owns the box,
+  // because the reader can change which camera it shows and that must not have to wait for
+  // the next fix to take effect.
   if (camPort) {
-    // The list below is ranked by which camera is worth WATCHING. This box can only show
-    // one we are allowed to PLAY, and today that is exactly one of the seven. So it takes
-    // the best playable camera rather than the best camera - otherwise the ranking quietly
-    // hands the live box a camera with no stream and the page loses the picture entirely.
-    // Caught by the anchored case: with her lying in the harbour the ranking correctly put
-    // a sea-level camera first, and that camera is a link, not a stream.
-    const ordered = camOrder(camPort.cameras, alongside, fromNorth);
-    const lead = ordered.find(c => c.hls || c.stream) || ordered[0];
-    const when = preview ? "preview \u2014 not on the approach yet"
-      : lyingOff ? "at anchor \u2014 tap to watch"
-      : alongside ? "alongside now"
-      : !timedFix() || minsOut > APPROACH_MIN ? "close enough to be in shot"
-      : minsOut < 12 ? "coming in now"
-      : `about ${Math.round(minsOut / 5) * 5} min out`;
-    // The page re-renders on a timer and on every new fix. Rebuilding this box each time
-    // would tear the video element out and start the stream again from nothing - a black
-    // rectangle and two seconds of buffering, every few minutes, during the one hour it
-    // matters. So the box is built once per camera and only the words are updated after
-    // that. `key` changes when the camera she is worth watching changes, which is exactly
-    // when the picture SHOULD be replaced: the entrance camera giving way to the quay.
-    // The mode is part of the key. Without it, a box built in standby while she swung at
-    // anchor would still be sitting there waiting to be tapped an hour later when she was
-    // actually under way for the quay - the one moment it must be playing by itself.
-    const mode = lyingOff ? "standby" : preview ? "preview" : "live";
-    const key = `${lead.name}|${lead.hls || lead.stream || lead.url}|${mode}`;
-    if (feedKey !== key) {
-      feedKey = key;
-      feedTeardown();
-      feedEl.innerHTML = `
-        <div class="bar">
-          <span class="live"><i></i>live</span>
-          <b>${lead.name}</b>
-          <span class="when">${when}</span>
-        </div>
-        <div class="stage"></div>
-        <div class="foot"></div>`;
-      const stage = feedEl.querySelector(".stage");
-      if (lead.hls && lyingOff) feedStandby(stage, lead, camPort);
-      else if (lead.hls) feedPlay(stage, lead);
-      else if (lead.stream) stage.innerHTML =
-        `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
-                 referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`;
-      else feedStand(stage, lead);
-      // Andy's terms for the stream, and they are cheap: a link and a mention. The credit
-      // goes under the picture whether it is playing or fell back to the link.
-      feedEl.querySelector(".foot").innerHTML = `
-        ${lead.by === "Shetland Webcams"
-          ? `<a href="https://www.shetlandwebcams.com" target="_blank"
-               rel="noopener">shetlandwebcams.com</a> — their camera, shown with their
-             permission. `
-          : lead.by ? `${lead.by} · ` : ""}Whether she is in the frame is luck.`;
-    } else {
-      const w = feedEl.querySelector(".bar .when");
-      if (w) w.textContent = when;
-    }
-    feedEl.hidden = false;
+    buildFeed({
+      port: camPort,
+      ordered: camOrder(camPort.cameras, alongside, fromNorth),
+      lyingOff, preview,
+      when: preview ? "preview \u2014 not on the approach yet"
+        : (lyingOff && !feedAsked) ? "at anchor \u2014 tap to watch"
+        : lyingOff ? "at anchor off " + camPort.name
+        : alongside ? "alongside now"
+        : !timedFix() || minsOut > APPROACH_MIN ? "close enough to be in shot"
+        : minsOut < 12 ? "coming in now"
+        : `about ${Math.round(minsOut / 5) * 5} min out`,
+    });
   } else {
-    feedKey = null;
-    feedTeardown();
-    feedEl.hidden = true;
-    feedEl.innerHTML = "";
+    feedArgs = null;
+    buildFeed(null);
   }
-
   // ---- charts
   // The charts showed fourteen days. That made every bar thin, forced the figures onto
   // their sides to fit, and buried the one number a reader actually wants - the worst it
