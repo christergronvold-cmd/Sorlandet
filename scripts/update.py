@@ -16,6 +16,8 @@ check that the page works before getting a key.
 from __future__ import annotations
 
 import json
+import subprocess
+import unicodedata
 import math
 import os
 import ssl
@@ -1927,6 +1929,240 @@ def build_orbit(points: list) -> None:
 # ----------------------------------------------------------------------- main
 
 
+SHORE_DIR = ROOT / "images" / "shore"
+SHORE = DATA / "shore.json"
+SHORE_MAX_KB = 700          # most of these families read the page on mobile data
+SHORE_MAX_PX = 1600         # wider than any phone, and plenty to see a ship in
+
+
+def shrink_frame(path: Path) -> Path:
+    """Bring an oversized frame down to something a phone can afford, in place.
+
+    The snapshot button on the webcam player saves PNG, and a 1080p PNG is about two
+    megabytes. A hundred and forty families, most of them on a phone, should not each
+    download two megabytes to see one picture of a ship - and Christer should not have to
+    re-export every frame by hand either, because that is the work the drop-in folder
+    exists to remove.
+
+    So: same picture, sensible size. PNG becomes JPEG, and the original is dropped once the
+    smaller file is written, since keeping both would show the same frame twice. Quality
+    steps down only as far as it must. If Pillow is not installed the file is left exactly
+    as it is and the caller warns instead - a big picture is a nuisance, a broken one is a
+    lie about the ship.
+    """
+    try:
+        from PIL import Image
+    except Exception:
+        return path
+    if path.stat().st_size // 1024 <= SHORE_MAX_KB:
+        return path
+    try:
+        with Image.open(path) as raw:
+            im = raw.convert("RGB")
+    except Exception as exc:
+        print(f"  ! could not read {path.name} to shrink it: {exc}")
+        return path
+    out = path.with_suffix(".jpg")
+    if out.exists() and out != path:
+        out = path.with_name(path.stem + "-web.jpg")
+    was = path.stat().st_size // 1024
+    for width, quality in ((SHORE_MAX_PX, 85), (SHORE_MAX_PX, 78), (1400, 75), (1200, 70)):
+        pic = im
+        if pic.width > width:
+            pic = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+        pic.save(out, "JPEG", quality=quality, optimize=True, progressive=True)
+        if out.stat().st_size // 1024 <= SHORE_MAX_KB:
+            break
+    now = out.stat().st_size // 1024
+    if out != path:
+        if now < was:
+            path.unlink()
+        else:
+            out.unlink()                      # shrinking made it worse; keep the original
+            return path
+    print(f"* shrank {path.name} from {was} kB to {now} kB ({out.name})")
+    return out
+
+
+def git_added(path: Path) -> str | None:
+    """When this file first appeared in the repository, as an ISO instant in UTC.
+
+    Used for pictures whose filename says nothing - the snapshot button on a webcam player
+    calls everything "Snapshot (1).png". The commit date is not when the shutter went, but
+    it is within an hour or two of it and it is a fact rather than a guess. Git is the only
+    place to ask: a checkout does not preserve modification times, so the mtime in a CI
+    runner is the moment the runner cloned the repo, which is the same for every file.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "log", "--diff-filter=A", "--format=%cI", "-1", "--", str(path)],
+            cwd=str(ROOT), capture_output=True, text=True, timeout=20)
+        line = (out.stdout or "").strip().splitlines()
+        if line:
+            when = datetime.fromisoformat(line[0])
+            return iso(when.astimezone(timezone.utc))
+    except Exception as exc:
+        print(f"  ! could not read the commit date for {path.name}: {exc}")
+    return None
+
+
+def build_shore() -> None:
+    """Turn whatever is in images/shore into data/shore.json.
+
+    The point of this is that Christer can drop a frame into the folder and be done. He
+    pays Shetland Webcams for the rewind, which means he can go back and catch her at the
+    right moment - and the moments worth catching happen while he is watching a camera, not
+    while he is editing a JSON file. A webcam holds a day at most; a picture nobody saves in
+    the next few hours is simply gone.
+
+    GitHub Pages will not list a directory, so the page cannot discover the files by itself
+    and something has to write the index. That something is this job, which already runs
+    every half hour.
+
+    The filename carries the facts:
+
+        2026-08-31-1626-kirkabister.jpg
+        ^^^^^^^^^^ ^^^^ ^^^^^^^^^^^
+        date       local time (the clock in the corner of the frame), camera
+
+    The camera part is matched against the cameras in ports.json, which is where the link
+    and the owner's name already live - so the credit cannot drift out of step with the
+    plan, and a frame from a camera we have not listed still gets published, just without a
+    link. Captions already in shore.json are kept, so a caption can be added by hand later
+    and will survive every later round.
+    """
+    if not SHORE_DIR.is_dir():
+        return
+    plan = read_json(DATA / "ports.json", {}) or {}
+    cams = []
+    for port in (plan.get("ports") or []):
+        for cam in (port.get("cameras") or []):
+            cams.append((port, cam))
+
+    # Accents have to be folded rather than treated as punctuation. "Fjara" is what anybody
+    # types for a file, and Shetland Webcams call the camera "Fjara SeaLevel Cam" with a
+    # ring over the a - without this the ring became a separator, the camera slugged to
+    # "fjar", and a correctly named frame was published with no link to the camera that
+    # took it. Norwegian names on a Norwegian voyage: this is the common case, not the
+    # exotic one.
+    FOLD = {"\u00e6": "ae", "\u00f8": "o", "\u00e5": "a", "\u00fc": "u", "\u00df": "ss",
+            "\u0153": "oe", "\u00f0": "d", "\u00fe": "th", "\u0142": "l"}
+
+    def slug(text: str) -> str:
+        flat = unicodedata.normalize("NFKD", (text or "").lower())
+        keep = []
+        for ch in flat:
+            if unicodedata.combining(ch):
+                continue                       # the ring, the acute, the umlaut: dropped
+            ch = FOLD.get(ch, ch)
+            keep.append(ch if ch.isalnum() else "-")
+        return "-".join(p for p in "".join(keep).split("-") if p)
+
+    old = {f.get("file"): f for f in ((read_json(SHORE, {}) or {}).get("frames") or [])}
+    frames, warned = [], []
+    for path in sorted(SHORE_DIR.iterdir()):
+        if path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
+            continue
+        # Keep the name it arrived under. The shrunk file is brand new, so git has never
+        # heard of it, and asking git when it appeared would come back empty - leaving a
+            # frame with no date for one round, which is exactly the round somebody looks.
+        dropped_as = path
+        path = shrink_frame(path)
+        rel = f"images/shore/{path.name}"
+        kb = path.stat().st_size // 1024
+        if kb > SHORE_MAX_KB:
+            warned.append(f"{path.name} is {kb} kB and could not be shrunk here - "
+                          "worth re-exporting it smaller")
+        parts = path.stem.split("-")
+        stamp, tail, added = None, path.stem, False
+        # YYYY-MM-DD-HHMM-name, and YYYY-MM-DD-name for a frame with no time in it
+        if len(parts) >= 4 and len(parts[0]) == 4 and parts[0].isdigit():
+            date = "-".join(parts[:3])
+            if len(parts[3]) == 4 and parts[3].isdigit():
+                stamp, tail = f"{date}T{parts[3][:2]}:{parts[3][2:]}:00", "-".join(parts[4:])
+            else:
+                stamp, tail = f"{date}T12:00:00", "-".join(parts[3:])
+        # The rewind player names its snapshots "Snapshot (1).png", and renaming every one
+        # by hand defeats the whole point of a drop-in folder. So an unparseable name is not
+        # an error: the time it was committed is close enough to when it was taken, and it
+        # is marked as an "added" date so the page never presents it as a capture time. The
+        # picture itself carries the real one - these frames have the camera name and the
+        # clock burned into the corner, which is better evidence than anything we could put
+        # in a caption.
+        named = stamp is not None
+        if stamp is None:
+            when = git_added(path) or (git_added(dropped_as) if dropped_as != path else None)
+            # Last resort. In a CI runner every mtime is the moment the repo was cloned, so
+            # this is nearly worthless for a file that came with the checkout - but it is
+            # right for one this job has just written, and a dated picture in roughly the
+            # right place beats an undated one that sorts to the bottom of the album.
+            if not when:
+                try:
+                    when = iso(datetime.fromtimestamp(path.stat().st_mtime, timezone.utc))
+                except Exception:
+                    when = None
+            if when:
+                stamp, added, tail = when, True, ""
+        want = slug(tail)
+        found = None
+        if want:
+            for port, cam in cams:
+                names = {slug(cam.get("name")), slug(cam.get("short"))}
+                if want in names or any(n and (want in n or n in want) for n in names):
+                    found = (port, cam)
+                    break
+        keep = old.get(rel, {})
+        entry = {"file": rel}
+        if stamp:
+            entry["t"] = stamp
+            if added:
+                # A git timestamp is a real instant, in UTC, and it is when the file
+                # arrived rather than when the shutter went.
+                entry["added"] = True
+            else:
+                # The time in the filename is the clock in the corner of the frame, which
+                # is the shore's own time, so it is stored with the zone it was read in
+                # rather than pretended to be UTC.
+                entry["tz"] = ((found[0].get("tz") if found else None)
+                               or keep.get("tz") or "UTC")
+                entry["local"] = True
+        if found:
+            port, cam = found
+            entry["camera"] = cam.get("name")
+            entry["url"] = cam.get("url")
+            entry["by"] = cam.get("by")
+        else:
+            # Only worth saying when the name was TRYING to name a camera. "Snapshot (1)"
+            # was never meant to, and warning about it every half hour for the rest of the
+            # voyage would train whoever reads the log to ignore it.
+            if want and named:
+                warned.append(f"{path.name}: no camera in the plan matches {want!r} - "
+                              "published without a link")
+            for k in ("camera", "url", "by"):
+                if keep.get(k):
+                    entry[k] = keep[k]
+        if keep.get("caption"):
+            entry["caption"] = keep["caption"]
+        frames.append(entry)
+
+    frames.sort(key=lambda f: f.get("t") or "", reverse=True)
+    payload = {
+        "note": ("Built from the files in images/shore by scripts/update.py. Drop a frame "
+                 "in named YYYY-MM-DD-HHMM-camera.jpg and it appears here. Captions added "
+                 "by hand are kept. Every frame is somebody else's picture, kept with "
+                 "their permission."),
+        "frames": frames,
+    }
+    before = read_json(SHORE, None)
+    if before == payload:
+        print(f"  shore album unchanged ({len(frames)} frames)")
+    else:
+        write_json(SHORE, payload)
+        print(f"* wrote {SHORE.name} ({len(frames)} frames)")
+    for w in warned:
+        print(f"  ! {w}")
+
+
 def main() -> int:
     api_key = os.environ.get("AISSTREAM_API_KEY", "").strip()
     demo = not api_key
@@ -2169,6 +2405,7 @@ def main() -> int:
     build_course(lat, lon, points)
     build_ahead(lat, lon, position.get("sog_kn"), points)
     build_orbit(points)
+    build_shore()
     update_history(weather, points, collected)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0
