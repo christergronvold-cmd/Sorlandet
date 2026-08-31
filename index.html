@@ -1097,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788205684";
+const BUILD = "1788208035";
 
 async function checkForNewBuild() {
   try {
@@ -1558,7 +1558,9 @@ function feedStandby(stage, lead, port) {
   stage.innerHTML = `
     <div class="stand">
       <p>She is lying at anchor off ${port ? port.name : "the port"}, in shot from this
-         camera. The live view does not start on its own while she is just swinging there.</p>
+         camera. Andy at Shetland Webcams has been a rock star and focused both cameras
+         directly on her. The live view does not start on its own while she is just
+         swinging there.</p>
       <a href="#" role="button">Watch ${lead.name}</a>
     </div>`;
   stage.querySelector("a").onclick = e => {
@@ -3686,8 +3688,28 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     }
   }
 
+  // ---- seen from space
+  //
+  // Retired from the front of the page, and kept for the one job it is actually good at.
+  //
+  // Sentinel-2 is the finest free imagery there is and she is still about six pixels long
+  // in it, at a cross drawn on open water. Next to a webcam frame of her under full sail it
+  // is not a picture of a ship, it is a puzzle - "veldig sokt og ikke spesielt lett a
+  // skjonne bildet", which is exactly right. On a coastal summer with three cameras
+  // pointed at her it earns nothing.
+  //
+  // It earns something in one situation, and it is the situation this whole page exists
+  // for: the Atlantic crossings, when nobody has heard her for a day and the only evidence
+  // that she is where she should be is a satellite that happened to pass over. Six pixels
+  // is a poor picture and an excellent answer to "is she all right".
+  //
+  // So it appears when the AIS has gone quiet, and not otherwise. ?space forces it, for
+  // when somebody wants to look anyway.
+  const SPACE_QUIET_H = 18;
+  const spaceEarnsIt = fixAgeMin >= SPACE_QUIET_H * 60
+    || /(^|[?&])space($|[=&])/.test(location.search);
   let albumCard = "";
-  if (!waiting) {
+  if (!waiting && spaceEarnsIt) {
     const alongside = orbitHits.filter(h => portAt(h.t)).slice(0, 12);
     const atSea = orbitHits.filter(h => !portAt(h.t)).slice(0, 12);
 
@@ -3719,9 +3741,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         albumTile(h, 800, `Sentinel-2 view of her position on ${h.t.slice(0, 10)}`)).join("")}</div>`);
 
     const intro = sections.length
-      ? `Sentinel-2 true colour, 10 m per pixel — the finest free imagery there is, and 37
-         times finer than the weather satellites. She is about six pixels long, at the
-         cross. Tap one to open it in ESA's own viewer and zoom in yourself.`
+      ? `${fixAgeMin >= SPACE_QUIET_H * 60
+          ? `Nobody has heard from her by radio for ${Math.round(fixAgeMin / 60)} hours, so
+             here is the other way of looking. ` : ""}Sentinel-2 true colour, 10 m per
+         pixel — the finest free imagery there is, and 37 times finer than the weather
+         satellites. She is about six pixels long, at the cross. Tap one to open it in
+         ESA's own viewer and zoom in yourself.`
       : `Nothing yet. ESA photographs coasts, not the middle of the ocean, so a crossing
          produces no passes at all — and a pass only counts here if its footprint contained
          her at the moment the shutter opened.${nextWhen && nextStop

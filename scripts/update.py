@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import shutil
 import ssl
 import subprocess
@@ -2173,6 +2174,27 @@ def git_added(path: Path) -> str | None:
     return None
 
 
+def images_are_committed() -> bool:
+    """Does the workflow actually push what this job writes into images/?
+
+    A real hazard, not a theoretical one. Shrinking a 2 MB PNG means writing a new .jpg and
+    deleting the PNG, and shore.json then points at the .jpg. If the commit step still
+    stages only data/, the album gets published pointing at ten files that were never
+    pushed - ten broken pictures on a page a hundred and forty families read, and the
+    originals still sitting there at 2 MB each.
+
+    So the job reads its own workflow and checks. If images/ is not staged it leaves every
+    file exactly as it found it and says so, loudly, in the log. A big picture is a
+    nuisance; a broken one is the page telling people something that is not true.
+    """
+    wf = ROOT / ".github" / "workflows" / "update.yml"
+    try:
+        text = wf.read_text(encoding="utf-8")
+    except OSError:
+        return True                    # not our workflow to reason about; assume it is fine
+    return bool(re.search(r"git add[^\n]*images/", text))
+
+
 def build_shore() -> None:
     """Turn whatever is in images/shore into data/shore.json.
 
@@ -2210,6 +2232,10 @@ def build_shore() -> None:
 
     old = {f.get("file"): f for f in ((read_json(SHORE, {}) or {}).get("frames") or [])}
     frames, warned = [], []
+    commit_images = images_are_committed()
+    if not commit_images:
+        warned.append("the workflow does not stage images/, so nothing in there is being "
+                      "shrunk or renamed - update .github/workflows/update.yml")
     for path in sorted(SHORE_DIR.iterdir()):
         if path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
             continue
@@ -2217,7 +2243,8 @@ def build_shore() -> None:
         # heard of it, and asking git when it appeared would come back empty - leaving a
             # frame with no date for one round, which is exactly the round somebody looks.
         dropped_as = path
-        path = shrink_frame(path)
+        if commit_images:
+            path = shrink_frame(path)
         rel = f"images/shore/{path.name}"
         kb = path.stat().st_size // 1024
         if kb > SHORE_MAX_KB:
