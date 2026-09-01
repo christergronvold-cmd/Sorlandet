@@ -1097,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788208035";
+const BUILD = "1788251141";
 
 async function checkForNewBuild() {
   try {
@@ -3594,7 +3594,28 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   let reviewCard = "";
   if (pendingFile) {
     const waiting = ((pendingFile.frames) || []).filter(f => f && f.file);
-    reviewCard = wideCard(`Awaiting your review · ${waiting.length}`, waiting.length ? `
+    // What each camera can see right this minute, as three pictures rather than three
+    // video players. Overwritten every round, so it is always current and never grows.
+    // This is how the question "which camera has actually got her" gets answered - by
+    // whoever is looking at this page, and by me when Christer asks which one to make the
+    // default. Fog moves and Andy swings the cameras about; a default written into a file
+    // in Norway cannot keep up with either.
+    const live = ((pendingFile.live) || []).filter(f => f && f.file);
+    const liveBlock = live.length ? `
+      <h3 class="albumh">What the cameras see now \u00b7 ${live.length}</h3>
+      <div class="album shore">${live.map(f => `
+        <figure>
+          <a href="${f.file}" target="_blank" rel="noopener">
+            <img loading="lazy" src="${f.file}?t=${encodeURIComponent(f.t || "")}"
+                 alt="Newest frame from ${f.camera}">
+          </a>
+          <figcaption><b>${f.camera}</b>
+            <br><span style="color:var(--muted)">${f.t
+              ? new Date(f.t).toLocaleTimeString("en-GB",
+                  { hour: "2-digit", minute: "2-digit" }) + " UTC" : ""} \u00b7 ${f.kb} kB
+            </span></figcaption>
+        </figure>`).join("")}</div>` : "";
+    reviewCard = wideCard(`Awaiting your review · ${waiting.length}`, liveBlock + (waiting.length ? `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 14px">
         The job took these by itself while she was closing on the port. <b>None of them are
         on the page.</b> To publish one, rename it in GitHub from
@@ -3613,10 +3634,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
             <code>images/shore/${name}</code></span>
           </figcaption>
         </figure>`; }).join("")}</div>`
-      : `<div style="font-size:13px;color:var(--muted)">Nothing waiting. The job only takes
-         pictures while she is inside the approaches and actually closing on the port, so
-         this stays empty through a week at anchor.</div>`,
-      { key: "review", open: true, note: waiting.length ? "not published" : "empty" });
+      : `<div style="font-size:13px;color:var(--muted)">Nothing waiting to be published. The
+         job only keeps frames while she is inside the approaches and actually closing on
+         the port, so this stays empty through a week at anchor — the row above is a
+         standing look at the cameras, refreshed every round and never kept.</div>`),
+      { key: "review", open: true,
+        note: waiting.length ? "not published" : (live.length ? "live look" : "empty") });
   }
 
   // ---- seen from the shore
@@ -3634,57 +3657,57 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   {
     const frames = ((shoreFile && shoreFile.frames) || []).filter(f => f && f.file);
     if (frames.length) {
-      const byNewest = frames.slice().sort((a, b) => (b.t || "").localeCompare(a.t || ""));
-      const hosts = [...new Set(byNewest.map(f => f.by).filter(Boolean))];
-      shoreCard = wideCard(`Seen from the shore \u00b7 ${byNewest.length}`, `
-        <div style="font-size:13px;color:var(--muted);margin:-4px 0 14px">
-          Somebody on land, or a camera on a headland, with her actually in the frame. These
-          are kept here because they do not last: a webcam holds a day at most, and then the
-          moment is gone.
-        </div>
-        <div class="album shore">${byNewest.map(f => {
-          // Two shapes of timestamp, and the difference matters by an hour in summer.
-          // A frame added by hand carries a true UTC instant. One indexed by the job
-          // carries the clock printed in the corner of the picture - which is the shore's
-          // own time - so it has to be moved into UTC using that shore's offset ON THAT
-          // DAY, or a frame from British Summer Time comes out an hour early in October.
-          // Three shapes of time, and the page must not present the third as the first.
-          // A frame named by the convention carries the clock printed in the corner of the
-          // picture, in the shore's own zone. One added by hand carries a true UTC instant.
-          // One whose filename said nothing - a webcam player calls every snapshot
-          // "Snapshot (1).png" - carries the date it was committed, which is when it
-          // ARRIVED, not when the shutter went. So that one is labelled "added", and the
-          // real moment is read off the picture, where the camera burned it in.
-          const t = f.t ? (f.local ? zonedToUtc(f.t, f.tz) : new Date(f.t)) : null;
+      // A folder per port, and the album follows it. Nineteen ports' worth of pictures in
+      // one flat run is a heap rather than a library - and the paragraph that used to sit
+      // above them, explaining what a webcam is, was doing no work at all. These pictures
+      // have a camera name, a time, and a ship in them. Nothing needs saying.
+      const groups = new Map();
+      for (const f of frames) {
+        const key = f.port || "Elsewhere";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(f);
+      }
+      const at = f => (f.t ? (f.local ? zonedToUtc(f.t, f.tz) : new Date(f.t)) : null);
+      const newest = list => list.reduce((m, f) => {
+        const t = at(f);
+        return t && (!m || t > m) ? t : m;
+      }, null);
+      // The port she was at most recently comes first, so the pictures somebody is
+      // actually looking for are at the top rather than under nine months of older ones.
+      const order = [...groups.entries()].sort((a, b) =>
+        (newest(b[1]) || 0) - (newest(a[1]) || 0));
+      const hosts = [...new Set(frames.map(f => f.by).filter(Boolean))];
+      shoreCard = wideCard(`Seen from the shore \u00b7 ${frames.length}`,
+        order.map(([port, list]) => `
+        <h3 class="albumh">${port} \u00b7 ${list.length}</h3>
+        <div class="album shore">${list.slice()
+          .sort((a, b) => (at(b) || 0) - (at(a) || 0)).map(f => {
+          const t = at(f);
           const where = f.camera && f.url
             ? `<a href="${f.url}" target="_blank" rel="noopener">${f.camera}</a>`
             : (f.camera || "");
           return `
           <figure>
-            <a href="${f.file}" target="_blank" rel="noopener"
-               title="Open the full frame">
+            <a href="${f.file}" target="_blank" rel="noopener" title="Open the full frame">
               <img loading="lazy" src="${f.file}"
                    alt="${(f.camera || "A camera") + " frame of Sorlandet"}">
             </a>
-            <figcaption>
-              ${t ? (f.added
-                  ? `<span style="color:var(--muted)">added ${t.toLocaleDateString("en-GB",
-                       { day: "numeric", month: "short" })} — the camera and the time are
-                       printed on the picture</span>`
-                  : `<b>${t.toLocaleDateString("en-GB",
-                       { day: "numeric", month: "short", timeZone: f.tz || undefined })}</b>
-                     ${t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit",
-                       timeZone: f.tz || undefined })}${f.tz ? " local" : ""}`)
-                  : ""}${where ? ` \u00b7 ${where}` : ""}
-              ${f.caption ? `<br><span style="color:var(--muted)">${f.caption}</span>` : ""}
-            </figcaption>
-          </figure>`; }).join("")}</div>
+            <figcaption>${t ? (f.added
+                ? `<span style="color:var(--muted)">added ${t.toLocaleDateString("en-GB",
+                     { day: "numeric", month: "short" })}</span>`
+                : `<b>${t.toLocaleDateString("en-GB", { day: "numeric", month: "short",
+                     timeZone: f.tz || undefined })}</b>
+                   ${t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit",
+                     timeZone: f.tz || undefined })}`)
+              : ""}${where ? ` \u00b7 ${where}` : ""}</figcaption>
+          </figure>`; }).join("")}</div>`).join("") + `
         <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
           ${hosts.includes("Shetland Webcams")
             ? `Frames by <a href="https://www.shetlandwebcams.com" target="_blank"
                  rel="noopener">shetlandwebcams.com</a>, kept here with their permission. `
             : ""}Their cameras, their pictures.
-        </div>`, { key: "shore", open: true, note: `${byNewest.length} so far` });
+        </div>`, { key: "shore", open: true, note: `${order.length} port${
+          order.length === 1 ? "" : "s"}` });
     }
   }
 

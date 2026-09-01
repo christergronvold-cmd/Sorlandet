@@ -2130,6 +2130,42 @@ def capture_frames(seconds: int) -> None:
         print(f"* captured {taken} frame(s) into {PENDING_DIR.relative_to(ROOT)}")
 
 
+LATEST_DIR = SHORE_DIR / "latest"
+
+
+def capture_latest() -> None:
+    """One frame from every camera at the port she is at, overwriting the last set.
+
+    Not an album and not a candidate for one: three files that always hold the newest look
+    at each camera, so the question "which of these can actually see her right now" can be
+    answered by looking at three pictures instead of opening three video players. Fog moves,
+    Andy swings the cameras about, and which view is worth being the default changes through
+    the day - on 31 August the long view across the sound went to fog while the sea-level
+    camera still had her.
+
+    Overwritten every round on purpose. She lies at anchor for days; a growing folder would
+    be hundreds of frames of the same ship not moving. Three files, always current.
+    """
+    plan = read_json(DATA / "ports.json", {}) or {}
+    pos = read_json(LATEST, {}).get("position") or {}
+    lat, lon = pos.get("lat"), pos.get("lon")
+    if lat is None or lon is None:
+        return
+    for port in (plan.get("ports") or []):
+        cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+        if not cams or nm_between((lat, lon), (port["lat"], port["lon"])) > CAPTURE_NM:
+            continue
+        for cam in cams:
+            dest = LATEST_DIR / f"{ascii_slug(cam.get('short') or cam['name'])}.jpg"
+            tmp = dest.with_suffix(".tmp.jpg")
+            if grab_frame(cam["hls"], tmp):
+                tmp.replace(dest)
+            elif tmp.exists():
+                tmp.unlink()
+        print(f"* refreshed the standing look at {len(cams)} camera(s) in {port['name']}")
+        return
+
+
 def build_pending() -> None:
     """Index the frames waiting to be looked at, so ?review can show them on a phone."""
     frames = []
@@ -2140,7 +2176,17 @@ def build_pending() -> None:
             frames.append({"file": f"images/shore/pending/{path.name}",
                            "kb": path.stat().st_size // 1024})
     frames.sort(key=lambda f: f["file"], reverse=True)
+    live = []
+    if LATEST_DIR.is_dir():
+        for path in sorted(LATEST_DIR.iterdir()):
+            if path.suffix.lower() != ".jpg":
+                continue
+            live.append({"file": f"images/shore/latest/{path.name}",
+                         "camera": path.stem,
+                         "kb": path.stat().st_size // 1024,
+                         "t": iso(datetime.fromtimestamp(path.stat().st_mtime, timezone.utc))})
     payload = {
+        "live": live,
         "note": ("Frames the job took by itself while she was coming in. NOTHING here is on "
                  "the page. To publish one, rename it in GitHub from "
                  "images/shore/pending/NAME to images/shore/NAME - it is already named for "
@@ -2233,10 +2279,23 @@ def build_shore() -> None:
     old = {f.get("file"): f for f in ((read_json(SHORE, {}) or {}).get("frames") or [])}
     frames, warned = [], []
     commit_images = images_are_committed()
+    # A folder per port, because a voyage with nineteen of them in one flat directory is not
+    # a picture library, it is a heap. images/shore/Lerwick, images/shore/Dublin, and so on.
+    # Loose files at the top level still work - that is where the first one lived - and are
+    # filed under whichever port the camera in their name belongs to.
+    def walk():
+        for entry in sorted(SHORE_DIR.iterdir()):
+            if entry.is_dir():
+                if entry.name in ("pending", "latest"):
+                    continue           # the job's own workspace, never the album
+                for f in sorted(entry.iterdir()):
+                    yield f, entry.name
+            else:
+                yield entry, None
     if not commit_images:
         warned.append("the workflow does not stage images/, so nothing in there is being "
                       "shrunk or renamed - update .github/workflows/update.yml")
-    for path in sorted(SHORE_DIR.iterdir()):
+    for path, folder in walk():
         if path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
             continue
         # Keep the name it arrived under. The shrunk file is brand new, so git has never
@@ -2245,7 +2304,7 @@ def build_shore() -> None:
         dropped_as = path
         if commit_images:
             path = shrink_frame(path)
-        rel = f"images/shore/{path.name}"
+        rel = ("images/shore/" + (f"{folder}/" if folder else "") + path.name)
         kb = path.stat().st_size // 1024
         if kb > SHORE_MAX_KB:
             warned.append(f"{path.name} is {kb} kB and could not be shrunk here - "
@@ -2299,10 +2358,17 @@ def build_shore() -> None:
             else:
                 # The time in the filename is the clock in the corner of the frame, which
                 # is the shore's own time, so it is stored with the zone it was read in
-                # rather than pretended to be UTC.
-                entry["tz"] = ((found[0].get("tz") if found else None)
+                # rather than pretended to be UTC. The folder name settles it when the
+                # filename names no camera: a frame in images/shore/Lerwick is on
+                # Shetland's clock whatever it is called.
+                by_folder = next((q.get("tz") for q in (plan.get("ports") or [])
+                                  if folder and q["name"].lower() == folder.lower()), None)
+                entry["tz"] = ((found[0].get("tz") if found else None) or by_folder
                                or keep.get("tz") or "UTC")
                 entry["local"] = True
+        entry["port"] = folder or (found[0]["name"] if found else None) or keep.get("port")
+        if not entry["port"]:
+            entry.pop("port")
         if found:
             port, cam = found
             entry["camera"] = cam.get("name")
@@ -2324,10 +2390,10 @@ def build_shore() -> None:
 
     frames.sort(key=lambda f: f.get("t") or "", reverse=True)
     payload = {
-        "note": ("Built from the files in images/shore by scripts/update.py. Drop a frame "
-                 "in named YYYY-MM-DD-HHMM-camera.jpg and it appears here. Captions added "
-                 "by hand are kept. Every frame is somebody else's picture, kept with "
-                 "their permission."),
+        "note": ("Built from the files in images/shore by scripts/update.py. One folder per "
+                 "port - images/shore/Lerwick, images/shore/Dublin - and any name will do; "
+                 "YYYY-MM-DD-HHMM-camera.jpg also gives the time and the camera. Every "
+                 "frame is somebody else's picture, kept with their permission."),
         "frames": frames,
     }
     before = read_json(SHORE, None)
@@ -2588,6 +2654,7 @@ def main() -> int:
     build_ahead(lat, lon, position.get("sog_kn"), points)
     build_orbit(points)
     build_shore()
+    capture_latest()
     build_pending()
     update_history(weather, points, collected)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
