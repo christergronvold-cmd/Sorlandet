@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-02T17:51:31Z",
+ "updated_utc": "2026-09-02T18:21:01Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -17,16 +17,28 @@
  },
  "voyage": null,
  "weather": {
-  "fetched_utc": "2026-09-02T17:51:29Z",
+  "fetched_utc": "2026-09-02T18:20:57Z",
   "sea": {
-   "wave_height_m": 0.6,
+   "wave_height_m": 0.58,
    "wave_direction_deg": 278,
    "wave_period_s": 5.75,
    "swell_height_m": 0.5,
    "swell_period_s": 4.35,
-   "wind_wave_height_m": 0.12,
+   "wind_wave_height_m": 0.1,
    "sea_temp_c": 13.3,
-   "time_utc": "2026-09-02T17:45"
+   "time_utc": "2026-09-02T18:15"
+  },
+  "air": {
+   "temp_c": 10.4,
+   "feels_c": 8.3,
+   "wind_ms": 2.3,
+   "gust_ms": 5.7,
+   "wind_direction_deg": 276,
+   "pressure_hpa": 1010.7,
+   "cloud_pct": 59,
+   "precip_mm": 0.0,
+   "weather_code": 2,
+   "time_utc": "2026-09-02T18:15"
   }
  },
  "sun": {
@@ -35,12 +47,15 @@
    "illumination": 0.68,
    "phase": "last quarter"
   },
+  "civil_timezone": "Europe/London",
+  "civil_place": "Lerwick",
+  "civil_country": "United Kingdom",
   "sunrise_utc": "2026-09-02T05:01",
-  "sunset_utc": "2026-09-02T19:05",
+  "sunset_utc": "2026-09-02T19:06",
   "daylight_hours": 14.1
  },
  "stats": {
-  "points": 1419,
+  "points": 1407,
   "distance_nm": 614.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
