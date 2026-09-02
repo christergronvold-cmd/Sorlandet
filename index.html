@@ -1097,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788251141";
+const BUILD = "1788333146";
 
 async function checkForNewBuild() {
   try {
@@ -1632,7 +1632,8 @@ function buildFeed(args) {
         ? `<a href="https://www.shetlandwebcams.com" target="_blank"
              rel="noopener">shetlandwebcams.com</a> — their camera, shown with their
            permission. `
-        : lead.by ? `${lead.by} · ` : ""}Whether she is in the frame is thanks to Andy${
+        : lead.by ? `${lead.by} · ` : ""}Whether she is in the frame is ${
+        lead.by === "Shetland Webcams" ? "thanks to Andy" : "luck"}${
         playable.length > 1 ? " — try another camera if this one has lost her to the fog"
                             : ""}.`;
   } else {
@@ -2646,13 +2647,47 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const waiting = !d.demo && (p.lat === undefined || p.source === "demo");
   const hours = p.seen_utc ? (Date.now() - new Date(p.seen_utc).getTime()) / 36e5 : 999;
 
+  // Is she somewhere a person has told us she is lying at anchor?
+  //
+  // Computed here, before anything is written, because three separate parts of the page
+  // need it and the most important of them is the very first line a reader sees. On
+  // 2 September the page said "last seen 8 hours ago" about a ship tied to the seabed a
+  // mile from a camera anybody could open, and there is a world of difference between
+  // eight hours of silence from a ship at anchor and eight hours of silence from one at
+  // sea. The page knew which this was and did not say so.
+  const anchorSaid = (() => {
+    const ageMin = p.seen_utc ? (Date.now() - new Date(p.seen_utc)) / 6e4 : 0;
+    // Reality first: if we have heard her recently and she is moving, she is moving.
+    if (ageMin <= 35 && p.sog_kn > 1.0) return null;
+    const now = Date.now();
+    for (const q of (plan.ports || [])) {
+      const st = q.lying_off;
+      if (!st || !(q.cameras || []).length) continue;
+      if (st.from && now < new Date(st.from).getTime()) continue;
+      // Through the end of the stated day: she berths ON that date, and the berth is
+      // recognised by geometry the moment she is alongside.
+      if (st.until && now > new Date(st.until + "T23:59:59Z").getTime()) continue;
+      // And she has to be THERE. A note saying "at anchor off Lerwick" cannot survive a
+      // position twelve miles away, however stale that position is - the note describes a
+      // ship lying off a town, and a ship twelve miles out is not lying off it.
+      if (p.lat !== undefined && nm([p.lat, p.lon], [q.lat, q.lon]) > 9.0) continue;
+      return q;
+    }
+    return null;
+  })();
+
   document.getElementById("sub").textContent = waiting
     ? `${d.ship || "Sørlandet"} · MMSI ${d.mmsi || ""} · waiting for first position`
-    : `${d.ship || "Sørlandet"} · MMSI ${d.mmsi || ""} · last seen ${ago(p.seen_utc)}`;
+    : `${d.ship || "Sørlandet"} · MMSI ${d.mmsi || ""} · last seen ${ago(p.seen_utc)}${
+        anchorSaid && hours >= 6 ? " · at anchor, so that is normal" : ""}`;
 
   const pill = document.getElementById("pill");
-  pill.textContent = waiting ? "waiting for AIS" : hours < 6 ? "AIS contact" : "out of AIS range";
-  pill.className = "pill " + (waiting ? "" : hours < 6 ? "live" : "stale");
+  pill.textContent = waiting ? "waiting for AIS"
+    : hours < 6 ? "AIS contact"
+    // "Out of AIS range" is true of our receivers and quite wrong as a description of a
+    // ship swinging on her anchor a mile from a webcam. Say where she is instead.
+    : anchorSaid ? "at anchor" : "out of AIS range";
+  pill.className = "pill " + (waiting ? "" : hours < 6 || anchorSaid ? "live" : "stale");
 
   const note = document.getElementById("note");
   if (waiting) {
@@ -2729,7 +2764,28 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // replaced a near-straight line drawn to the port. Two forward routes on one map
   // disagreed with each other, and the straight one was never a course she could steer:
   // she cannot point within about 58 degrees of the wind.
-  if (ahead?.route?.length > 1) {
+  // ...and two conditions on drawing it at all, both learned the hard way.
+  //
+  // Stale: ahead.json is only rewritten when the job can work out a pace, and a ship lying
+  // at anchor has no pace. On 2 September the map was still drawing the route from the
+  // 31st - a line that ran from beside her back out to seaward and in again, describing a
+  // passage she had already made. A forecast route two days old is not a forecast.
+  //
+  // Close in: the sea grid this route is searched on keeps six kilometres clear of land,
+  // which is wider than Bressay Sound. Inside the approaches it therefore cannot draw the
+  // last mile without putting it ashore, and a dashed line over Lerwick is worse than no
+  // line at all - she is a mile from the quay and everyone can see where she is going.
+  const aheadAgeH = ahead?.generated_utc
+    ? (Date.now() - new Date(ahead.generated_utc)) / 36e5 : 0;
+  // Measured to the end of the route itself rather than to a port object: the last point
+  // of the route IS where it runs to, and it is available here, where the plan's leg is
+  // not yet worked out.
+  const AHEAD_MIN_NM = 4.0;
+  const aheadEnd = ahead?.route?.length ? ahead.route[ahead.route.length - 1] : null;
+  const aheadNearNm = (aheadEnd && p.lat !== undefined)
+    ? nm([p.lat, p.lon], [aheadEnd[0], aheadEnd[1]]) : 999;
+  const drawAhead = ahead?.route?.length > 1 && aheadAgeH <= 6 && aheadNearNm > AHEAD_MIN_NM;
+  if (drawAhead) {
     const sailed = ahead.route_basis === "course";
     layers.push(L.polyline(ahead.route, {
       color: "#0b6ea8", weight: sailed ? 2.5 : 2, opacity: sailed ? .75 : .55,
@@ -2854,7 +2910,11 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       rows += row("Status", "no AIS message yet");
     } else {
       rows += row("Position", `${dms(p.lat, "lat")} ${dms(p.lon, "lon")}`);
-      rows += row("Last seen", fmtTime(p.seen_utc));
+      rows += row("Last seen", `${fmtTime(p.seen_utc)}${anchorSaid && hours >= 6
+        ? ` <span style="color:var(--muted)">— ${Math.round(hours)} h ago. At anchor her
+            transponder sends every three minutes instead of every ten seconds, and out
+            here only satellites can hear it, so a gap of half a day is ordinary. She is
+            not going anywhere.</span>` : ""}`);
       rows += row("Speed", `${N(p.sog_kn)} knots${p.sog_derived ? ' <span title="This position came from a feed that sends no speed, so it is worked out from the step between two fixes - a curve reads low.">(worked out from her track)</span>' : ""}`);
       rows += row("Course", `${N(p.cog_deg, 0)}° <span class="arrow" style="transform:rotate(${p.cog_deg || 0}deg);display:inline-block">↑</span> ${compass(p.cog_deg)}`);
       // What the crew typed into the AIS set - destination, and the ETA that tracking
@@ -3246,28 +3306,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // into the plan. It is not a licence to make things up - it yields to evidence in both
   // directions. A FRESH fix showing her making way cancels it on the spot, and it expires
   // on its own date, so it cannot outlive the thing it describes.
-  const declaredAnchor = (() => {
-    if (leg.inPort && leg.berthed) return null;             // alongside is its own answer
-    // Reality first: if we have heard her recently and she is moving, she is moving.
-    if (fixAgeMin <= STALE_MIN && p.sog_kn > CLOSING_KN) return null;
-    const now = Date.now();
-    for (const q of (plan.ports || [])) {
-      const s = q.lying_off;
-      if (!s || !(q.cameras || []).length) continue;
-      if (s.from && now < new Date(s.from).getTime()) continue;
-      // Through the end of the stated day: she berths ON that date, and the berth is
-      // recognised by geometry the moment she is alongside.
-      if (s.until && now > new Date(s.until + "T23:59:59Z").getTime()) continue;
-      // And she has to be THERE. A note saying "at anchor off Lerwick" cannot survive a
-      // position twelve miles away, however stale that position is - the note describes a
-      // ship lying off a town, and a ship twelve miles out is not lying off it. Without
-      // this the declaration quietly became "she is at Lerwick" for the whole window,
-      // wherever she actually was.
-      if (p.lat !== undefined && nm([p.lat, p.lon], [q.lat, q.lon]) > CAM_SEE_NM) continue;
-      return q;
-    }
-    return null;
-  })();
+  // The declaration, and the one extra thing it cannot answer on its own: whether she has
+  // already gone alongside. That is geometry's business, and geometry wins the moment it
+  // can see her at the quay.
+  const declaredAnchor = (leg.inPort && leg.berthed) ? null : anchorSaid;
   const coming = (() => {
     if (declaredAnchor) return false;         // she is at anchor; she is not coming in
     if (waiting || !nextPort || !(nextPort.cameras || []).length || p.lat === undefined)
@@ -3375,15 +3417,18 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
              ${N(closing)} knots${!timedFix() || minsOut > APPROACH_MIN
-               ? ` — <b>near enough to be in shot</b>${timedFix()
-                   ? ", though hours off at that rate" : ""}. A tall ship under sail is
-                   visible from these lenses well before she is close.`
+               ? ` — <b>near enough to be in shot</b>${timedFix() && minsOut > 120
+                   ? `, though ${Math.round(minsOut / 60)} hours off at that rate` : ""}. A
+                   tall ship under sail is visible from these lenses well before she is
+                   close.`
                : ` — <b>about ${minsOut < 12 ? "ten minutes"
                    : minsOut < 25 ? "twenty minutes" : Math.round(minsOut / 5) * 5 + " minutes"}
                    out</b> at that rate. It is worth opening a window now.`}`}
         These are other people's cameras, looking at the same water from other angles, and
-        they open in their own windows. Whether she is in the frame is thanks to Andy${
-          lyingOff ? ", who has been steering one of them at her" : ""}.
+        they open in their own windows. Whether she is in the frame is ${
+          camPort.cameras.some(c => c.by === "Shetland Webcams")
+            ? `thanks to Andy${lyingOff ? ", who has been steering one of them at her" : ""}`
+            : "luck"}.
         ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
         so she may already be further in than this says.`}
       </div>

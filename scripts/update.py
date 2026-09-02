@@ -865,6 +865,10 @@ def thin_track(points: list) -> list:
 SEAGRID_BIN = DATA / "seagrid.bin"
 SEAGRID_META = DATA / "seagrid.json"
 AHEAD = DATA / "ahead.json"
+# Inside this, no route line: the sea grid the route is searched on keeps six kilometres
+# clear of land, which is wider than Bressay Sound, so the last mile cannot be drawn
+# without putting it ashore. Matches AHEAD_MIN_NM on the page.
+AHEAD_CLEAR_NM = 4.0
 WAKE = DATA / "wake.json"
 COURSE = DATA / "course.json"
 ORBIT = DATA / "orbit.json"
@@ -1512,11 +1516,70 @@ def next_port(ports: list, points: list | None = None) -> dict | None:
 
 def build_ahead(lat: float, lon: float, speed_kn: float | None,
                 track_points: list | None = None) -> None:
+    """Write the route ahead - or, if that fails, make sure the old one stops being drawn.
+
+    This wrapper exists because of one map, on 2 September 2026. She had lain at anchor off
+    Lerwick since the 31st, and the page still showed the dashed route written on the 31st:
+    a line running from beside her back out to seaward and in again, across Bressay.
+    Nothing was wrong with the drawing code. The route had simply never been rewritten -
+    the work below can fail for several honest reasons (no pace to walk at, no wind field,
+    no way through the sea grid) and every one of them used to leave the last good route
+    sitting on disk.
+
+    A two-day-old forecast presented as a forecast is worse than no forecast, and the page
+    cannot tell the difference unless the file says so. So: if a round produces no new
+    route, the old one is taken out and the file restamped. The weather ladder is kept -
+    that is the part that still matters while she is in port.
+    """
+    before = read_json(AHEAD, {}) or {}
+    # "Did this round write the file" is a question about the file, not about the timestamp
+    # inside it. The first version compared generated_utc, which is truncated to the second
+    # - so two rounds in the same second looked identical and a perfectly good new route
+    # was thrown away as stale. The test suite runs that fast; a busy job could too.
+    stamp = AHEAD.stat().st_mtime_ns if AHEAD.exists() else 0
+    _build_ahead(lat, lon, speed_kn, track_points)
+    if not AHEAD.exists() or AHEAD.stat().st_mtime_ns != stamp:
+        return                                    # a fresh round wrote a fresh file
+    if not before.get("route"):
+        return                                    # nothing stale to take out
+    write_json(AHEAD, {k: v for k, v in before.items()
+                       if k not in ("route", "tacks", "route_basis", "distance_nm",
+                                    "direct_nm", "winding")}
+               | {"generated_utc": iso(now_utc()), "route_cleared": True})
+    print("* no new route this round - cleared the old one rather than leave it on the map")
+
+
+def _build_ahead(lat: float, lon: float, speed_kn: float | None,
+                 track_points: list | None = None) -> None:
     """The whole chain: route from here to the next port, then the weather on the way."""
     try:
         plan = read_json(DATA / "ports.json", {})
         port = next_port(plan.get("ports") or [], track_points)
         if not port:
+            return
+        # Inside the approaches there is no route worth drawing, and the file must SAY so
+        # rather than be left as it was.
+        #
+        # On 2 September the map still carried the route written on 31 August: a dashed line
+        # running from beside her back out to seaward and in again, over Bressay, describing
+        # a passage she had already made. Nothing was wrong with the drawing. The file was
+        # simply never rewritten, because the steps below need a pace and a ship at anchor
+        # has none - so the last good route sat there for two days looking like a forecast.
+        #
+        # A stale file is worse than an empty one: the page cannot tell the difference
+        # without being told. So when she is this close, the route is cleared and only the
+        # weather ladder is kept - which is the part that still matters in port.
+        near_nm = nm_between((lat, lon), (float(port["lat"]), float(port["lon"])))
+        if near_nm <= AHEAD_CLEAR_NM:
+            old = read_json(AHEAD, {}) or {}
+            if old.get("route"):
+                write_json(AHEAD, {k: v for k, v in old.items()
+                                   if k not in ("route", "tacks", "route_basis",
+                                                "distance_nm", "direct_nm", "winding")}
+                           | {"generated_utc": iso(now_utc()), "to": port["name"],
+                              "near_nm": round(near_nm, 2)})
+                print(f"* she is {near_nm:.1f} nm off {port['name']} - cleared the route "
+                      "line from ahead.json")
             return
         # The route she is drawn along is the SAILING COURSE, not a line ruled to the port.
         # A square rigger cannot point within about 58 degrees of the wind, so the straight
@@ -2241,6 +2304,34 @@ def images_are_committed() -> bool:
     return bool(re.search(r"git add[^\n]*images/", text))
 
 
+def port_for_date(plan: dict, stamp: str) -> str | None:
+    """Which port she was at on the day this frame was taken.
+
+    For a frame whose filename names no camera - "Snapshot (1).png", which is what the
+    rewind player calls everything - this is the only way to file it. It asks the plan, and
+    it has to ask about both kinds of stay: the berth (arrive to depart) and the anchorage
+    (the lying_off window). Her Lerwick frames from 31 August fall in neither the North Sea
+    crossing nor the 6-10 September berth; they fall in the week she spent swinging at
+    anchor off the town, and only lying_off knows about that.
+    """
+    day = (stamp or "")[:10]
+    if len(day) != 10:
+        return None
+    for port in (plan.get("ports") or []):
+        if not (port.get("cameras") or []):
+            continue
+        windows = []
+        if port.get("arrive") and port.get("depart"):
+            windows.append((port["arrive"], port["depart"]))
+        lo = port.get("lying_off") or {}
+        if lo.get("from") and lo.get("until"):
+            windows.append((lo["from"][:10], lo["until"]))
+        for a, b in windows:
+            if a <= day <= b:
+                return port["name"]
+    return None
+
+
 def build_shore() -> None:
     """Turn whatever is in images/shore into data/shore.json.
 
@@ -2283,15 +2374,22 @@ def build_shore() -> None:
     # a picture library, it is a heap. images/shore/Lerwick, images/shore/Dublin, and so on.
     # Loose files at the top level still work - that is where the first one lived - and are
     # filed under whichever port the camera in their name belongs to.
+    # Read the whole tree BEFORE moving anything, and return a list rather than a
+    # generator. The loop below files loose frames into their port's folder as it goes, and
+    # a generator reading the directory while that happens is the oldest bug in the book:
+    # "Lerwick" sorts before "snapshot (1).png", so a file moved into the Lerwick folder
+    # after the walk had already passed that folder was never seen, and the album came out
+    # one frame short - for one round, which is the round somebody looks.
     def walk():
+        out = []
         for entry in sorted(SHORE_DIR.iterdir()):
             if entry.is_dir():
                 if entry.name in ("pending", "latest"):
                     continue           # the job's own workspace, never the album
-                for f in sorted(entry.iterdir()):
-                    yield f, entry.name
+                out.extend((f, entry.name) for f in sorted(entry.iterdir()))
             else:
-                yield entry, None
+                out.append((entry, None))
+        return out
     if not commit_images:
         warned.append("the workflow does not stage images/, so nothing in there is being "
                       "shrunk or renamed - update .github/workflows/update.yml")
@@ -2347,8 +2445,15 @@ def build_shore() -> None:
                 if want in names or any(n and (want in n or n in want) for n in names):
                     found = (port, cam)
                     break
-        keep = old.get(rel, {})
+        # Look the old entry up under both names: a file the job has just filed into a
+        # port folder had a different path five minutes ago, and a caption written by hand
+        # must not be lost to the tidying.
+        keep = old.get(rel) or old.get(f"images/shore/{path.name}") or {}
         entry = {"file": rel}
+        # Which port this frame belongs to, settled before the clock is chosen: a frame
+        # filed under Lerwick is on Shetland's clock even when its own name says nothing.
+        where = (folder or (found[0]["name"] if found else None)
+                 or port_for_date(plan, stamp or "") or keep.get("port"))
         if stamp:
             entry["t"] = stamp
             if added:
@@ -2362,11 +2467,28 @@ def build_shore() -> None:
                 # filename names no camera: a frame in images/shore/Lerwick is on
                 # Shetland's clock whatever it is called.
                 by_folder = next((q.get("tz") for q in (plan.get("ports") or [])
-                                  if folder and q["name"].lower() == folder.lower()), None)
+                                  if where and q["name"].lower() == where.lower()), None)
                 entry["tz"] = ((found[0].get("tz") if found else None) or by_folder
                                or keep.get("tz") or "UTC")
                 entry["local"] = True
-        entry["port"] = folder or (found[0]["name"] if found else None) or keep.get("port")
+        # A loose frame at the top level gets filed into its port's folder, by the job,
+        # once. Ten snapshots uploaded in one go would otherwise mean ten renames by hand
+        # in the GitHub web editor - and this job is the only thing here with write access
+        # to the repository, so it is the only thing that can tidy up.
+        if commit_images and folder is None and where:
+            home = SHORE_DIR / where
+            home.mkdir(parents=True, exist_ok=True)
+            target = home / path.name
+            if not target.exists():
+                try:
+                    path.rename(target)
+                    print(f"* filed {path.name} under {where}/")
+                    path, folder = target, where
+                    rel = f"images/shore/{where}/{path.name}"
+                except OSError as exc:
+                    print(f"  ! could not file {path.name}: {exc}")
+        entry["file"] = rel
+        entry["port"] = where
         if not entry["port"]:
             entry.pop("port")
         if found:
