@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-02T09:06:02Z",
+ "updated_utc": "2026-09-02T09:35:24Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -17,34 +17,22 @@
  },
  "voyage": null,
  "weather": {
-  "fetched_utc": "2026-09-02T09:04:46Z",
+  "fetched_utc": "2026-09-02T09:35:23Z",
   "sea": {
-   "wave_height_m": 1.12,
-   "wave_direction_deg": 278,
-   "wave_period_s": 5.5,
+   "wave_height_m": 1.1,
+   "wave_direction_deg": 279,
+   "wave_period_s": 5.45,
    "swell_height_m": 0.48,
-   "swell_period_s": 5.95,
+   "swell_period_s": 5.9,
    "wind_wave_height_m": 0.92,
    "sea_temp_c": 13.3,
-   "time_utc": "2026-09-02T09:00"
-  },
-  "air": {
-   "temp_c": 11.2,
-   "feels_c": 5.7,
-   "wind_ms": 8.6,
-   "gust_ms": 13.9,
-   "wind_direction_deg": 277,
-   "pressure_hpa": 1010.0,
-   "cloud_pct": 93,
-   "precip_mm": 0.0,
-   "weather_code": 3,
-   "time_utc": "2026-09-02T09:00"
+   "time_utc": "2026-09-02T09:30"
   }
  },
  "sun": {
   "moon": {
    "age_days": 20.1,
-   "illumination": 0.72,
+   "illumination": 0.71,
    "phase": "waning gibbous"
   },
   "civil_timezone": "Europe/London",
@@ -55,8 +43,8 @@
   "daylight_hours": 14.1
  },
  "stats": {
-  "points": 1588,
-  "distance_nm": 616.8,
+  "points": 1576,
+  "distance_nm": 615.7,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
