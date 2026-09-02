@@ -1097,7 +1097,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788333146";
+const BUILD = "1788349428";
 
 async function checkForNewBuild() {
   try {
@@ -2733,10 +2733,33 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   }
 
   // The planned route follows sailing waypoints where a straight line would cross land.
+  //
+  // It stops at the last waypoint outside each port rather than being drawn to the quay,
+  // and that is not tidiness - it is the only way this line can be honest.
+  //
+  // Each port's waypoint list ends in its approach, and the NEXT port's list begins from
+  // the same place. Pushing the quay between the two produced an out-and-back spur: at
+  // Lerwick the line ran 60.0/-1.1 → the quay → 60.0/-1.1 again, so at chart zoom it
+  // crossed Bressay, doubled back, and crossed it a second time. Two days running that
+  // was mistaken for the forecast route, which is fair: it is dashed and it is blue and
+  // it goes over an island.
+  //
+  // A plan line is an overview of nine months and nineteen ports. It cannot be pilotage
+  // for the last mile, and pretending otherwise is what puts it ashore. The port markers
+  // already say exactly where each call is, to the metre.
   const routeLine = [];
+  const nearSame = (a, b) => a && b && Math.abs(a[0] - b[0]) < 1e-6
+                                    && Math.abs(a[1] - b[1]) < 1e-6;
   ports.forEach(q => {
-    (q.waypoints || []).forEach(wp => routeLine.push(wp));
-    routeLine.push([q.lat, q.lon]);
+    (q.waypoints || []).forEach(wp => {
+      if (!nearSame(routeLine[routeLine.length - 1], wp)) routeLine.push(wp);
+    });
+    // ...and only join the quay itself when the plan gives no approach to stop at, so a
+    // port without waypoints still appears on the line.
+    if (!(q.waypoints || []).length
+        && !nearSame(routeLine[routeLine.length - 1], [q.lat, q.lon])) {
+      routeLine.push([q.lat, q.lon]);
+    }
   });
 
   if (ports.length) {
