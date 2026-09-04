@@ -1634,17 +1634,49 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         holding = bool(here and here.get("depart") and today_iso() <= here["depart"])
         near_nm = nm_between((lat, lon), (float(port["lat"]), float(port["lon"])))
         if holding or near_nm <= AHEAD_CLEAR_NM:
+            # No route - and no forecast ladder strung out along one either.
+            #
+            # Clearing only the route was half a job. The ladder points had been worked out
+            # along the old route to Dublin, and keeping them left a trail of circles from
+            # Shetland down past the Hebrides to Ireland: the route removed, its shadow
+            # still drawn. "Kun den stiplede linjen skal være igjen frem til 10. sept."
+            #
+            # So while she is holding, the ladder describes standing still: every hour of
+            # it at the place she is, out to the day she sails. That is the forecast a
+            # parent actually wants from a ship in port - the week she is having in Lerwick,
+            # not the weather over a passage that has not begun.
+            stay = here or port
+            span = AHEAD_MAX_HOURS
+            if here and here.get("depart"):
+                try:
+                    left = (parse_iso(here["depart"] + "T23:59:59Z") - now_utc())
+                    span = max(6, min(AHEAD_MAX_HOURS, left.total_seconds() / 3600))
+                except Exception:
+                    pass
+            hrs = [h for h in AHEAD_LADDER if h <= span] or [AHEAD_LADDER[0]]
+            still = [{"t": iso(now_utc() + timedelta(hours=h)), "hours": h,
+                      "lat": round(lat, 4), "lon": round(lon, 4),
+                      "where": "port" if holding else "sea"} for h in hrs]
             old = read_json(AHEAD, {}) or {}
-            if old.get("route"):
-                write_json(AHEAD, {k: v for k, v in old.items()
-                                   if k not in ("route", "tacks", "route_basis",
-                                                "distance_nm", "direct_nm", "winding")}
-                           | {"generated_utc": iso(now_utc()), "to": port["name"],
-                              "near_nm": round(near_nm, 2)})
-                print("* " + (f"alongside in {here['name']} until {here['depart']}"
-                               if holding else
-                               f"she is {near_nm:.1f} nm off {port['name']}")
-                      + " - cleared the route line from ahead.json")
+            write_json(AHEAD, {
+                "generated_utc": iso(now_utc()),
+                "to": (stay or port)["name"],
+                "country": (stay or port).get("country"),
+                "holding_until": here.get("depart") if here else None,
+                "near_nm": round(near_nm, 2),
+                # fetch_ahead composes its own rows, so `where` is put back on afterwards:
+                # the page labels each forecast tile with it ("in Lerwick" rather than a
+                # bare hour), and without it the tiles lose the one word that says she is
+                # not at sea.
+                "points": [dict(q, where="port" if holding else "sea")
+                           for q in fetch_ahead(still)],
+            })
+            print("* " + (f"alongside in {here['name']} until {here['depart']}"
+                           if holding else
+                           f"she is {near_nm:.1f} nm off {port['name']}")
+                  + f" - no route, and the {len(still)}-point ladder stays where she is"
+                  + (" (was strung out to " + str(old.get("to")) + ")"
+                     if old.get("route") else ""))
             return
         # The route she is drawn along is the SAILING COURSE, not a line ruled to the port.
         # A square rigger cannot point within about 58 degrees of the wind, so the straight
