@@ -13,14 +13,39 @@
         "Pre-departure meeting 16th",
         "Departure 17th"
       ],
-      "tz": "Europe/Oslo"
+      "tz": "Europe/Oslo",
+      "cameras": [
+        {
+          "name": "Kristiansand havn",
+          "short": "Havna",
+          "url": "https://en.portofkristiansand.no/maritimt-og-trafikk/kai-og-terminaler/webkamera",
+          "view": "live over the harbour basin — the port's own page, no subscription",
+          "by": "Fædrelandsvennen / Port of Kristiansand",
+          "best": "alongside",
+          "lead": true
+        },
+        {
+          "name": "Gjestehavna, indre havn",
+          "short": "Gjestehavna",
+          "url": "https://www.krsgjestehavn.no/webkamera",
+          "view": "the inner harbour at Gravane and Fiskebrygga",
+          "by": "Kristiansand Gjestehavn"
+        },
+        {
+          "name": "Bystranda",
+          "short": "Bystranda",
+          "url": "https://bjost.no/webkameraer/kristiansand.htm",
+          "view": "the beach and Østre havn, free of the paywall",
+          "by": "Fædrelandsvennen"
+        }
+      ]
     },
     {
       "name": "Lerwick",
       "country": "United Kingdom",
       "lat": 60.155,
       "lon": -1.145,
-      "arrive": "2026-09-06",
+      "arrive": "2026-09-04",
       "depart": "2026-09-10",
       "waypoints": [
         [
@@ -42,6 +67,18 @@
       ],
       "cameras": [
         {
+          "name": "Lerwick Harbour",
+          "url": "https://www.shetlandwebcams.com/lerwick-harbour-north/",
+          "view": "points north out the entrance and pans in over the berths - steerable, and it is the one that found her at the quay on 4 September",
+          "by": "Shetland Webcams",
+          "best": "alongside",
+          "entrance": "north",
+          "short": "Lerwick Harbour",
+          "hls": "https://zetcast-eu.b-cdn.net/cf_lerwickharbour/LerwickHarbourABR/playlist.m3u8",
+          "hls_by": "Shetland Webcams, with Andy's permission",
+          "lead": true
+        },
+        {
           "name": "Lerwick Boating Club",
           "url": "https://www.shetlandwebcams.com/lerwick-boating-club/",
           "view": "from the jetty, and steerable — Andy at Shetland Webcams follows tall ships in on this one and tries for close-ups of the crew tying up",
@@ -59,7 +96,6 @@
           "best": "alongside",
           "hls": "https://zetcast-eu.b-cdn.net/cf_fjara/FjaraABR/playlist.m3u8",
           "hls_by": "Shetland Webcams, with Andy's permission",
-          "lead": true,
           "short": "Fjarå"
         },
         {
@@ -98,24 +134,16 @@
           "best": "approach",
           "entrance": "south",
           "short": "Town Hall"
-        },
-        {
-          "name": "Harbour north",
-          "url": "https://www.shetlandwebcams.com/lerwick-harbour-north/",
-          "view": "points north out the entrance, then pans in — the way she comes if she arrives from the north",
-          "by": "Shetland Webcams",
-          "best": "approach",
-          "entrance": "north",
-          "short": "Harbour N"
         }
       ],
       "tz": "Europe/London",
       "lying_off": {
         "from": "2026-08-31T15:16:00Z",
-        "until": "2026-09-06",
-        "note": "Anchored in Lerwick Roads since the afternoon of 31 August, waiting for her berth.",
+        "until": "2026-09-03",
+        "note": "Anchored in Lerwick Roads from the afternoon of 31 August. She went alongside on 4 September, two days ahead of the plan - seen on the Lerwick Harbour camera - so the window ends there.",
         "source": "her own AIS navigational status, and Andy's camera"
-      }
+      },
+      "arrived_early": "Planned for 6 September; she went alongside on the 4th, seen on the Lerwick Harbour camera."
     },
     {
       "name": "Dublin",
@@ -164,10 +192,34 @@
       ],
       "cameras": [
         {
-          "name": "Dublin Port, three cameras",
-          "url": "https://www.dublinport.ie/webcam/",
-          "view": "Poolbeg lighthouse, the bay, and the Liffey towards the city",
+          "name": "Dublin Bay",
+          "short": "Dublin Bay",
+          "url": "https://www.youtube.com/watch?v=oxx7MqjhOpw",
+          "stream": "https://www.youtube.com/embed/oxx7MqjhOpw?autoplay=1&mute=1&playsinline=1&rel=0",
+          "view": "ships entering and leaving the port — the way she comes in",
           "by": "Dublin Port Company",
+          "best": "approach",
+          "rewind_h": 12,
+          "lead": true
+        },
+        {
+          "name": "Poolbeg Lighthouse",
+          "short": "Poolbeg",
+          "url": "https://www.youtube.com/watch?v=jy3fkOBIolk",
+          "stream": "https://www.youtube.com/embed/jy3fkOBIolk?autoplay=1&mute=1&playsinline=1&rel=0",
+          "view": "the mouth of the Liffey past the Poolbeg light, which everything into Dublin passes",
+          "by": "Dublin Port Company",
+          "best": "approach",
+          "rewind_h": 12
+        },
+        {
+          "name": "Dublin Port, city view",
+          "short": "City view",
+          "url": "https://www.youtube.com/watch?v=K_ye7QHXosQ",
+          "stream": "https://www.youtube.com/embed/K_ye7QHXosQ?autoplay=1&mute=1&playsinline=1&rel=0",
+          "view": "up the Liffey towards the city, over the berths",
+          "by": "Dublin Port Company",
+          "best": "alongside",
           "rewind_h": 12
         }
       ],
@@ -198,7 +250,25 @@
           -2.0
         ]
       ],
-      "tz": "Europe/Paris"
+      "tz": "Europe/Paris",
+      "cameras": [
+        {
+          "name": "Port Vauban",
+          "short": "Port Vauban",
+          "url": "https://www.skaping.com/saint-malo/port-vauban",
+          "view": "the wet dock under the ramparts, where visiting square-riggers lie",
+          "by": "Skaping / Bretagne Plaisance",
+          "best": "alongside"
+        },
+        {
+          "name": "Saint-Malo, the port",
+          "short": "The port",
+          "url": "https://www.vision-environnement.com/en/webcam/france/brittany/4-saint-malo/",
+          "view": "a steerable view over the port and the walled city — the camera used for the Route du Rhum",
+          "by": "Vision-Environnement / Ville de Saint-Malo",
+          "best": "approach"
+        }
+      ]
     },
     {
       "name": "Vigo",
@@ -256,7 +326,25 @@
           -16.9
         ]
       ],
-      "tz": "Atlantic/Madeira"
+      "tz": "Atlantic/Madeira",
+      "cameras": [
+        {
+          "name": "Pontinha mole",
+          "short": "Pontinha",
+          "url": "https://www.netmadeira.com/webcams-madeira/funchal-pontinha",
+          "view": "from the mole itself, across the harbour — the only berth long enough for her",
+          "by": "NetMadeira",
+          "best": "alongside"
+        },
+        {
+          "name": "Funchal marina",
+          "short": "Marina",
+          "url": "https://www.madeira-web.com/en/webcams/funchal-marina-livecam.html",
+          "view": "the seafront, the marina and the cruise pier",
+          "by": "Madeira-Web",
+          "best": "alongside"
+        }
+      ]
     },
     {
       "name": "Sevilla",
@@ -275,7 +363,24 @@
           -6.5
         ]
       ],
-      "tz": "Europe/Madrid"
+      "tz": "Europe/Madrid",
+      "cameras": [
+        {
+          "name": "Puente de las Delicias",
+          "short": "Delicias",
+          "url": "https://www.windy.com/webcams/1268325187",
+          "view": "the bridge at the mouth of the Delicias quay — and it opens for her, which is worth seeing",
+          "by": "Windy webcam network",
+          "best": "approach"
+        },
+        {
+          "name": "Puente de Triana",
+          "short": "Triana",
+          "url": "https://www.skylinewebcams.com/en/webcam/espana/andalucia/sevilla/siviglia-puente-de-triana.html",
+          "view": "the Guadalquivir at the city bridges, upstream of the quays",
+          "by": "SkylineWebcams"
+        }
+      ]
     },
     {
       "name": "Las Palmas",
@@ -298,7 +403,25 @@
           -15.3
         ]
       ],
-      "tz": "Atlantic/Canary"
+      "tz": "Atlantic/Canary",
+      "cameras": [
+        {
+          "name": "Las Palmas port",
+          "short": "The port",
+          "url": "https://www.youtube.com/watch?v=IJ6EDTB1gHU",
+          "view": "a steerable view along the Avenida Marítima and the sailing harbour, and it sees in the dark",
+          "by": "WingCam",
+          "best": "alongside"
+        },
+        {
+          "name": "Puerto de La Luz",
+          "short": "La Luz",
+          "url": "https://www.skylinewebcams.com/en/webcam/espana/canarias/las-palmas/la-luz-port.html",
+          "view": "over the whole port, including ships coming in and out",
+          "by": "SkylineWebcams",
+          "best": "approach"
+        }
+      ]
     },
     {
       "name": "Mindelo",
@@ -325,7 +448,16 @@
           -24.8
         ]
       ],
-      "tz": "Atlantic/Cape_Verde"
+      "tz": "Atlantic/Cape_Verde",
+      "cameras": [
+        {
+          "name": "Praia da Laginha",
+          "short": "Laginha",
+          "url": "https://capoverdego.it/webcam/",
+          "view": "the beach inside Porto Grande bay — she anchors or lies at the commercial quay, so this is the bay rather than the berth",
+          "by": "Atlantic Waves / webcamcaboverde.com"
+        }
+      ]
     },
     {
       "name": "Fernando de Noronha",
@@ -440,7 +572,16 @@
           -79.9
         ]
       ],
-      "tz": "America/New_York"
+      "tz": "America/New_York",
+      "cameras": [
+        {
+          "name": "Charleston harbour cams",
+          "short": "Charleston",
+          "url": "https://www.live5news.com/weather/cams/",
+          "view": "the aquarium wharf and the harbour — the tall ship berth is beside the aquarium, but the framing is unconfirmed",
+          "by": "WCSC Live 5 News"
+        }
+      ]
     },
     {
       "name": "New York City",
@@ -467,7 +608,34 @@
           -73.8
         ]
       ],
-      "tz": "America/New_York"
+      "tz": "America/New_York",
+      "cameras": [
+        {
+          "name": "Port New York",
+          "short": "Port New York",
+          "url": "https://www.ptztv.live/port-new-york-webcam/",
+          "view": "the Hudson from the George Washington Bridge to the Verrazzano, including the Manhattan cruise piers",
+          "by": "PTZtv",
+          "best": "alongside",
+          "lead": true
+        },
+        {
+          "name": "New York Harbor",
+          "short": "The Narrows",
+          "url": "https://www.skylinewebcams.com/en/webcam/united-states/new-york/new-york/new-york-city-harbor.html",
+          "view": "the Narrows and the Upper Bay from Red Hook — where she comes in past the Statue",
+          "by": "SkylineWebcams",
+          "best": "approach"
+        },
+        {
+          "name": "Statue of Liberty",
+          "short": "Liberty",
+          "url": "https://www.statueofliberty.org/statue-of-liberty/earthcam/",
+          "view": "from the torch, over the harbour and the Hudson",
+          "by": "Statue of Liberty–Ellis Island Foundation / EarthCam",
+          "rewind_h": 24
+        }
+      ]
     },
     {
       "name": "Horta",
@@ -486,7 +654,18 @@
           -28.6
         ]
       ],
-      "tz": "Atlantic/Azores"
+      "tz": "Atlantic/Azores",
+      "cameras": [
+        {
+          "name": "Horta harbour",
+          "short": "Horta",
+          "url": "https://spotazores.com/en/webcam/faial/horta/",
+          "view": "over the marina with its painted wall, the commercial quays and the entrance, with Pico behind",
+          "by": "SpotAzores",
+          "best": "alongside",
+          "lead": true
+        }
+      ]
     },
     {
       "name": "Scheveningen",
@@ -528,7 +707,18 @@
           4.2
         ]
       ],
-      "tz": "Europe/Amsterdam"
+      "tz": "Europe/Amsterdam",
+      "cameras": [
+        {
+          "name": "Scheveningen harbour mouth",
+          "short": "Harbour mouth",
+          "url": "https://webcam.nl/scheveningen/marinabeach/",
+          "view": "both harbour heads and the outer harbour — everything in or out passes it",
+          "by": "WebCam.NL",
+          "best": "approach",
+          "lead": true
+        }
+      ]
     },
     {
       "name": "Skagen",
@@ -563,7 +753,16 @@
           10.6
         ]
       ],
-      "tz": "Europe/Copenhagen"
+      "tz": "Europe/Copenhagen",
+      "cameras": [
+        {
+          "name": "Skagen harbour cams",
+          "short": "Skagen",
+          "url": "https://skagenlystbaadehavn.frederikshavn.dk/webcams-i-skagen-lystbaadehavn",
+          "view": "four cameras over the yacht basin — she lies at a commercial quay, so which one catches her depends on the berth",
+          "by": "Skagen Lystbådehavn"
+        }
+      ]
     },
     {
       "name": "Kristiansand",
@@ -593,7 +792,32 @@
           8.0
         ]
       ],
-      "tz": "Europe/Oslo"
+      "tz": "Europe/Oslo",
+      "cameras": [
+        {
+          "name": "Kristiansand havn",
+          "short": "Havna",
+          "url": "https://en.portofkristiansand.no/maritimt-og-trafikk/kai-og-terminaler/webkamera",
+          "view": "live over the harbour basin — the port's own page, no subscription",
+          "by": "Fædrelandsvennen / Port of Kristiansand",
+          "best": "alongside",
+          "lead": true
+        },
+        {
+          "name": "Gjestehavna, indre havn",
+          "short": "Gjestehavna",
+          "url": "https://www.krsgjestehavn.no/webkamera",
+          "view": "the inner harbour at Gravane and Fiskebrygga",
+          "by": "Kristiansand Gjestehavn"
+        },
+        {
+          "name": "Bystranda",
+          "short": "Bystranda",
+          "url": "https://bjost.no/webkameraer/kristiansand.htm",
+          "view": "the beach and Østre havn, free of the paywall",
+          "by": "Fædrelandsvennen"
+        }
+      ]
     }
   ]
 }

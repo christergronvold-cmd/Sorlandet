@@ -767,6 +767,28 @@ function portCalls(points, ports) {
 // answers only for what the track cannot see, which is the stretch before this page
 // existed, and even then "next" now means the first port she has not yet left, not the
 // first one she has not yet reached.
+// Is this port's declared anchorage window open right now?
+//
+// A stay inside it means she is waiting OFF the port, not that she has called at it.
+// Geometry cannot tell those apart here: Lerwick Roads is half a mile from the quay
+// coordinate and BERTH_NM is eight tenths of a mile, so a ship lying to her anchor reads
+// as alongside. On 4 September that became the Voyage plan card announcing "Lerwick →
+// Dublin", a course drawn 542 miles to Ireland, and a ship sitting at anchor waiting for
+// her berth on the sixth - while the camera box on the same page said, correctly, "at
+// anchor". Two cards on one screen disagreeing, and the wrong one was the loud one.
+//
+// So a person's observation wins over half a mile of arithmetic, and for exactly as long
+// as they said it would.
+function lyingOffOpen(port, now) {
+  const st = (port || {}).lying_off;
+  if (!st || !st.from || !st.until) return false;
+  const t = now || Date.now();
+  const from = new Date(st.from).getTime();
+  const until = new Date(st.until + "T23:59:59Z").getTime();
+  if (isNaN(from) || isNaN(until)) return false;
+  return t >= from && t <= until;
+}
+
 function voyageState(points, ports, todayISO) {
   ports = ports || [];
   const stays = portStays(points || [], ports);
@@ -781,7 +803,17 @@ function voyageState(points, ports, todayISO) {
     done: ended ? i + 1 : i,
     basis: last ? "track" : "plan",
   });
-  if (last) return settle(last.pi, last.ended, last.berthed);
+  if (last) {
+    // Declared anchorage: she is off this port, not through it.
+    if (lyingOffOpen(ports[last.pi])) {
+      // `inPort` stays set and `berthed` goes false: she IS at this port, off it rather
+      // than in it. Nulling inPort took the "At anchor off Lerwick" row off the plan card
+      // with her sitting at anchor off Lerwick, which test_anchor caught at once.
+      return { to: ports[last.pi], inPort: ports[last.pi], berthed: false,
+               done: last.pi, basis: "declared" };
+    }
+    return settle(last.pi, last.ended, last.berthed);
+  }
 
   // Nothing observed. Fall back to the calendar - but read the same shape out of it, so
   // the fallback cannot say she is alongside in Lerwick and also on her way to Lerwick.
@@ -1097,7 +1129,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788349428";
+const BUILD = "1788517230";
 
 async function checkForNewBuild() {
   try {
