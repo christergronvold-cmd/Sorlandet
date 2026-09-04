@@ -804,6 +804,33 @@ function voyageState(points, ports, todayISO) {
     basis: last ? "track" : "plan",
   });
   if (last) {
+    // A call is not over until the day she is due to leave.
+    //
+    // "De kan ikke skje før 10. sept. Eller når jeg eventuelt sier noe annet." Right, and
+    // it names the real fault. portStays will call a stay ENDED on thin evidence: a drift
+    // of a few hundred metres outside the five-mile radius, a shift of berth, or simply a
+    // gap in AIS while she lies still - and out here the gaps run twelve hours. On
+    // 4 September that one flag being wrong took the whole camera section off the page,
+    // because "next port" became Dublin and there is no camera 440 miles away, and drew a
+    // route to Ireland with her tied up in Lerwick until the 10th.
+    //
+    // The plan knows when she leaves. So the departure date, not a sparse track, decides
+    // whether the call has ended - and the date is the knob Christer turns if she leaves
+    // early or stays on.
+    //
+    // The escape is the same shape as everywhere else here: evidence beats the note. Seen
+    // well clear of the port and making way, she has gone, whatever the calendar says.
+    // Only `ended` is touched: `to` stays the NEXT port, so the leg label and the distance
+    // to run are unchanged. The first attempt at this pointed `to` back at the port she
+    // was sitting in, which broke three tests that were quite right to object.
+    const q = ports[last.pi];
+    const newest = (points || [])[(points || []).length - 1];
+    const goneNm = (newest && q) ? nm([newest.lat, newest.lon], [q.lat, q.lon]) : 0;
+    const clearlyGone = !!newest && goneNm > PORT_NM * 2 && (newest.sog || 0) > 1.0;
+    const stillIn = !!(q && q.depart && todayISO <= q.depart && !clearlyGone);
+    if (stillIn && last.ended) {
+      return { ...settle(last.pi, false, last.berthed), basis: "in-port-until-depart" };
+    }
     // Declared anchorage: she is off this port, not through it.
     if (lyingOffOpen(ports[last.pi])) {
       // `inPort` stays set and `berthed` goes false: she IS at this port, off it rather
@@ -1129,7 +1156,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788517230";
+const BUILD = "1788520461";
 
 async function checkForNewBuild() {
   try {

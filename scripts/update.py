@@ -1468,6 +1468,32 @@ def port_stays(points: list, ports: list) -> list:
     return out
 
 
+def lying_off_open(port: dict, when=None) -> bool:
+    """Is this port's declared anchorage window open right now?
+
+    A stay inside it means she is waiting OFF the port, not that she has called at it.
+    Geometry cannot tell those apart here: Lerwick Roads is half a mile from the quay
+    coordinate and the berth radius is eight tenths of a mile, so a ship lying to her
+    anchor reads as alongside. On 4 September that turned into the page announcing the
+    Lerwick call complete and setting the course for Dublin, five hundred and forty miles
+    off, while she sat at anchor waiting for her berth on the sixth - and while the same
+    page correctly said "at anchor" in the camera box.
+
+    So a person's observation wins over half a mile of arithmetic, and it wins for exactly
+    as long as they said it would.
+    """
+    st = (port or {}).get("lying_off") or {}
+    if not st.get("from") or not st.get("until"):
+        return False
+    now = when or now_utc()
+    try:
+        if now < parse_iso(st["from"]):
+            return False
+        return now <= parse_iso(st["until"] + "T23:59:59Z")
+    except Exception:
+        return False
+
+
 def voyage_state(ports: list, points: list | None = None, today: str | None = None) -> dict:
     """Which leg she is on: the track first, the calendar only where it cannot see.
 
@@ -1491,7 +1517,34 @@ def voyage_state(ports: list, points: list | None = None, today: str | None = No
                 "basis": basis}
 
     if last:
-        return settle(last["pi"], last["ended"], "track")
+        i = last["pi"]
+        q = ports[i]
+        # A call is not over until the day she is due to leave. port_stays will call a stay
+        # ended on thin evidence - a drift outside the five-mile radius, a berth shift, or a
+        # twelve-hour gap in AIS while she lies still - and on 4 September that sent the
+        # course 542 miles to Dublin with her tied up in Lerwick until the 10th. The plan
+        # knows when she leaves; evidence of her actually leaving still wins.
+        newest = (points or [])[-1] if (points or []) else None
+        gone = False
+        if newest and q:
+            try:
+                off = nm_between((float(newest["lat"]), float(newest["lon"])),
+                                 (float(q["lat"]), float(q["lon"])))
+                gone = off > PORT_NM * 2 and float(newest.get("sog") or 0) > 1.0
+            except Exception:
+                gone = False
+        # Only `ended` is overridden: "to" stays the NEXT port, so nothing else in the job
+        # changes shape. The first attempt pointed "to" back at the port she was sitting
+        # in, and three tests objected, correctly.
+        if q.get("depart") and today <= q["depart"] and not gone and last["ended"]:
+            out = settle(i, False, "in-port-until-depart")
+            return out
+        # Declared anchorage: she is off this port, not through it.
+        if lying_off_open(ports[i]):
+            # She IS at this port, off it rather than in it - so in_port stays set and the
+            # next port is this one, not the one after.
+            return {"to": ports[i], "in_port": ports[i], "done": i, "basis": "declared"}
+        return settle(i, last["ended"], "track")
 
     # Nothing observed. Fall back to the calendar - but read the same shape out of it, so
     # the fallback cannot say she is alongside in Lerwick and also on her way to Lerwick.
@@ -1569,8 +1622,18 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         # A stale file is worse than an empty one: the page cannot tell the difference
         # without being told. So when she is this close, the route is cleared and only the
         # weather ladder is kept - which is the part that still matters in port.
+        # ...and no route onward while she is still alongside on this call.
+        #
+        # "Ruten som nå er satt til Dublin. De kan ikke skje før 10. sept." The route to
+        # the next port is a forecast of a passage that has not begun. Drawn from a ship
+        # tied up in Lerwick it is 542 miles of dashed line across Scotland's latitude,
+        # and it zooms the whole map out to fit itself - which is how the camera section
+        # and the harbour she is actually in disappeared off the top of the page.
+        state = voyage_state(plan.get("ports") or [], track_points)
+        here = state.get("in_port")
+        holding = bool(here and here.get("depart") and today_iso() <= here["depart"])
         near_nm = nm_between((lat, lon), (float(port["lat"]), float(port["lon"])))
-        if near_nm <= AHEAD_CLEAR_NM:
+        if holding or near_nm <= AHEAD_CLEAR_NM:
             old = read_json(AHEAD, {}) or {}
             if old.get("route"):
                 write_json(AHEAD, {k: v for k, v in old.items()
@@ -1578,8 +1641,10 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                                                 "distance_nm", "direct_nm", "winding")}
                            | {"generated_utc": iso(now_utc()), "to": port["name"],
                               "near_nm": round(near_nm, 2)})
-                print(f"* she is {near_nm:.1f} nm off {port['name']} - cleared the route "
-                      "line from ahead.json")
+                print("* " + (f"alongside in {here['name']} until {here['depart']}"
+                               if holding else
+                               f"she is {near_nm:.1f} nm off {port['name']}")
+                      + " - cleared the route line from ahead.json")
             return
         # The route she is drawn along is the SAILING COURSE, not a line ruled to the port.
         # A square rigger cannot point within about 58 degrees of the wind, so the straight
