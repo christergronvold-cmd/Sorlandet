@@ -1519,6 +1519,13 @@ def voyage_state(ports: list, points: list | None = None, today: str | None = No
     if last:
         i = last["pi"]
         q = ports[i]
+        # The declared anchorage is asked FIRST - both rules agree she is at this port, but
+        # only the human note knows she is lying OFF it rather than alongside.
+        # Declared anchorage: she is off this port, not through it.
+        if lying_off_open(ports[i]):
+            # She IS at this port, off it rather than in it - so in_port stays set and the
+            # next port is this one, not the one after.
+            return {"to": ports[i], "in_port": ports[i], "done": i, "basis": "declared"}
         # A call is not over until the day she is due to leave. port_stays will call a stay
         # ended on thin evidence - a drift outside the five-mile radius, a berth shift, or a
         # twelve-hour gap in AIS while she lies still - and on 4 September that sent the
@@ -1539,11 +1546,6 @@ def voyage_state(ports: list, points: list | None = None, today: str | None = No
         if q.get("depart") and today <= q["depart"] and not gone and last["ended"]:
             out = settle(i, False, "in-port-until-depart")
             return out
-        # Declared anchorage: she is off this port, not through it.
-        if lying_off_open(ports[i]):
-            # She IS at this port, off it rather than in it - so in_port stays set and the
-            # next port is this one, not the one after.
-            return {"to": ports[i], "in_port": ports[i], "done": i, "basis": "declared"}
         return settle(i, last["ended"], "track")
 
     # Nothing observed. Fall back to the calendar - but read the same shape out of it, so
@@ -1560,7 +1562,17 @@ def voyage_state(ports: list, points: list | None = None, today: str | None = No
     if i < 0:
         return {"to": ports[0] if ports else None, "in_port": None, "done": 0,
                 "basis": "plan"}
-    return settle(i, end(ports[i]) < today, "plan")
+    # A date is a plan; a position is a fact. Without an observed stay the calendar alone
+    # would call her "in port" from her arrival date onwards, wherever she actually is.
+    far_off = False
+    newest = (points or [])[-1] if (points or []) else None
+    if newest:
+        try:
+            far_off = nm_between((float(newest["lat"]), float(newest["lon"])),
+                                 (float(ports[i]["lat"]), float(ports[i]["lon"]))) > PORT_NM
+        except Exception:
+            far_off = False
+    return settle(i, end(ports[i]) < today or far_off, "plan")
 
 
 def next_port(ports: list, points: list | None = None) -> dict | None:
@@ -2293,7 +2305,7 @@ def capture_frames(seconds: int) -> None:
 LATEST_DIR = SHORE_DIR / "latest"
 
 
-def capture_latest() -> None:
+def capture_latest() -> str | None:
     """One frame from every camera at the port she is at, overwriting the last set.
 
     Not an album and not a candidate for one: three files that always hold the newest look
@@ -2306,27 +2318,44 @@ def capture_latest() -> None:
     Overwritten every round on purpose. She lies at anchor for days; a growing folder would
     be hundreds of frames of the same ship not moving. Three files, always current.
     """
+    # It reports why it produced nothing, because on 6 September it had produced nothing
+    # for two days and the only way to find that out was to fetch the published files and
+    # notice they were 404. A capture that fails quietly is a capture nobody fixes.
+    if not shutil.which("ffmpeg"):
+        return ("no ffmpeg on the runner - .github/workflows/update.yml needs the install "
+                "step, and it must also stage images/ or nothing captured is ever pushed")
     plan = read_json(DATA / "ports.json", {}) or {}
     pos = read_json(LATEST, {}).get("position") or {}
     lat, lon = pos.get("lat"), pos.get("lon")
     if lat is None or lon is None:
-        return
+        return "no position yet"
     for port in (plan.get("ports") or []):
         cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
-        if not cams or nm_between((lat, lon), (port["lat"], port["lon"])) > CAPTURE_NM:
+        if not cams:
             continue
+        off = nm_between((lat, lon), (port["lat"], port["lon"]))
+        if off > CAPTURE_NM:
+            continue
+        got, failed = 0, []
         for cam in cams:
             dest = LATEST_DIR / f"{ascii_slug(cam.get('short') or cam['name'])}.jpg"
             tmp = dest.with_suffix(".tmp.jpg")
             if grab_frame(cam["hls"], tmp):
                 tmp.replace(dest)
-            elif tmp.exists():
-                tmp.unlink()
-        print(f"* refreshed the standing look at {len(cams)} camera(s) in {port['name']}")
-        return
+                got += 1
+            else:
+                failed.append(cam.get("short") or cam["name"])
+                if tmp.exists():
+                    tmp.unlink()
+        print(f"* standing look at {port['name']}: {got} of {len(cams)} camera(s)")
+        if failed:
+            return f"{got} of {len(cams)} cameras answered; no frame from {', '.join(failed)}"
+        return None
+    return (f"she is not within {CAPTURE_NM:.0f} nm of a port with streams "
+            "- nothing to look at")
 
 
-def build_pending() -> None:
+def build_pending(live_note: str | None = None) -> None:
     """Index the frames waiting to be looked at, so ?review can show them on a phone."""
     frames = []
     if PENDING_DIR.is_dir():
@@ -2347,6 +2376,10 @@ def build_pending() -> None:
                          "t": iso(datetime.fromtimestamp(path.stat().st_mtime, timezone.utc))})
     payload = {
         "live": live,
+        # Why the row above is empty, when it is. Shown under ?review so the answer to
+        # "why can you not see the cameras" is on the page instead of in a job log nobody
+        # can reach.
+        "live_note": (live_note or None) if not live else None,
         "note": ("Frames the job took by itself while she was coming in. NOTHING here is on "
                  "the page. To publish one, rename it in GitHub from "
                  "images/shore/pending/NAME to images/shore/NAME - it is already named for "
@@ -2873,8 +2906,7 @@ def main() -> int:
     build_ahead(lat, lon, position.get("sog_kn"), points)
     build_orbit(points)
     build_shore()
-    capture_latest()
-    build_pending()
+    build_pending(capture_latest())
     update_history(weather, points, collected)
     print(f"* wrote {LATEST.name} and {TRACK.name} ({len(points)} points, {distance_nm:.0f} nm)")
     return 0

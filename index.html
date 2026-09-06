@@ -804,6 +804,19 @@ function voyageState(points, ports, todayISO) {
     basis: last ? "track" : "plan",
   });
   if (last) {
+    // The declared anchorage is asked FIRST. Both rules below agree she is at this port;
+    // only the human note knows she is lying OFF it rather than alongside, and on
+    // 6 September the depart-date rule got there first and announced "alongside now" about
+    // a ship at anchor. Evidence of a berth still wins - the window is closed by hand the
+    // day she goes alongside, which is exactly what happened on the 4th.
+    // Declared anchorage: she is off this port, not through it.
+    if (lyingOffOpen(ports[last.pi])) {
+      // `inPort` stays set and `berthed` goes false: she IS at this port, off it rather
+      // than in it. Nulling inPort took the "At anchor off Lerwick" row off the plan card
+      // with her sitting at anchor off Lerwick, which test_anchor caught at once.
+      return { to: ports[last.pi], inPort: ports[last.pi], berthed: false,
+               done: last.pi, basis: "declared" };
+    }
     // A call is not over until the day she is due to leave.
     //
     // "De kan ikke skje før 10. sept. Eller når jeg eventuelt sier noe annet." Right, and
@@ -831,14 +844,6 @@ function voyageState(points, ports, todayISO) {
     if (stillIn && last.ended) {
       return { ...settle(last.pi, false, last.berthed), basis: "in-port-until-depart" };
     }
-    // Declared anchorage: she is off this port, not through it.
-    if (lyingOffOpen(ports[last.pi])) {
-      // `inPort` stays set and `berthed` goes false: she IS at this port, off it rather
-      // than in it. Nulling inPort took the "At anchor off Lerwick" row off the plan card
-      // with her sitting at anchor off Lerwick, which test_anchor caught at once.
-      return { to: ports[last.pi], inPort: ports[last.pi], berthed: false,
-               done: last.pi, basis: "declared" };
-    }
     return settle(last.pi, last.ended, last.berthed);
   }
 
@@ -850,7 +855,15 @@ function voyageState(points, ports, todayISO) {
   let i = -1;
   ports.forEach((q, k) => { if ((q.arrive || "") < todayISO) i = k; });
   if (i < 0) return { to: ports[0] || null, inPort: null, done: 0, basis: "plan" };
-  return settle(i, end(ports[i]) < todayISO);
+  // ...and the calendar may not claim she is IN a port that her own position contradicts.
+  // With no observed stay the fallback reads the dates alone, and on 6 September that had
+  // the page announcing "In port now: Lerwick" about a ship two hundred miles out in the
+  // North Sea, simply because her arrival date had passed. A date is a plan; a position is
+  // a fact.
+  const newestPt = (points || [])[(points || []).length - 1];
+  const farOff = !!newestPt
+    && nm([newestPt.lat, newestPt.lon], [ports[i].lat, ports[i].lon]) > PORT_NM;
+  return settle(i, end(ports[i]) < todayISO || farOff);
 }
 
 // A log of things that HAPPENED, not a second copy of the statistics.
@@ -1156,7 +1169,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788527384";
+const BUILD = "1788686289";
 
 async function checkForNewBuild() {
   try {
@@ -3391,7 +3404,14 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // The declaration, and the one extra thing it cannot answer on its own: whether she has
   // already gone alongside. That is geometry's business, and geometry wins the moment it
   // can see her at the quay.
-  const declaredAnchor = (leg.inPort && leg.berthed) ? null : anchorSaid;
+  // ...and only an OBSERVED berth overrules the note. When the track shows no stay at all
+  // - which is what a sparse feed gives you - voyageState falls back to the calendar, and
+  // the calendar says she is alongside from her arrival date onwards. That is an
+  // assumption, not a sighting, and on 6 September it was quietly cancelling a human's
+  // written observation that she was lying at anchor. `basis` is how the page tells the
+  // two apart, and it exists precisely so that no card has to guess.
+  const declaredAnchor = (leg.inPort && leg.berthed && leg.basis !== "plan")
+    ? null : anchorSaid;
   const coming = (() => {
     if (declaredAnchor) return false;         // she is at anchor; she is not coming in
     if (waiting || !nextPort || !(nextPort.cameras || []).length || p.lat === undefined)
@@ -3456,7 +3476,15 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // preview, so nobody arrives at it by accident and thinks she is coming in.
   const preview = new URLSearchParams(location.search).has("preview")
                   && !(leg.inPort && leg.berthed) && !coming;
-  const camPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length)
+  // ...and she has to actually BE there. When the track shows no stay, voyageState falls
+  // back to the calendar, which says she is alongside from her arrival date onwards - so
+  // on 6 September a fixture 200 miles out in the North Sea put the Lerwick cameras on the
+  // page, because the plan said she was due. A wrong or optimistic date in the plan must
+  // never point a hundred and forty families at a camera she is nowhere near.
+  const atInPort = (leg.inPort && p.lat !== undefined)
+    ? nm([p.lat, p.lon], [leg.inPort.lat, leg.inPort.lon]) : 999;
+  const camPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length
+                   && atInPort <= CAM_SEE_NM)
                     ? leg.inPort
                 : coming ? nextPort
                 : lyingOffPort ? lyingOffPort
@@ -3728,6 +3756,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     // default. Fog moves and Andy swings the cameras about; a default written into a file
     // in Norway cannot keep up with either.
     const live = ((pendingFile.live) || []).filter(f => f && f.file);
+    // Why the standing look is empty, when it is. On 6 September it had been empty for
+    // two days and the only way to find out was to fetch the published files and notice
+    // they were 404 - the job's own explanation was in a log nobody can reach.
+    const liveNote = pendingFile.live_note;
     const liveBlock = live.length ? `
       <h3 class="albumh">What the cameras see now \u00b7 ${live.length}</h3>
       <div class="album shore">${live.map(f => `
@@ -3741,7 +3773,13 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
               ? new Date(f.t).toLocaleTimeString("en-GB",
                   { hour: "2-digit", minute: "2-digit" }) + " UTC" : ""} \u00b7 ${f.kb} kB
             </span></figcaption>
-        </figure>`).join("")}</div>` : "";
+        </figure>`).join("")}</div>` : (liveNote ? `
+      <h3 class="albumh">What the cameras see now</h3>
+      <div style="font-size:13px;color:#e0b96b;background:rgba(224,185,107,.09);
+                  border:1px solid rgba(224,185,107,.28); border-radius:10px;
+                  padding:10px 12px; margin:0 0 14px">
+        <b>No frames.</b> ${liveNote}
+      </div>` : "");
     reviewCard = wideCard(`Awaiting your review · ${waiting.length}`, liveBlock + (waiting.length ? `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 14px">
         The job took these by itself while she was closing on the port. <b>None of them are
