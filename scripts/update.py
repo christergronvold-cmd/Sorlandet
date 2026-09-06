@@ -916,6 +916,64 @@ def _coord(i: int, j: int):
     return (meta["lat0"] + i * meta["step"], meta["lon0"] + j * meta["step"])
 
 
+# ---------------------------------------------------------------- is this line on land?
+#
+# A separate, blunter question than "is this cell navigable". The sea mask keeps six
+# kilometres clear of land, so it calls Lerwick harbour, Bressay Sound and the quay at
+# Dublin "land" - which is fine for a router that must not steer her into a rock, and
+# useless as a test of whether a line drawn on the map is obviously wrong.
+#
+# This asks the coarser question a reader asks: does the line run WELL inland. A sample
+# counts only if every cell in the three-by-three block around it is land too, so a
+# harbour, a sound or a five-kilometre peninsula never trips it, while Sutherland, Ulster
+# and Jutland always do.
+#
+# It exists because of one line. On 6 September the sailing course to Dublin ran out of
+# forecast 127 miles short and the goal was appended anyway: a straight line from off
+# Kintyre across County Down, Armagh and Louth. Nobody would have seen it until she
+# sailed on the 10th, when it would have been the first thing on the map.
+def _deep_land(lat: float, lon: float, ring: int = 1) -> bool:
+    if not sea_grid():
+        return False
+    meta = _grid[0]
+    ci, cj = _cell(lat, lon)
+    # Off the edge of the bitmap is not a claim about land - it is the absence of one.
+    # _is_sea answers False outside its bounds, which is right for a router that must not
+    # step into the unknown and exactly wrong here: it would call the open Atlantic south
+    # of the mask "inland" and refuse to draw the crossing to Fernando de Noronha.
+    if not (0 <= ci < meta["nlat"] and 0 <= cj < meta["nlon"]):
+        return False
+    for di in range(-ring, ring + 1):
+        for dj in range(-ring, ring + 1):
+            if _is_sea(ci + di, cj + dj):
+                return False
+    return True
+
+
+def line_over_land(route, free=(), free_nm: float = 10.0, sample_nm: float = 3.0):
+    """Index of the first leg of `route` that runs well inland, or None if the line is
+    honest. `free` are the points a line is allowed to be inland near - her own position
+    and the berth she is heading for, both of which sit inside the mask's clearance."""
+    if not sea_grid() or not route or len(route) < 2:
+        return None
+    for k in range(1, len(route)):
+        a, b = (route[k - 1][0], route[k - 1][1]), (route[k][0], route[k][1])
+        d = nm_between(a, b)
+        if d <= 0:
+            continue
+        n = max(2, int(d / sample_nm) + 1)
+        for i in range(n + 1):
+            f = i / n
+            la = a[0] + (b[0] - a[0]) * f
+            lo = a[1] + (b[1] - a[1]) * f
+            if not _deep_land(la, lo):
+                continue
+            if any(nm_between((la, lo), q) <= free_nm for q in free):
+                continue
+            return k
+    return None
+
+
 def _nearest_sea(lat: float, lon: float, radius: int = 25):
     ci, cj = _cell(lat, lon)
     if _is_sea(ci, cj):
@@ -1710,6 +1768,24 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                 # It starts where she was when the router ran; pin it to where she is now.
                 route[0] = (lat, lon)
                 route_basis = "course"
+
+                # ...and then the same question we ask of every other line: does it go
+                # over land. The isochrone search itself only ever steps to cells the
+                # mask calls sea, so the body of the course is sound - but when the
+                # search runs out of forecast before it reaches the port, the goal is
+                # appended to the end regardless, and that last leg is not a course at
+                # all. To Dublin on 6 September it was 127 miles across Northern Ireland.
+                #
+                # Falling back rather than truncating: the A* route below is checked leg
+                # by leg and walks in along the plan's own approach waypoints, so it is
+                # a line we can stand behind. A course with a lie on the end of it is not.
+                over = line_over_land(route, free=((lat, lon),
+                                                   (float(port["lat"]), float(port["lon"]))))
+                if over is not None:
+                    print(f"  ! the sailing course to {port['name']} runs over land on leg"
+                          f" {over} of {len(route) - 1} - falling back to the sea route",
+                          file=sys.stderr)
+                    route, route_basis = None, "direct"
         if route is None:
             # The fallback line needs the same pilotage the sailing course gets, and for the
             # same reason. A* snaps the goal to the nearest navigable cell - the sea mask
@@ -1764,6 +1840,17 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         if not route or len(route) < 2:
             print("  ! could not route to the next port", file=sys.stderr)
             return
+
+        # Last gate, whichever branch drew it. A dashed line over a county is worse than
+        # no line: everybody can see it is wrong, and it makes them doubt the parts that
+        # are right.
+        over = line_over_land(route, free=((lat, lon),
+                                           (float(port["lat"]), float(port["lon"]))))
+        if over is not None:
+            print(f"  ! the {route_basis} route to {port['name']} still runs over land on"
+                  f" leg {over} - drawing no route at all", file=sys.stderr)
+            return
+
         legs = sum(nm_between(route[i - 1], route[i]) for i in range(1, len(route)))
 
         # How fast to assume she covers the route. Neither of the obvious answers works.
@@ -2188,6 +2275,8 @@ PENDING = DATA / "pending.json"
 CAPTURE_NM = 9.0            # the same "inside the approaches" figure the page uses
 CAPTURE_EVERY_S = 300       # a frame from each camera every five minutes
 CAPTURE_MAX_ROUND = 24      # ...and never more than this many in one round of the job
+CAPTURE_CLOSING_KN = 1.0    # coming in: a ship being warped onto a quay still counts
+CAPTURE_LEAVING_KN = 2.5    # going out: above anything a tide can do to her at anchor
 PENDING_MAX = 240           # if nobody reviews them, stop growing rather than fill the repo
 
 
@@ -2198,8 +2287,9 @@ def capture_port(position: dict, plan: dict) -> dict | None:
     has the rewind subscription - but neither of them can be watching at 06:40 on a Sunday,
     which is the sort of hour a ship actually arrives. So the job watches instead.
 
-    The rule is deliberately narrow: she has to be CLOSING on the port at better than a
-    knot, and be inside the approaches. That is "under innseiling" and nothing else. It
+    The rule is deliberately narrow: she has to be MOVING relative to the port at better
+    than a knot - in or out - and be inside the approaches. That is her arrival and her
+    departure, and nothing in between. It
     matters that it cannot mean anything else: she lay at anchor off Lerwick from 31 August
     to 6 September, a mile off a camera, and a rule based on distance alone would have taken
     a picture every five minutes for six days - some thousand frames of a ship not moving,
@@ -2226,12 +2316,32 @@ def capture_port(position: dict, plan: dict) -> dict | None:
         off = nm_between((lat, lon), (port["lat"], port["lon"]))
         if off > CAPTURE_NM:
             continue
-        # Closing rate: her speed projected onto the bearing to the port.
+        # Her speed projected onto the bearing to the port: positive coming in, negative
+        # going out. Both are worth photographing, and the sign is the only difference.
+        #
+        # It used to demand a positive number, which is to say an arrival. That was right
+        # for Lerwick and wrong for the thing that matters most now: she sails from there
+        # on 10 September, and a departure under sail past the Bressay cameras is the one
+        # picture the families will want. Leaving is exactly as photogenic as arriving and
+        # the rule for "she is moving, and she is inside the approaches" is the same rule.
+        #
+        # The original worry stands and is still answered: a ship at anchor does not make
+        # a knot in any direction, so the six days she lay off Lerwick still take no
+        # pictures. Only the hours around a real arrival or a real departure do.
+        #
+        # The two thresholds are deliberately different. Coming in, one knot is enough: a
+        # ship being warped the last few hundred metres onto a quay is worth a picture.
+        # Going out, one knot is not evidence of anything - she lay six days off Lerwick
+        # and a spring tide swings a ship on her cable at better than a knot, which would
+        # have started a capture round every hour for a week. A square rigger standing out
+        # of the sound is making three or four before she is clear of the pier, so the
+        # outbound test asks for two and a half and loses nothing real.
         brg = bearing((lat, lon), (port["lat"], port["lon"]))
         closing = sog * math.cos(math.radians((brg - cog + 540) % 360 - 180))
-        if closing < 1.0:
+        if not (closing >= CAPTURE_CLOSING_KN or closing <= -CAPTURE_LEAVING_KN):
             continue
-        print(f"* she is {off:.1f} nm from {port['name']}, closing at {closing:.1f} kn "
+        way = "closing at" if closing > 0 else "standing out at"
+        print(f"* she is {off:.1f} nm from {port['name']}, {way} {abs(closing):.1f} kn "
               f"- capturing from {len(cams)} camera(s)")
         return port
     return None
