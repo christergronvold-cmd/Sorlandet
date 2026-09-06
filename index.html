@@ -1169,7 +1169,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1788686289";
+const BUILD = "47b6446ee0";
 
 async function checkForNewBuild() {
   try {
@@ -2785,11 +2785,35 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   if (pts.length > 1) {
     // Split the track where AIS coverage was lost for more than 12 hours and draw the
     // gap dashed, so you can see where the ship was out of range.
+    //
+    // ...and split it again inside a harbour, where the line is drawn but not dashed,
+    // because there the straight line between two fixes is a lie of a different kind.
+    //
+    // "Det er fortsatt linje over land. Kan vi ikke bare kutte siste linje fra der de la
+    // ankret opp 3. sept?" He is right, and the reason is geometry, not a bug. Bressay
+    // Sound is about a kilometre wide and it bends round the Knab; her fixes in Lerwick
+    // are hours apart, so the leg from the anchorage to Victoria Pier is ruled straight
+    // across the town - past the ferry terminal, over the Esplanade, through the houses.
+    // The sea mask cannot save us here: it works at a tenth of a degree, six kilometres,
+    // and the whole harbour fits inside one of its cells.
+    //
+    // So we do not draw it. Within two and a half miles of a port we know she is
+    // manoeuvring and we do not know her path, and a line we cannot vouch for is worse
+    // than no line: the marker already says exactly where she is. The track ends as she
+    // comes into the approaches and picks up again when she is clear of them - which is
+    // also the answer to the second half of his question. On the 10th the new line starts
+    // by itself, the moment she is outside this radius.
+    const HARBOUR_NM = 2.5;
+    const manoeuvring = a => ports.some(
+      q => q && q.lat != null && nm([a[0], a[1]], [q.lat, q.lon]) <= HARBOUR_NM);
     const raw = track.points || [];
     let seg = [pts[0]];
     for (let i = 1; i < pts.length; i++) {
       const gapH = (new Date(raw[i].t) - new Date(raw[i - 1].t)) / 36e5;
-      if (gapH > 12) {
+      if (manoeuvring(pts[i - 1]) && manoeuvring(pts[i])) {
+        if (seg.length > 1) layers.push(L.polyline(seg, { color: "#0b6ea8", weight: 3, opacity: .8 }).addTo(map));
+        seg = [pts[i]];
+      } else if (gapH > 12) {
         if (seg.length > 1) layers.push(L.polyline(seg, { color: "#0b6ea8", weight: 3, opacity: .8 }).addTo(map));
         layers.push(L.polyline([pts[i - 1], pts[i]], {
           color: "#0b6ea8", weight: 2, opacity: .45, dashArray: "5,7"

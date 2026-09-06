@@ -2277,6 +2277,7 @@ CAPTURE_EVERY_S = 300       # a frame from each camera every five minutes
 CAPTURE_MAX_ROUND = 24      # ...and never more than this many in one round of the job
 CAPTURE_CLOSING_KN = 1.0    # coming in: a ship being warped onto a quay still counts
 CAPTURE_LEAVING_KN = 2.5    # going out: above anything a tide can do to her at anchor
+CAPTURE_ALONGSIDE_NM = 1.5  # inside this the quay cameras see her; outside, the entrance ones
 PENDING_MAX = 240           # if nobody reviews them, stop growing rather than fill the repo
 
 
@@ -2379,10 +2380,26 @@ def capture_frames(seconds: int) -> None:
     seen it. Publishing is a rename, and the file is already named for it.
     """
     plan = read_json(DATA / "ports.json", {}) or {}
-    port = capture_port(read_json(LATEST, {}).get("position") or {}, plan)
+    where = read_json(LATEST, {}).get("position") or {}
+    port = capture_port(where, plan)
     if not port:
         return
+
+    # Not every camera at once. Andy has given us six streams into Lerwick and pointing
+    # all six at the same minute is both a waste of his bandwidth and a folder Christer
+    # cannot get through: at a frame a minute it was heading for two hundred an hour.
+    #
+    # Each camera already says what it is good for. Out in the approaches the ones that
+    # watch the entrance are the only ones that can see her; alongside it is the ones that
+    # look at the quay. A departure uses both, in that order, without being told to.
+    off = nm_between((float(where["lat"]), float(where["lon"])),
+                     (float(port["lat"]), float(port["lon"])))
+    want = "alongside" if off <= CAPTURE_ALONGSIDE_NM else "approach"
     cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+    picked = [c for c in cams if c.get("best") == want] or cams
+    print(f"  {len(picked)} of {len(cams)} camera(s) at {port['name']} are the "
+          f"{want} ones at {off:.1f} nm")
+    cams = picked
     tz = port.get("tz")
     taken, deadline = 0, now_utc() + timedelta(seconds=max(0, seconds - 30))
     while now_utc() < deadline and taken < CAPTURE_MAX_ROUND:
@@ -2390,7 +2407,14 @@ def capture_frames(seconds: int) -> None:
         if held >= PENDING_MAX:
             print(f"  ! {held} frames already waiting to be looked at - stopping there")
             return
-        stamp = now_utc()
+        # Bucketed to the capture interval rather than to the minute. The file name IS
+        # the deduplication - a frame whose name already exists is skipped - so the
+        # bucket is what actually sets the spacing, and rounding to the minute quietly
+        # made it one frame per camera per minute. CAPTURE_EVERY_S was written down,
+        # documented as five minutes, and never used by anything.
+        stamp = now_utc().replace(second=0, microsecond=0)
+        every_min = max(1, CAPTURE_EVERY_S // 60)
+        stamp = stamp.replace(minute=(stamp.minute // every_min) * every_min)
         if tz:
             # The album's convention is the clock on the shore, because that is the clock
             # printed in the corner of the frame - so the file is named in it, and a frame
