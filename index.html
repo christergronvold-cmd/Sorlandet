@@ -1169,7 +1169,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "47b6446ee0";
+const BUILD = "9eecaa7234";
 
 async function checkForNewBuild() {
   try {
@@ -3073,15 +3073,101 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   }
 
   // ---- full route strip
+  // Each stop says what it took to get there, not only when she is due.
+  //
+  // "Jeg onsker a ha tilleggsinfo pa hver havn. Hvor mange dager seilasen er planlagt og
+  // hvor lang den er." The date alone answers "when", and the interesting question about a
+  // school ship's programme is "how far, and how long at sea" - which is also what makes
+  // the strip readable as a voyage rather than a calendar: 2,100 nm and twenty-one days
+  // from New York to Horta, against four days and 390 from Bridgetown to St. Martin.
+  //
+  // The miles are along the planned track, waypoint by waypoint, the same measure as the
+  // totals above and the "To go" tile. The days are from the day she leaves the previous
+  // port to the day she is due at this one, so they include whatever the programme has
+  // her doing on the way. The first Kristiansand has no passage into it - that is where
+  // the year starts - and it says so instead of showing a zero.
+  const legCum = ports.length > 1 ? routeDistances(ports) : [0];
+  const dayMs = d => d ? new Date(d + "T00:00:00Z").getTime() : null;
   const routeStrip = ports.map((q, i) => {
     const passed = i < leg.done;
     const here = q === leg.inPort;
     const isNext = !here && q === nextPort;
-    return `<div style="${passed ? "opacity:.45" : ""}${
+    const prev = i > 0 ? ports[i - 1] : null;
+    const legNm = i > 0 ? legCum[i] - legCum[i - 1] : null;
+    const from = prev ? dayMs(prev.depart || prev.arrive) : null;
+    const to = dayMs(q.arrive);
+    const legDays = from && to && to > from ? Math.round((to - from) / 864e5) : null;
+    // Two lines, not one. The tiles are 96 px wide and "1,341 nm - 12 days" wraps
+    // wherever it likes, which left the strip looking ragged; stacked, every tile has
+    // the same shape and the numbers line up down the row where they can be compared.
+    const passage = i === 0
+      ? `<span style="color:var(--muted)">the start</span>`
+      : [legNm != null ? `${Math.round(legNm).toLocaleString("en-GB")} nm` : "",
+         legDays != null ? `${legDays} ${legDays === 1 ? "day" : "days"}` : ""]
+        .filter(Boolean).join("<br>");
+    const why = i === 0 ? "Where the year begins."
+      : `The passage from ${prev.name}: ${legNm != null
+          ? Math.round(legNm).toLocaleString("en-GB") + " nm along the planned track" : ""}${
+          legDays != null ? `, ${legDays} days from her departure on ${
+            dayName(prev.depart || prev.arrive)}` : ""}.`;
+    // A column with the passage pinned to the bottom: "United Kingdom" wraps onto two
+    // lines and "France" does not, so anchored to the text above it the rule under each
+    // tile sat at a different height in every tile.
+    return `<div style="display:flex;flex-direction:column;${passed ? "opacity:.45" : ""}${
       here || isNext ? "border-color:var(--accent);border-width:2px" : ""}">
       <b>${q.name}</b><div class="ic">${here ? "⚓" : isNext ? "🧭" : passed ? "✓" : "·"}</div>
-      ${dayName(q.arrive)}<br><span style="color:var(--muted)">${q.country}</span></div>`;
+      ${dayName(q.arrive)}<br><span style="color:var(--muted)">${q.country}</span>
+      <div title="${why}" style="margin:9px 0 0;padding-top:7px;font-size:11.5px;
+                  margin-top:auto;
+                  border-top:1px solid var(--line);color:var(--ink)">${passage}</div></div>`;
   }).join("");
+
+  // How long the year actually is, in the two units a reader thinks in.
+  //
+  // The miles are measured ALONG THE PLANNED TRACK, not port to port. "Da ma vi ha NM
+  // etter sjoveien, og ikke rett strekning." A straight line from Kristiansand to Lerwick
+  // runs over Jaeren and one from Vigo to Funchal is fine, so the two numbers differ by
+  // very little over an Atlantic crossing and by a great deal round a coast; the honest
+  // figure is the one that follows the waypoints somebody chose to keep her off the rocks.
+  // Both are shown, because the difference is itself the interesting part.
+  //
+  // The days come from the programme, and are split rather than totalled: 285 days reads
+  // as 285 days at sea, which would be a different voyage entirely. Only the intermediate
+  // calls count as time in port - the first and last day are Kristiansand, and she is not
+  // "in port" on the day she leaves home.
+  const routeTotals = (() => {
+    if (ports.length < 2) return null;
+    const cum = routeDistances(ports);
+    const seaNm = cum[cum.length - 1];
+    const directNm = ports.slice(1).reduce(
+      (sum, q, i) => sum + nm([ports[i].lat, ports[i].lon], [q.lat, q.lon]), 0);
+    const day = d => d ? new Date(d + "T00:00:00Z").getTime() : null;
+    const last = ports[ports.length - 1];
+    const from = day(ports[0].depart || ports[0].arrive);
+    const to = day(last.arrive || last.depart);
+    const out = { seaNm, directNm };
+    if (from && to && to > from) {
+      out.days = Math.round((to - from) / 864e5);
+      out.inPort = ports.slice(1, -1).reduce((sum, q) => sum
+        + (q.arrive && q.depart ? Math.round((day(q.depart) - day(q.arrive)) / 864e5) : 0), 0);
+      out.atSea = out.days - out.inPort;
+    }
+    return out;
+  })();
+  const routeSum = !routeTotals ? "" : `
+    <div style="display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+                margin:0 0 12px;font-size:13.5px">
+      <span title="Measured along the planned track, round every waypoint - not the straight
+line between ports, which would run over land in places. Harbour approaches are not
+pilotage, so the last mile into each port is approximate."><b style="font-size:17px">${
+        Math.round(routeTotals.seaNm).toLocaleString("en-GB")}</b> nm by sea<span
+        style="color:var(--muted)"> · ${
+        Math.round(routeTotals.directNm).toLocaleString("en-GB")} nm straight port
+        to port</span></span>
+      ${routeTotals.days ? `<span><b style="font-size:17px">${routeTotals.days}</b> days<span
+        style="color:var(--muted)"> · ${routeTotals.atSea} at sea, ${
+        routeTotals.inPort} in port</span></span>` : ""}
+    </div>`;
 
   // What the dashed route is paced on, said plainly. The two numbers a reader might expect
   // are both wrong: her speed through the water would have her alongside in a day and a
@@ -4080,8 +4166,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     shoreCard,
     albumCard,
     chartsCard,
-    routeStrip ? wideCard("Full route 2026–2027", `<div class="fc">${routeStrip}</div>`,
-      { key: "route", open: false, note: `${ports.length} ports` }) : "",
+    routeStrip ? wideCard("Full route 2026–2027",
+      `${routeSum}<div class="fc">${routeStrip}</div>`,
+      { key: "route", open: false,
+        note: `${ports.length} ports${routeTotals
+          ? ` · ${Math.round(routeTotals.seaNm).toLocaleString("en-GB")} nm${
+              routeTotals.days ? ` · ${routeTotals.days} days` : ""}` : ""}` }) : "",
     shareCard
   ].join("");
 
