@@ -2,42 +2,43 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-10T13:54:26Z",
+ "updated_utc": "2026-09-10T14:23:53Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 60.0,
-  "lon": -1.1266666666666667,
-  "sog_kn": null,
-  "cog_deg": null,
+  "lat": 59.82333333333333,
+  "lon": -1.2383333333333333,
+  "sog_kn": 9.0,
+  "cog_deg": 244,
   "heading_deg": null,
-  "seen_utc": "2026-09-10T11:08:08Z",
-  "source": "foundation"
+  "seen_utc": "2026-09-10T12:47:08Z",
+  "source": "foundation",
+  "sog_derived": true
  },
  "voyage": null,
  "weather": {
-  "fetched_utc": "2026-09-10T13:54:23Z",
+  "fetched_utc": "2026-09-10T14:23:50Z",
   "sea": {
-   "wave_height_m": 1.26,
-   "wave_direction_deg": 178,
-   "wave_period_s": 4.6,
-   "swell_height_m": 0.28,
-   "swell_period_s": 4.65,
-   "wind_wave_height_m": 1.18,
-   "sea_temp_c": 13.0,
-   "time_utc": "2026-09-10T13:45"
+   "wave_height_m": 1.68,
+   "wave_direction_deg": 194,
+   "wave_period_s": 5.35,
+   "swell_height_m": 0.78,
+   "swell_period_s": 5.8,
+   "wind_wave_height_m": 1.46,
+   "sea_temp_c": 12.8,
+   "time_utc": "2026-09-10T14:15"
   },
   "air": {
-   "temp_c": 13.0,
-   "feels_c": 7.1,
-   "wind_ms": 12.0,
-   "gust_ms": 15.5,
+   "temp_c": 12.9,
+   "feels_c": 7.3,
+   "wind_ms": 11.4,
+   "gust_ms": 15.4,
    "wind_direction_deg": 179,
-   "pressure_hpa": 1005.3,
+   "pressure_hpa": 1005.2,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-09-10T13:45"
+   "time_utc": "2026-09-10T14:15"
   }
  },
  "sun": {
@@ -46,16 +47,16 @@
    "illumination": 0.02,
    "phase": "new moon"
   },
-  "civil_timezone": "Europe/London",
-  "civil_place": "Lerwick",
-  "civil_country": "United Kingdom",
-  "sunrise_utc": "2026-09-10T05:20",
-  "sunset_utc": "2026-09-10T18:40",
+  "civil_timezone": "Europe/Dublin",
+  "civil_place": "Dublin",
+  "civil_country": "Ireland",
+  "sunrise_utc": "2026-09-10T05:21",
+  "sunset_utc": "2026-09-10T18:41",
   "daylight_hours": 13.3
  },
  "stats": {
-  "points": 306,
-  "distance_nm": 617.1,
+  "points": 308,
+  "distance_nm": 628.4,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
