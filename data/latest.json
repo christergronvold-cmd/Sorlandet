@@ -2,43 +2,43 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-10T15:22:48Z",
+ "updated_utc": "2026-09-10T15:53:06Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 59.82333333333333,
-  "lon": -1.2383333333333333,
-  "sog_kn": 9.0,
-  "cog_deg": 244,
+  "lat": 59.675,
+  "lon": -1.9816666666666667,
+  "sog_kn": 8.0,
+  "cog_deg": 251,
   "heading_deg": null,
-  "seen_utc": "2026-09-10T12:47:08Z",
+  "seen_utc": "2026-09-10T15:38:03Z",
   "source": "foundation",
   "sog_derived": true
  },
  "voyage": null,
  "weather": {
-  "fetched_utc": "2026-09-10T15:22:45Z",
+  "fetched_utc": "2026-09-10T15:53:03Z",
   "sea": {
-   "wave_height_m": 1.78,
-   "wave_direction_deg": 189,
-   "wave_period_s": 5.5,
-   "swell_height_m": 0.8,
-   "swell_period_s": 6.0,
-   "wind_wave_height_m": 1.58,
-   "sea_temp_c": 12.8,
-   "time_utc": "2026-09-10T15:15"
+   "wave_height_m": 1.84,
+   "wave_direction_deg": 190,
+   "wave_period_s": 5.65,
+   "swell_height_m": 0.94,
+   "swell_period_s": 6.15,
+   "wind_wave_height_m": 1.54,
+   "sea_temp_c": 12.9,
+   "time_utc": "2026-09-10T15:45"
   },
   "air": {
-   "temp_c": 13.0,
-   "feels_c": 7.3,
-   "wind_ms": 11.5,
-   "gust_ms": 15.5,
-   "wind_direction_deg": 175,
-   "pressure_hpa": 1004.1,
+   "temp_c": 13.2,
+   "feels_c": 7.5,
+   "wind_ms": 11.6,
+   "gust_ms": 15.6,
+   "wind_direction_deg": 169,
+   "pressure_hpa": 1002.4,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-09-10T15:15"
+   "time_utc": "2026-09-10T15:45"
   }
  },
  "sun": {
@@ -50,13 +50,13 @@
   "civil_timezone": "Europe/Dublin",
   "civil_place": "Dublin",
   "civil_country": "Ireland",
-  "sunrise_utc": "2026-09-10T05:21",
-  "sunset_utc": "2026-09-10T18:41",
+  "sunrise_utc": "2026-09-10T05:24",
+  "sunset_utc": "2026-09-10T18:43",
   "daylight_hours": 13.3
  },
  "stats": {
-  "points": 308,
-  "distance_nm": 628.4,
+  "points": 310,
+  "distance_nm": 652.6,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
