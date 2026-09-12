@@ -2,48 +2,51 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-12T16:55:35Z",
+ "updated_utc": "2026-09-12T17:25:06Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 56.14162,
-  "lon": -5.66784,
-  "sog_kn": 6.6,
-  "cog_deg": 132,
-  "heading_deg": 141,
+  "lat": 56.07794,
+  "lon": -5.69197,
+  "sog_kn": 9.3,
+  "cog_deg": 191.9,
+  "heading_deg": 191,
   "nav_status": 0,
-  "seen_utc": "2026-09-12T16:53:36Z",
-  "source": "aisstream.io"
+  "seen_utc": "2026-09-12T17:23:46Z",
+  "source": "aisstream.io",
+  "destination": "IE DUB",
+  "draught_m": 4.1,
+  "eta_text": "21.03 12:34"
  },
  "voyage": {
   "destination": "IE DUB",
   "eta_text": "21.03 12:34",
   "draught_m": 4.1,
-  "heard_utc": "2026-09-12T14:25:05Z"
+  "heard_utc": "2026-09-12T17:23:46Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-12T16:55:33Z",
+  "fetched_utc": "2026-09-12T17:25:02Z",
   "sea": {
-   "wave_height_m": 1.02,
-   "wave_direction_deg": 281,
-   "wave_period_s": 6.15,
-   "swell_height_m": 0.6,
-   "swell_period_s": 8.25,
-   "wind_wave_height_m": 0.62,
-   "sea_temp_c": 14.5,
-   "time_utc": "2026-09-12T16:45"
+   "wave_height_m": 0.76,
+   "wave_direction_deg": 286,
+   "wave_period_s": 5.05,
+   "swell_height_m": 0.46,
+   "swell_period_s": 5.7,
+   "wind_wave_height_m": 0.4,
+   "sea_temp_c": 14.6,
+   "time_utc": "2026-09-12T17:15"
   },
   "air": {
-   "temp_c": 14.9,
+   "temp_c": 14.4,
    "feels_c": 12.0,
-   "wind_ms": 6.1,
-   "gust_ms": 7.8,
-   "wind_direction_deg": 304,
-   "pressure_hpa": 1014.8,
-   "cloud_pct": 94,
+   "wind_ms": 5.4,
+   "gust_ms": 9.3,
+   "wind_direction_deg": 306,
+   "pressure_hpa": 1015.5,
+   "cloud_pct": 90,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-09-12T16:45"
+   "time_utc": "2026-09-12T17:15"
   }
  },
  "sun": {
@@ -60,8 +63,8 @@
   "daylight_hours": 13.0
  },
  "stats": {
-  "points": 612,
-  "distance_nm": 978.4,
+  "points": 619,
+  "distance_nm": 982.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
