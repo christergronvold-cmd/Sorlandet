@@ -1,136 +1,131 @@
 {
- "generated_utc": "2026-09-12T21:26:10Z",
+ "generated_utc": "2026-09-12T21:56:28Z",
  "to": "Dublin",
  "country": "Ireland",
- "distance_nm": 238.3,
- "direct_nm": 146.0,
+ "distance_nm": 224.4,
+ "direct_nm": 131.8,
  "route_basis": "course",
- "winding": 1.63,
+ "winding": 1.7,
  "tacks": [
-  5,
-  6,
   8,
   10,
-  15,
+  12,
+  13,
   16,
-  24,
+  17,
   25
  ],
- "speed_kn": 7.6,
- "vmg_kn": 4.64,
+ "speed_kn": 7.9,
+ "vmg_kn": 4.63,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good easing to the plan",
  "due_utc": "2026-09-16T12:00:00Z",
- "eta_utc": "2026-09-14T07:26:10Z",
+ "eta_utc": "2026-09-14T03:56:28Z",
  "route": [
   [
-   55.7693,
-   -5.893
+   55.5393,
+   -6.2866
   ],
   [
-   55.6548,
-   -5.9288
+   55.4271,
+   -6.1726
   ],
   [
-   55.5648,
-   -5.9569
+   55.3482,
+   -6.1481
   ],
   [
-   55.504,
-   -5.9379
+   55.2859,
+   -6.0849
   ],
   [
-   55.4727,
-   -5.9061
+   55.2654,
+   -5.9865
   ],
   [
-   55.4863,
-   -5.9721
+   55.2387,
+   -5.9056
   ],
   [
-   55.4444,
-   -5.9294
+   55.1905,
+   -5.805
   ],
   [
-   55.4183,
-   -5.8501
+   55.1682,
+   -5.7374
   ],
   [
-   55.3768,
-   -5.9114
+   55.1465,
+   -5.7826
   ],
   [
-   55.3021,
-   -6.1381
+   55.0998,
+   -5.9237
   ],
   [
-   55.2501,
-   -5.9804
+   55.0566,
+   -5.7931
   ],
   [
-   55.1808,
-   -5.836
+   55.0058,
+   -5.64
   ],
   [
-   55.1064,
-   -5.6813
+   54.9896,
+   -5.7987
   ],
   [
-   55.0049,
-   -5.5328
+   54.9012,
+   -5.6157
   ],
   [
-   54.9253,
-   -5.3679
+   54.8269,
+   -5.3927
   ],
   [
-   54.8896,
-   -5.7146
+   54.7348,
+   -5.1174
   ],
   [
-   54.769,
-   -5.466
+   54.7007,
+   -5.4475
   ],
   [
-   54.629,
-   -5.2634
+   54.5602,
+   -5.3077
   ],
   [
-   54.4459,
-   -5.0817
+   54.3591,
+   -5.1821
   ],
   [
-   54.1461,
-   -4.9915
+   54.0709,
+   -5.0955
   ],
   [
-   53.9038,
-   -4.9915
+   53.8293,
+   -5.0955
   ],
   [
-   53.6779,
-   -4.9915
+   53.6366,
+   -5.1528
   ],
   [
-   53.4756,
-   -5.1151
+   53.4101,
+   -5.2911
   ],
   [
-   53.3284,
-   -5.2574
+   53.2772,
+   -5.4773
   ],
   [
-   53.4246,
-   -5.2859
+   53.1585,
+   -5.7129
   ],
   [
-   53.2683,
-   -5.5966
-  ],
-  [
-   53.1732,
-   -5.8705
+   53.3085,
+   -5.7129
   ],
   [
    53.345,
@@ -141,58 +136,58 @@
   {
    "hours": 0,
    "time_utc": "2026-09-12T21:00:00Z",
-   "lat": 55.7693,
-   "lon": -5.893,
-   "wind_ms": 2.8,
-   "wind_dir": 272,
-   "gust_ms": 3.5,
-   "temp_c": 14.3,
+   "lat": 55.5393,
+   "lon": -6.2866,
+   "wind_ms": 4.4,
+   "wind_dir": 280,
+   "gust_ms": 5.6,
+   "temp_c": 14.6,
    "weather_code": 3,
-   "wave_m": 0.4,
-   "wave_dir": 279,
-   "wave_period_s": 5.5
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 6,
    "time_utc": "2026-09-13T03:00:00Z",
-   "lat": 55.247,
-   "lon": -5.974,
-   "wind_ms": 3.7,
-   "wind_dir": 294,
-   "gust_ms": 4.8,
-   "temp_c": 14.1,
+   "lat": 55.0261,
+   "lon": -5.7012,
+   "wind_ms": 1.5,
+   "wind_dir": 234,
+   "gust_ms": 2.0,
+   "temp_c": 14.4,
    "weather_code": 3,
-   "wave_m": 0.76,
-   "wave_dir": 301,
-   "wave_period_s": 8.95
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 12,
    "time_utc": "2026-09-13T09:00:00Z",
-   "lat": 54.8378,
-   "lon": -5.6078,
-   "wind_ms": 2.6,
-   "wind_dir": 188,
-   "gust_ms": 3.3,
-   "temp_c": 14.5,
+   "lat": 54.7021,
+   "lon": -5.4344,
+   "wind_ms": 2.1,
+   "wind_dir": 180,
+   "gust_ms": 2.8,
+   "temp_c": 14.2,
    "weather_code": 2,
-   "wave_m": 0.26,
-   "wave_dir": 315,
-   "wave_period_s": 7.4
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 24,
    "time_utc": "2026-09-13T21:00:00Z",
-   "lat": 53.4527,
-   "lon": -5.1373,
-   "wind_ms": 5.4,
-   "wind_dir": 180,
-   "gust_ms": 6.8,
-   "temp_c": 16.2,
-   "weather_code": 3,
-   "wave_m": 0.48,
-   "wave_dir": 199,
-   "wave_period_s": 4.45
+   "lat": 53.246,
+   "lon": -5.5393,
+   "wind_ms": 6.9,
+   "wind_dir": 210,
+   "gust_ms": 8.8,
+   "temp_c": 16.8,
+   "weather_code": 2,
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 36,
@@ -204,9 +199,9 @@
    "gust_ms": 7.6,
    "temp_c": 18.8,
    "weather_code": 2,
-   "wave_m": 0.2,
-   "wave_dir": 163,
-   "wave_period_s": 3.3
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 48,
@@ -218,9 +213,9 @@
    "gust_ms": 10.98,
    "temp_c": 19.4,
    "weather_code": 1,
-   "wave_m": 0.78,
-   "wave_dir": 174,
-   "wave_period_s": 4.15
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 72,
@@ -232,9 +227,9 @@
    "gust_ms": 10.8,
    "temp_c": 14.1,
    "weather_code": 0,
-   "wave_m": 0.42,
-   "wave_dir": 291,
-   "wave_period_s": 2.8
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 96,
@@ -246,9 +241,9 @@
    "gust_ms": 13.1,
    "temp_c": 14.2,
    "weather_code": 51,
-   "wave_m": 0.26,
-   "wave_dir": 238,
-   "wave_period_s": 2.25
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 120,
@@ -260,9 +255,9 @@
    "gust_ms": 13.8,
    "temp_c": 12.4,
    "weather_code": 0,
-   "wave_m": 0.42,
-   "wave_dir": 264,
-   "wave_period_s": 2.85
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 144,
@@ -274,9 +269,9 @@
    "gust_ms": 17.0,
    "temp_c": 15.5,
    "weather_code": 51,
-   "wave_m": 0.66,
-   "wave_dir": 217,
-   "wave_period_s": 3.8
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   },
   {
    "hours": 168,
@@ -288,9 +283,9 @@
    "gust_ms": 12.6,
    "temp_c": 13.5,
    "weather_code": 2,
-   "wave_m": 0.52,
-   "wave_dir": 262,
-   "wave_period_s": 3.1
+   "wave_m": null,
+   "wave_dir": null,
+   "wave_period_s": null
   }
  ]
 }
