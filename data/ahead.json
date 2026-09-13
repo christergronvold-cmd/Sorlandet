@@ -1,41 +1,31 @@
 {
- "generated_utc": "2026-09-13T12:24:27Z",
+ "generated_utc": "2026-09-13T12:53:56Z",
  "to": "Dublin",
  "country": "Ireland",
- "distance_nm": 43.3,
- "direct_nm": 29.9,
+ "distance_nm": 25.2,
+ "direct_nm": 25.2,
  "route_basis": "course",
- "winding": 1.44,
- "tacks": [
-  4
- ],
- "speed_kn": 9.2,
- "vmg_kn": 6.38,
+ "winding": 1.0,
+ "tacks": [],
+ "speed_kn": 6.4,
+ "vmg_kn": 6.45,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good",
  "due_utc": "2026-09-16T12:00:00Z",
- "eta_utc": "2026-09-13T17:24:27Z",
+ "eta_utc": "2026-09-13T16:53:56Z",
  "route": [
   [
-   53.6921,
-   -5.6075
+   53.6204,
+   -5.6775
   ],
   [
-   53.6328,
-   -5.6913
+   53.5575,
+   -5.8035
   ],
   [
-   53.5508,
-   -5.8072
-  ],
-  [
-   53.5089,
-   -5.9288
-  ],
-  [
-   53.4075,
-   -5.7263
+   53.4759,
+   -5.9667
   ],
   [
    53.345,
@@ -46,16 +36,16 @@
   {
    "hours": 0,
    "time_utc": "2026-09-13T12:00:00Z",
-   "lat": 53.6921,
-   "lon": -5.6075,
-   "wind_ms": 2.8,
-   "wind_dir": 162,
-   "gust_ms": 3.4,
-   "temp_c": 15.7,
-   "weather_code": 1,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "lat": 53.6204,
+   "lon": -5.6775,
+   "wind_ms": 3.1,
+   "wind_dir": 154,
+   "gust_ms": 3.8,
+   "temp_c": 15.9,
+   "weather_code": 2,
+   "wave_m": 0.36,
+   "wave_dir": 180,
+   "wave_period_s": 4.75
   },
   {
    "hours": 6,
@@ -63,13 +53,13 @@
    "lat": 53.345,
    "lon": -6.21,
    "wind_ms": 1.1,
-   "wind_dir": 248,
-   "gust_ms": 3.3,
+   "wind_dir": 148,
+   "gust_ms": 2.4,
    "temp_c": 20.2,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.28,
+   "wave_dir": 155,
+   "wave_period_s": 2.7
   },
   {
    "hours": 12,
@@ -81,9 +71,9 @@
    "gust_ms": 5.1,
    "temp_c": 17.8,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.22,
+   "wave_dir": 157,
+   "wave_period_s": 3.05
   },
   {
    "hours": 24,
@@ -95,9 +85,9 @@
    "gust_ms": 7.9,
    "temp_c": 22.0,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.36,
+   "wave_dir": 160,
+   "wave_period_s": 3.15
   },
   {
    "hours": 36,
@@ -109,9 +99,9 @@
    "gust_ms": 12.8,
    "temp_c": 18.8,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.62,
+   "wave_dir": 172,
+   "wave_period_s": 4.2
   },
   {
    "hours": 48,
@@ -123,9 +113,9 @@
    "gust_ms": 11.05,
    "temp_c": 17.3,
    "weather_code": 2,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.42,
+   "wave_dir": 257,
+   "wave_period_s": 2.95
   },
   {
    "hours": 72,
@@ -137,9 +127,9 @@
    "gust_ms": 9.6,
    "temp_c": 15.9,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.4,
+   "wave_dir": 289,
+   "wave_period_s": 2.7
   },
   {
    "hours": 96,
@@ -151,9 +141,9 @@
    "gust_ms": 16.5,
    "temp_c": 14.4,
    "weather_code": 51,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.48,
+   "wave_dir": 256,
+   "wave_period_s": 2.95
   },
   {
    "hours": 120,
@@ -165,9 +155,9 @@
    "gust_ms": 12.0,
    "temp_c": 15.7,
    "weather_code": 2,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.56,
+   "wave_dir": 272,
+   "wave_period_s": 3.0
   },
   {
    "hours": 144,
@@ -179,23 +169,23 @@
    "gust_ms": 13.5,
    "temp_c": 16.0,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.38,
+   "wave_dir": 262,
+   "wave_period_s": 2.8
   },
   {
    "hours": 168,
    "time_utc": "2026-09-20T12:00:00Z",
-   "lat": 53.3134,
-   "lon": -6.1819,
-   "wind_ms": 9.4,
-   "wind_dir": 287,
-   "gust_ms": 19.8,
-   "temp_c": 16.1,
+   "lat": 53.2732,
+   "lon": -6.146,
+   "wind_ms": 9.04,
+   "wind_dir": 291,
+   "gust_ms": 19.6,
+   "temp_c": 14.9,
    "weather_code": 1,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.76,
+   "wave_dir": 286,
+   "wave_period_s": 3.25
   }
  ]
 }
