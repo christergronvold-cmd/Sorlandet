@@ -2,16 +2,16 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-13T16:51:58Z",
+ "updated_utc": "2026-09-13T17:21:28Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 53.29437166666666,
-  "lon": -6.111285,
-  "sog_kn": 0.0,
-  "cog_deg": 69,
+  "lat": 53.294531666666664,
+  "lon": -6.111643333333333,
+  "sog_kn": 0.1,
+  "cog_deg": 347,
   "heading_deg": null,
-  "seen_utc": "2026-09-13T16:47:05Z",
+  "seen_utc": "2026-09-13T17:11:03Z",
   "source": "foundation",
   "sog_derived": true
  },
@@ -22,25 +22,35 @@
   "heard_utc": "2026-09-13T15:15:18Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-13T16:51:24Z",
+  "fetched_utc": "2026-09-13T17:21:25Z",
+  "sea": {
+   "wave_height_m": 0.26,
+   "wave_direction_deg": 155,
+   "wave_period_s": 2.7,
+   "swell_height_m": 0.14,
+   "swell_period_s": 3.6,
+   "wind_wave_height_m": 0.2,
+   "sea_temp_c": 16.7,
+   "time_utc": "2026-09-13T17:15"
+  },
   "air": {
-   "temp_c": 20.2,
-   "feels_c": 21.0,
-   "wind_ms": 2.5,
-   "gust_ms": 4.8,
-   "wind_direction_deg": 154,
-   "pressure_hpa": 1019.1,
+   "temp_c": 20.1,
+   "feels_c": 20.9,
+   "wind_ms": 2.0,
+   "gust_ms": 4.3,
+   "wind_direction_deg": 171,
+   "pressure_hpa": 1019.2,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-09-13T16:45"
+   "time_utc": "2026-09-13T17:15"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 1.8,
+   "age_days": 1.9,
    "illumination": 0.04,
-   "phase": "new moon"
+   "phase": "waxing crescent"
   },
   "civil_timezone": "Europe/Dublin",
   "civil_place": "Dublin",
@@ -50,7 +60,7 @@
   "daylight_hours": 12.8
  },
  "stats": {
-  "points": 758,
+  "points": 760,
   "distance_nm": 1182.0,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
