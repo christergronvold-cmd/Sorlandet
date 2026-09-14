@@ -23,6 +23,7 @@ import shutil
 import ssl
 import subprocess
 import sys
+import time
 import unicodedata
 import urllib.error
 import urllib.parse
@@ -950,6 +951,62 @@ def _deep_land(lat: float, lon: float, ring: int = 1) -> bool:
     return True
 
 
+def mark_gaps(points: list) -> int:
+    """Flag the legs of the track we cannot vouch for, so the page stops drawing them.
+
+    "Jeg tipper at de ikke rapportere ofte nok, men det ser ut som om de har kjort over
+    land." He is right about the picture and, as it turns out, wrong about the cause: on
+    the way down the west coast of Scotland she reported every two to fifteen minutes,
+    which is plenty. What she also did was sail through the Sound of Mull, past Lochaline
+    and in to Oban - water a kilometre wide - and there the few long silences do not draw
+    a shortcut, they draw a line over Mull.
+
+    So the test is not "how often does she report". It is "could we possibly know the way
+    she went". Two gaps of three and a half hours on 12 September each put twenty miles
+    between one fix and the next among the islands; a straight line across those is an
+    invention. The legs either side of them, minutes apart, trace the sound exactly and
+    must be kept.
+
+    Offshore the same silence is harmless - there is nothing to hit - so the question is
+    asked only where the sea mask says she is within about six kilometres of land. That
+    mask is far too coarse to tell us whether a particular line clips a headland (the
+    whole of Lerwick harbour fits in one of its cells), but it is entirely good enough to
+    answer "is she inshore", which is all that is being asked of it here.
+
+    Sets "x": 1 on the LATER point of each such leg. Recomputed for the whole track every
+    run, so points written before this existed are judged too.
+    """
+    if not sea_grid() or len(points or []) < 2:
+        return 0
+    flagged = 0
+    for i in range(1, len(points)):
+        a, b = points[i - 1], points[i]
+        points[i].pop("x", None)
+        try:
+            mins = (parse_iso(b["t"]) - parse_iso(a["t"])).total_seconds() / 60
+        except Exception:
+            continue
+        if mins <= INSHORE_GAP_MIN:
+            continue
+        p0 = (float(a["lat"]), float(a["lon"]))
+        p1 = (float(b["lat"]), float(b["lon"]))
+        d = nm_between(p0, p1)
+        if d < 1.0:                      # she has not gone anywhere; nothing to invent
+            continue
+        n = max(2, int(d / 2.0) + 1)
+        inshore = False
+        for k in range(n + 1):
+            f = k / n
+            cell = _cell(p0[0] + (p1[0] - p0[0]) * f, p0[1] + (p1[1] - p0[1]) * f)
+            if not _is_sea(*cell):
+                inshore = True
+                break
+        if inshore:
+            points[i]["x"] = 1
+            flagged += 1
+    return flagged
+
+
 def line_over_land(route, free=(), free_nm: float = 10.0, sample_nm: float = 3.0):
     """Index of the first leg of `route` that runs well inland, or None if the line is
     honest. `free` are the points a line is allowed to be inland near - her own position
@@ -1595,7 +1652,21 @@ def voyage_state(ports: list, points: list | None = None, today: str | None = No
             try:
                 off = nm_between((float(newest["lat"]), float(newest["lon"])),
                                  (float(q["lat"]), float(q["lon"])))
-                gone = off > PORT_NM * 2 and float(newest.get("sog") or 0) > 1.0
+                # Three ways of being gone - see the same comment on the page, which this
+                # mirrors. Ten miles out is gone whatever the speed: nothing lies at
+                # anchor ten miles off a port. Outside the port radius and making way is
+                # gone. Outside the port radius on or after the day the plan says she
+                # sails is gone, because that is the day to believe it.
+                #
+                # It used to demand BOTH ten miles and a transmitted knot, and on
+                # 10 September that held her in Lerwick after she had left: she sailed
+                # inside a twelve-hour hole in the coverage and the first fix afterwards
+                # was a bare satellite position 9.3 nm south of the quay, with no speed
+                # in it at all.
+                sailing_day = bool(q.get("depart") and today >= q["depart"])
+                moving = float(newest.get("sog") or 0) > 1.0
+                gone = (off > PORT_NM * 2
+                        or (off > PORT_NM and (moving or sailing_day)))
             except Exception:
                 gone = False
         # Only `ended` is overridden: "to" stays the NEXT port, so nothing else in the job
@@ -2278,6 +2349,8 @@ CAPTURE_MAX_ROUND = 24      # ...and never more than this many in one round of t
 CAPTURE_CLOSING_KN = 1.0    # coming in: a ship being warped onto a quay still counts
 CAPTURE_LEAVING_KN = 2.5    # going out: above anything a tide can do to her at anchor
 CAPTURE_ALONGSIDE_NM = 1.5  # inside this the quay cameras see her; outside, the entrance ones
+# Inshore, a long silence is a hole in the track and not a straight line. See mark_gaps.
+INSHORE_GAP_MIN = float(os.environ.get("INSHORE_GAP_MIN", "45"))
 PENDING_MAX = 240           # if nobody reviews them, stop growing rather than fill the repo
 
 
@@ -2310,6 +2383,22 @@ def capture_port(position: dict, plan: dict) -> dict | None:
     cog = position.get("cog_deg")
     if sog is None or cog is None:
         return None
+    # Places she passes but does not call at - the Sound of Mull, a headland with a
+    # lighthouse camera on it. She is through them in an hour and there is no arrival to
+    # wait for, so the test is simply that she is inside their reach and moving: a ship
+    # standing through a sound at eight knots is the picture, and there will not be a
+    # second chance at it.
+    for site in (plan.get("passages") or []):
+        cams = [c for c in (site.get("cameras") or []) if c.get("hls") or c.get("img")]
+        if not cams or site.get("lat") is None:
+            continue
+        off = nm_between((lat, lon), (float(site["lat"]), float(site["lon"])))
+        if off > float(site.get("see_nm") or CAPTURE_NM) or sog < CAPTURE_LEAVING_KN:
+            continue
+        print(f"* she is passing {site['name']}, {off:.1f} nm off at {sog:.1f} kn "
+              f"- capturing from {len(cams)} camera(s)")
+        return site
+
     for port in (plan.get("ports") or []):
         cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
         if not cams:
@@ -2346,6 +2435,30 @@ def capture_port(position: dict, plan: dict) -> dict | None:
               f"- capturing from {len(cams)} camera(s)")
         return port
     return None
+
+
+def grab_still(url: str, dest: Path) -> bool:
+    """A camera that publishes one JPEG rather than a stream. Just fetch the JPEG.
+
+    Salen Pier looks straight down the Sound of Mull and is the only camera on that water
+    we are allowed to use; it replaces its picture about once a minute. ffmpeg has nothing
+    to do here - the frame is already a frame - and refusing to save it because it did not
+    arrive over HLS would have meant no picture of her in the sound at all.
+    """
+    try:
+        req = urllib.request.Request(
+            url + ("&" if "?" in url else "?") + f"t={int(time.time())}",
+            headers={"User-Agent": CONTACT_UA})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            body = r.read()
+    except Exception as exc:
+        print(f"  ! {dest.name}: {exc}")
+        return False
+    if len(body) < 8000:
+        print(f"  ! {dest.name}: only {len(body)} bytes back - not a picture")
+        return False
+    dest.write_bytes(body)
+    return True
 
 
 def grab_frame(url: str, dest: Path) -> bool:
@@ -2395,7 +2508,7 @@ def capture_frames(seconds: int) -> None:
     off = nm_between((float(where["lat"]), float(where["lon"])),
                      (float(port["lat"]), float(port["lon"])))
     want = "alongside" if off <= CAPTURE_ALONGSIDE_NM else "approach"
-    cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+    cams = [c for c in (port.get("cameras") or []) if c.get("hls") or c.get("img")]
     picked = [c for c in cams if c.get("best") == want] or cams
     print(f"  {len(picked)} of {len(cams)} camera(s) at {port['name']} are the "
           f"{want} ones at {off:.1f} nm")
@@ -2429,7 +2542,9 @@ def capture_frames(seconds: int) -> None:
             dest = PENDING_DIR / f"{stamp.strftime('%Y-%m-%d-%H%M')}-{slug_name}.jpg"
             if dest.exists():
                 continue
-            if grab_frame(cam["hls"], dest):
+            got = (grab_frame(cam["hls"], dest) if cam.get("hls")
+                   else grab_still(cam["img"], dest))
+            if got:
                 taken += 1
                 print(f"  captured {dest.name} ({dest.stat().st_size // 1024} kB)")
     if taken:
@@ -2625,9 +2740,12 @@ def build_shore() -> None:
         return
     plan = read_json(DATA / "ports.json", {}) or {}
     cams = []
-    for port in (plan.get("ports") or []):
-        for cam in (port.get("cameras") or []):
-            cams.append((port, cam))
+    # Passages as well as ports: a frame of her in the Sound of Mull comes off somebody's
+    # camera exactly as a frame of her in Lerwick does, and it needs the same link and the
+    # same credit. Ports first, so a name that somehow exists in both is read as the call.
+    for site in list(plan.get("ports") or []) + list(plan.get("passages") or []):
+        for cam in (site.get("cameras") or []):
+            cams.append((site, cam))
 
     slug = ascii_slug
 
@@ -2970,6 +3088,11 @@ def main() -> int:
             q["sog"] = round(float(q["sog"]), 1)
         if q.get("cog") is not None:
             q["cog"] = round(float(q["cog"]))
+
+    holes = mark_gaps(points)
+    if holes:
+        print(f"  -> {holes} leg(s) inshore with more than {INSHORE_GAP_MIN:.0f} min "
+              f"between fixes - the page will break the track there")
 
     # Steps under 0.02 nm are receiver jitter while she lies still, not distance sailed.
     distance_nm = sum(

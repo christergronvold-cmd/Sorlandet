@@ -839,7 +839,23 @@ function voyageState(points, ports, todayISO) {
     const q = ports[last.pi];
     const newest = (points || [])[(points || []).length - 1];
     const goneNm = (newest && q) ? nm([newest.lat, newest.lon], [q.lat, q.lon]) : 0;
-    const clearlyGone = !!newest && goneNm > PORT_NM * 2 && (newest.sog || 0) > 1.0;
+    // Three ways of being gone, because the first version knew only one and got today
+    // wrong. On 10 September she sailed from Lerwick during a twelve-hour hole in the AIS
+    // coverage, and the next thing we heard was a bare satellite position nine and a
+    // third miles south of the quay - no speed in it, no course, because the foundation's
+    // feed does not always carry them. The old test wanted her more than ten miles out AND
+    // transmitting over a knot, so she failed both halves, the page held her in Lerwick,
+    // and the arrow on the map went on pointing at the port she had just left. "Det ser ut
+    // som den er pa vei tilbake?"
+    //
+    // So: ten miles out is gone whatever the speed - nothing lies at anchor ten miles off.
+    // Outside the port radius and making way is gone. And outside the port radius on or
+    // after the day the plan says she sails is gone, because that is the day to believe
+    // it; a stray fix on any other day still will not end a call.
+    const departed = !!(q && q.depart && todayISO >= q.depart);
+    const clearlyGone = !!newest && (
+      goneNm > PORT_NM * 2
+      || (goneNm > PORT_NM && ((newest.sog || 0) > 1.0 || departed)));
     const stillIn = !!(q && q.depart && todayISO <= q.depart && !clearlyGone);
     if (stillIn && last.ended) {
       return { ...settle(last.pi, false, last.berthed), basis: "in-port-until-depart" };
@@ -1169,7 +1185,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "9eecaa7234";
+const BUILD = "1764eeaa6a";
 
 async function checkForNewBuild() {
   try {
@@ -1606,7 +1622,7 @@ const GLYPH_GAP_PX = 60;
 const HLS_JS = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js";
 const FEED_WAIT_MS = 14000;      // black for longer than this and we stop pretending
 let feedKey = null;              // which camera the box is currently built around
-let feedHls = null, feedTimer = null, feedVis = null;
+let feedHls = null, feedTimer = null, feedVis = null, feedStill = null;
 // Which camera the reader picked, and whether they have asked for a picture at all. Both
 // belong to the reader, not to the ship. On the evening of 31 August the long view across
 // Bressay Sound went to fog while she lay at anchor, and the sea-level camera was the only
@@ -1619,6 +1635,7 @@ function feedTeardown() {
   // Order matters: kill the watchdog first, or it fires against a detached element and
   // rewrites a box that a later render has already replaced.
   if (feedTimer) { clearTimeout(feedTimer); feedTimer = null; }
+  if (feedStill) { clearInterval(feedStill); feedStill = null; }
   if (feedVis) { document.removeEventListener("visibilitychange", feedVis); feedVis = null; }
   if (feedHls) { try { feedHls.destroy(); } catch (e) {} feedHls = null; }
 }
@@ -1660,19 +1677,21 @@ function buildFeed(args) {
   // what we can actually show, so it cannot quietly hand the live box a camera that is only
   // a link. Caught by the anchored case: with her lying in the harbour the ranking
   // correctly put a sea-level camera first, and at the time that camera had no stream.
-  const playable = a.ordered.filter(c => c.hls || c.stream);
+  const playable = a.ordered.filter(c => c.hls || c.stream || c.img);
   const lead = playable.find(c => c.name === feedPick) || playable[0] || a.ordered[0];
   // Standby is for a ship swinging at anchor that nobody has asked to see. Once the reader
   // HAS asked - the Watch button, or any chip - it plays, and keeps playing through every
   // later render; otherwise the next refresh puts the lid back on.
   const mode = (a.lyingOff && !feedAsked) ? "standby" : a.preview ? "preview" : "live";
-  const key = `${lead.name}|${lead.hls || lead.stream || lead.url}|${mode}`;
+  const key = `${lead.name}|${lead.hls || lead.stream || lead.img || lead.url}|${mode}`;
   if (feedKey !== key) {
     feedKey = key;
     feedTeardown();
     el.innerHTML = `
       <div class="bar">
-        <span class="live"><i></i>live</span>
+        <span class="live"${lead.img && !lead.hls && !lead.stream
+          ? ' style="opacity:.55"' : ""}><i></i>${
+          lead.img && !lead.hls && !lead.stream ? "still" : "live"}</span>
         <b>${lead.name}</b>
         <span class="when">${a.when}</span>
       </div>
@@ -1688,6 +1707,7 @@ function buildFeed(args) {
     else if (lead.stream) stage.innerHTML =
       `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
                referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`;
+    else if (lead.img) feedShot(stage, lead);
     else feedStand(stage, lead);
     const cams = el.querySelector(".cams");
     if (cams) cams.onclick = e => {
@@ -1716,12 +1736,36 @@ function buildFeed(args) {
 }
 
 // The fallback, and also the box as it was before Andy answered.
+// Not every camera worth watching is a video stream. Salen Pier looks straight down the
+// Sound of Mull and publishes a single JPEG, replaced about once a minute - which for a
+// square rigger doing eight knots through a two-mile-wide sound is very nearly as good as
+// video, and it is the only camera on that water we are allowed to use.
+//
+// So: show the picture, and say plainly that it is a picture. The one thing this must not
+// do is look live when it is not; a still that quietly goes stale is worse than no camera,
+// because somebody will sit and watch it.
+function feedShot(stage, lead) {
+  if (!stage) return;
+  const every = Math.max(15, +lead.img_every_s || 60) * 1000;
+  stage.innerHTML = `<img alt="${lead.name}" style="width:100%;height:100%;object-fit:cover">`;
+  const img = stage.querySelector("img");
+  // Cache-busted, or the browser hands back the same frame all afternoon.
+  const pull = () => { img.src = lead.img + (lead.img.includes("?") ? "&" : "?") + "t=" + Date.now(); };
+  img.onerror = () => feedStand(stage, lead,
+    "The picture is not coming through just now.");
+  pull();
+  feedStill = setInterval(() => {
+    if (document.hidden) return;   // nobody is looking; do not pull somebody else's camera
+    pull();
+  }, every);
+}
+
 function feedStand(stage, lead, why) {
   if (!stage) return;
   stage.innerHTML = `
     <div class="stand">
       <p>${why || (lead.view ? lead.view[0].toUpperCase() + lead.view.slice(1) + "." : "")}
-         It opens in its own window at Shetland Webcams.</p>
+         It opens in its own window${lead.by ? ` at ${lead.by}` : ""}.</p>
       <a href="${lead.url}" target="_blank" rel="noopener">Watch ${lead.name}</a>
     </div>`;
 }
@@ -2810,14 +2854,24 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     let seg = [pts[0]];
     for (let i = 1; i < pts.length; i++) {
       const gapH = (new Date(raw[i].t) - new Date(raw[i - 1].t)) / 36e5;
+      // raw[i].x is set by the job: a leg where she was inshore and went quiet for more
+      // than three quarters of an hour. Twelve hours of silence in mid-Atlantic draws a
+      // harmless straight line; three hours of it in the Sound of Mull draws a line over
+      // Mull, which is what happened on 12 September. The job has the sea mask and can
+      // tell the two apart; the page cannot, so it is told.
+      const unknown = !!raw[i].x;
       if (manoeuvring(pts[i - 1]) && manoeuvring(pts[i])) {
         if (seg.length > 1) layers.push(L.polyline(seg, { color: "#0b6ea8", weight: 3, opacity: .8 }).addTo(map));
         seg = [pts[i]];
-      } else if (gapH > 12) {
+      } else if (unknown || gapH > 12) {
         if (seg.length > 1) layers.push(L.polyline(seg, { color: "#0b6ea8", weight: 3, opacity: .8 }).addTo(map));
+        const hrs = gapH >= 1 ? `${Math.round(gapH)} hours` : `${Math.round(gapH * 60)} minutes`;
         layers.push(L.polyline([pts[i - 1], pts[i]], {
           color: "#0b6ea8", weight: 2, opacity: .45, dashArray: "5,7"
-        }).bindTooltip(`No AIS coverage for ${Math.round(gapH)} hours`).addTo(map));
+        }).bindTooltip(unknown && gapH <= 12
+          ? `No AIS message for ${hrs}, and she was among the islands - `
+            + "we do not know which way she went, so this is a gap and not a course"
+          : `No AIS coverage for ${hrs}`).addTo(map));
         seg = [pts[i]];
       } else {
         seg.push(pts[i]);
@@ -3444,6 +3498,11 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // a knot - so it cannot sit open through a week at anchor. If it still feels too eager,
   // this one number is the dial.
   const CAM_SEE_NM = 9.0;
+  // ...and a shorter reach for the places she only passes. A port is a destination and she
+  // is aimed at it for hours; a sound she is through in one. Each entry may set its own
+  // see_nm - the Sound of Mull is twenty miles long and wants a wide one, a lighthouse on
+  // a headland wants three - and this is only the default for those that do not.
+  const PASS_SEE_NM = 5.0;
 
   // The rate she is closing on the port: her speed through the water resolved onto the
   // bearing to it. Negative means she is going the other way.
@@ -3593,7 +3652,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // never point a hundred and forty families at a camera she is nowhere near.
   const atInPort = (leg.inPort && p.lat !== undefined)
     ? nm([p.lat, p.lon], [leg.inPort.lat, leg.inPort.lon]) : 999;
-  const camPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length
+  const camAtPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length
                    && atInPort <= CAM_SEE_NM)
                     ? leg.inPort
                 : coming ? nextPort
@@ -3601,6 +3660,29 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
                 : preview ? ((nextPort && (nextPort.cameras || []).length) ? nextPort
                              : (plan.ports || []).find(q => (q.cameras || []).length) || null)
                 : null;
+
+  // Cameras she only sails PAST.
+  //
+  // On 12 September she went inside rather than outside: Cape Wrath, the Minch, then the
+  // Sound of Mull, past Lochaline, round Duart Point and in to Oban - none of which is a
+  // port of call, all of which is watched by somebody's camera. A tall ship under sail in
+  // a two-mile-wide sound is the best sight of the whole voyage and the page had no way
+  // of knowing it was happening, because every camera it knew about belonged to a port.
+  //
+  // So plan.passages is a list of PLACES, not calls: a position, how far away its cameras
+  // can still see her, and the cameras. No dates, because she has no appointment with the
+  // Sound of Mull - she is either in it or she is not.
+  //
+  // A port always wins. Skagen has both a call and a strait; when she is alongside there,
+  // the quay camera is the one that matters.
+  const passing = (!camAtPort && p.lat !== undefined && !waiting)
+    ? ((plan.passages || [])
+        .filter(q => (q.cameras || []).length && q.lat != null)
+        .map(q => ({ q, off: nm([p.lat, p.lon], [q.lat, q.lon]) }))
+        .filter(x => x.off <= (x.q.see_nm || PASS_SEE_NM))
+        .sort((a, b) => a.off - b.off)[0] || null)
+    : null;
+  const camPort = camAtPort || (passing && passing.q) || null;
   // Hoisted: the live view above the map is built further down and needs the same three
   // answers. Block-scoped inside the card, they were simply missing there - and a
   // ReferenceError inside the render leaves the whole page half-drawn without a word.
@@ -3616,9 +3698,14 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
     // the list flip back and forth between refreshes.
     fromNorth = !alongside && p.lat > camPort.lat + 0.02;
     // The live view above the map is the headline now, so this is the rest of them.
-    cameraCard = wideCard(`More cameras in ${camPort.name}`, `
+    cameraCard = wideCard(
+      passing ? `Cameras \u2014 ${camPort.name}` : `More cameras in ${camPort.name}`, `
       <div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">
-        ${preview
+        ${passing
+          ? `She is <b>passing ${camPort.name}</b> now${
+             camPort.note ? ` \u2014 ${camPort.note}` : ""}. She does not stop here, so this
+             is a window of hours rather than days.`
+          : preview
           ? `<b>Preview.</b> She is not on the approach yet — this is what the section looks
              like when she is. It opens on its own about half an hour out.`
           : lyingOff
@@ -3650,7 +3737,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
             ? `thanks to Andy${lyingOff ? ", who has been steering one of them at her" : ""}`
             : "luck"}.
         ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
-        so she may already be further in than this says.`}
+        so she may already be ${passing ? "past" : "further in than"} this says.`}
       </div>
       <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth).map(c => `
         <li><span class="ic">\u{1F4F9}</span>
@@ -3672,6 +3759,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         // every day for a week. Open the moment she is actually doing something.
         key: "cameras", open: !lyingOff,
         note: preview ? "preview"
+            : passing ? "passing now"
             : lyingOff ? `lying off ${camPort.name}`
             : alongside ? "alongside now"
             : !timedFix() || minsOut > APPROACH_MIN ? "in sight"
@@ -3699,6 +3787,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       ordered: camOrder(camPort.cameras, alongside, fromNorth),
       lyingOff, preview,
       when: preview ? "preview \u2014 not on the approach yet"
+        : passing ? "passing now"
         : (lyingOff && !feedAsked) ? "at anchor \u2014 tap to watch"
         : lyingOff ? "at anchor off " + camPort.name
         : alongside ? "alongside now"

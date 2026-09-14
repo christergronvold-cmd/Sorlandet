@@ -226,6 +226,20 @@
           "by": "Dublin Port Company",
           "best": "alongside",
           "rewind_h": 12
+        },
+        {
+          "name": "Howth Yacht Club",
+          "short": "Howth",
+          "url": "https://hyc.ie/new-web-cam",
+          "view": "north side of Dublin Bay - she passes it coming down from the Irish Sea",
+          "by": "Howth Yacht Club"
+        },
+        {
+          "name": "Dun Laoghaire Harbour",
+          "short": "Dun Laoghaire",
+          "url": "https://www.dlrcoco.ie/dun-laoghaire-harbour/harbour-information/harbour-webcam",
+          "view": "the east pier, four miles south of the port entrance",
+          "by": "Dun Laoghaire-Rathdown County Council"
         }
       ],
       "tz": "Europe/Dublin"
@@ -821,6 +835,76 @@
           "url": "https://bjost.no/webkameraer/kristiansand.htm",
           "view": "the beach and Østre havn, free of the paywall",
           "by": "Fædrelandsvennen"
+        }
+      ]
+    }
+  ],
+  "passages": [
+    {
+      "name": "Sound of Mull",
+      "place": "Scotland",
+      "lat": 56.535,
+      "lon": -5.88,
+      "see_nm": 12,
+      "tz": "Europe/London",
+      "note": "twenty miles long and a mile wide, with Morvern on one side and Mull on the other - she sailed through it on 12 September, past Lochaline, on her way in to Oban",
+      "cameras": [
+        {
+          "name": "Salen Pier",
+          "short": "Salen Pier",
+          "url": "https://www.salenpier.co.uk/live-webcams/",
+          "view": "straight out across the sound from the Mull shore, about seven miles south-west of Lochaline",
+          "by": "Salen Pier",
+          "img": "https://app1.maui.co.uk/webcam/salenpier/SalenPier.jpg",
+          "img_every_s": 60
+        },
+        {
+          "name": "Glenforsa",
+          "short": "Glenforsa",
+          "url": "https://www.camsecure.co.uk/isle_of_mull_webcam.html",
+          "view": "the airstrip beside the sound, looking over to Morvern",
+          "by": "Glenforsa Hotel"
+        },
+        {
+          "name": "Tobermory",
+          "short": "Tobermory",
+          "url": "https://www.farsondigitalwatercams.com/locations/tobermory",
+          "view": "the bay at the northern entrance, where everything coming down from Ardnamurchan turns in",
+          "by": "Farson Digital Watercams"
+        }
+      ]
+    },
+    {
+      "name": "Oban and the Firth of Lorne",
+      "place": "Scotland",
+      "lat": 56.43,
+      "lon": -5.5,
+      "see_nm": 8,
+      "tz": "Europe/London",
+      "note": "the way out of the Sound of Mull and down towards the Sound of Luing",
+      "cameras": [
+        {
+          "name": "Dunstaffnage pontoon",
+          "short": "Dunstaffnage",
+          "url": "https://www.sams.ac.uk/about/webcams/",
+          "view": "at the water's edge in Dunstaffnage Bay, looking out over the approach to Oban",
+          "by": "Scottish Association for Marine Science",
+          "stream": "https://www.youtube.com/embed/Qx2LDTQCclE"
+        },
+        {
+          "name": "Oban ferry terminal",
+          "short": "Oban",
+          "url": "https://www.cmassets.co.uk/live-webcams/",
+          "view": "over Oban Bay and the Railway Pier, where she turned on 12 September",
+          "by": "Caledonian Maritime Assets",
+          "stream": "https://player.twitch.tv/?channel=cmaloban&parent=christergronvold-cmd.github.io&muted=true"
+        },
+        {
+          "name": "Oban Bay",
+          "short": "Oban Bay",
+          "url": "https://www.crerarhotels.com/collection/oban-bay-hotel/experiences/local-guide/oban-bay-webcam/",
+          "view": "from the Esplanade, across the bay to Kerrera and Lismore",
+          "by": "Oban Bay Hotel"
         }
       ]
     }
