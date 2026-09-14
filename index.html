@@ -1185,7 +1185,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "98a25e4605";
+const BUILD = "7f6021b180";
 
 async function checkForNewBuild() {
   try {
@@ -3042,7 +3042,19 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     }
     if (nextPort) {
       const days = Math.max(0, Math.round((new Date(nextPort.arrive + "T12:00:00Z") - Date.now()) / 864e5));
-      rows += row("Scheduled arrival", `${dayName(nextPort.arrive)} (in ${days} days)`);
+      // Say WHICH port, whenever she is already at one.
+      //
+      // Anchored off Dublin on 14 September the card read: "Alongside 16 Sept · Departs
+      // 20 Sept · Scheduled arrival 26 Sept · Distance 376 nm to run". The first two are
+      // Dublin and the last two are St. Malo, and nothing on the card said so. "Her er det
+      // kanskje litt misvisende info." It is: four dates about two different ports, stacked
+      // in one column, reading as one muddled story about the port she is lying off.
+      //
+      // Only when she is AT a port - at sea the leg row above already names both ends, and
+      // repeating the destination on every row would be noise.
+      const onward = leg.inPort && leg.inPort !== nextPort;
+      rows += row(onward ? `Then on to ${nextPort.name}` : "Scheduled arrival",
+                  `${dayName(nextPort.arrive)} (in ${days} days)`);
       // The port the leg starts at, taken by index exactly as the progress card takes it -
       // not "the last port she has departed from", which is a second definition that could
       // drift from the first and put two disagreeing numbers on the screen again.
@@ -3072,7 +3084,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
         // by seven miles and read as a contradiction. So when they disagree by enough to
         // notice, both are shown here, once, each saying what it is.
         const crow = nm([p.lat, p.lon], [nextPort.lat, nextPort.lon]);
-        rows += row("Distance", `${N(toRun, 0)} nm to run${
+        rows += row(onward ? "That passage" : "Distance", `${N(toRun, 0)} nm to run${
           Math.abs(toRun - crow) >= 3
             ? ` <span style="color:var(--muted)" title="The first figure follows the planned\
  track, round the waypoints. The second is the direct distance from where she is now.">·\
