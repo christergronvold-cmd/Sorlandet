@@ -1185,7 +1185,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1764eeaa6a";
+const BUILD = "98a25e4605";
 
 async function checkForNewBuild() {
   try {
@@ -1705,8 +1705,22 @@ function buildFeed(args) {
     if (lead.hls && mode === "standby") feedStandby(stage, lead, a.port);
     else if (lead.hls) feedPlay(stage, lead);
     else if (lead.stream) stage.innerHTML =
-      `<iframe src="${lead.stream}" allow="autoplay; fullscreen"
-               referrerpolicy="no-referrer" title="${lead.name} live"></iframe>`;
+      // referrerpolicy is load-bearing, and the obvious privacy-minded choice is the
+      // wrong one. YouTube decides whether an embed is allowed by looking at WHO is
+      // embedding it - the referrer - so "no-referrer" makes every one of its players
+      // refuse with "Konfigurasjonsfeil for videospilleren, Feil 153", which is what a
+      // hundred and forty families saw the morning she anchored in Dublin Bay. It had
+      // been wrong since the day the Dublin cameras went in; it only showed when she
+      // finally arrived and the box opened for the first time.
+      //
+      // strict-origin-when-cross-origin is what YouTube's own oEmbed markup uses. It
+      // sends the origin - christergronvold-cmd.github.io - and not the path, which is
+      // exactly the fact YouTube needs and nothing more. Verified against the live page
+      // in a browser: the same stream that showed the error plays with this.
+      `<iframe src="${lead.stream}"
+               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+               referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
+               title="${lead.name} live"></iframe>`;
     else if (lead.img) feedShot(stage, lead);
     else feedStand(stage, lead);
     const cams = el.querySelector(".cams");
