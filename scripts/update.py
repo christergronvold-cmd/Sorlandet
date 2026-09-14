@@ -2354,7 +2354,32 @@ INSHORE_GAP_MIN = float(os.environ.get("INSHORE_GAP_MIN", "45"))
 PENDING_MAX = 240           # if nobody reviews them, stop growing rather than fill the repo
 
 
-def capture_port(position: dict, plan: dict) -> dict | None:
+def closing_made_good(points: list, target: tuple) -> float | None:
+    """Knots she is making good ON `target`, from her own last two fixes.
+
+    Positive is closing, negative is standing out. This needs no transmitted speed and no
+    transmitted course, which is the whole point: it is worked out from two positions, and
+    two positions are the one thing every source gives us.
+
+    It is also the quantity the capture rule actually wants. Her speed through the water
+    resolved onto a bearing is an approximation of this; this is the thing itself.
+    """
+    pts = [q for q in (points or []) if q.get("lat") is not None]
+    if len(pts) < 2:
+        return None
+    a, b = pts[-2], pts[-1]
+    try:
+        hours = (parse_iso(b["t"]) - parse_iso(a["t"])).total_seconds() / 3600
+    except Exception:
+        return None
+    if not 1 / 60 <= hours <= 24:
+        return None
+    off_a = nm_between((float(a["lat"]), float(a["lon"])), target)
+    off_b = nm_between((float(b["lat"]), float(b["lon"])), target)
+    return (off_a - off_b) / hours
+
+
+def capture_port(position: dict, plan: dict, track: list | None = None) -> dict | None:
     """The port she is closing on and can be photographed at, or None.
 
     Andy gave permission for still frames on condition of a link and a mention, and Christer
@@ -2381,8 +2406,18 @@ def capture_port(position: dict, plan: dict) -> dict | None:
         return None
     sog = position.get("sog_kn")
     cog = position.get("cog_deg")
-    if sog is None or cog is None:
-        return None
+    # No speed in the fix is not the same as no movement.
+    #
+    # The foundation's satellite feed sends bare positions. The job works speed and course
+    # out from consecutive fixes, but only when they are between a few minutes and three
+    # hours apart - and on 10 September, when she sailed from Lerwick, the gap was twelve
+    # hours, so the first fix afterwards carried no speed and no course at all. The old
+    # guard turned round and went home on exactly the morning it was built for.
+    #
+    # Her track answers the question anyway, and answers it better. What this rule wants is
+    # not her speed through the water but how fast the distance to the port is shrinking,
+    # and two positions give that directly - no transmitted speed required. Below.
+    have_reported = sog is not None and cog is not None
     # Places she passes but does not call at - the Sound of Mull, a headland with a
     # lighthouse camera on it. She is through them in an hour and there is no arrival to
     # wait for, so the test is simply that she is inside their reach and moving: a ship
@@ -2393,9 +2428,11 @@ def capture_port(position: dict, plan: dict) -> dict | None:
         if not cams or site.get("lat") is None:
             continue
         off = nm_between((lat, lon), (float(site["lat"]), float(site["lon"])))
-        if off > float(site.get("see_nm") or CAPTURE_NM) or sog < CAPTURE_LEAVING_KN:
+        speed = sog if have_reported else abs(
+            closing_made_good(track, (float(site["lat"]), float(site["lon"]))) or 0)
+        if off > float(site.get("see_nm") or CAPTURE_NM) or speed < CAPTURE_LEAVING_KN:
             continue
-        print(f"* she is passing {site['name']}, {off:.1f} nm off at {sog:.1f} kn "
+        print(f"* she is passing {site['name']}, {off:.1f} nm off at {speed:.1f} kn "
               f"- capturing from {len(cams)} camera(s)")
         return site
 
@@ -2426,13 +2463,19 @@ def capture_port(position: dict, plan: dict) -> dict | None:
         # have started a capture round every hour for a week. A square rigger standing out
         # of the sound is making three or four before she is clear of the pier, so the
         # outbound test asks for two and a half and loses nothing real.
-        brg = bearing((lat, lon), (port["lat"], port["lon"]))
-        closing = sog * math.cos(math.radians((brg - cog + 540) % 360 - 180))
+        if have_reported:
+            brg = bearing((lat, lon), (port["lat"], port["lon"]))
+            closing = sog * math.cos(math.radians((brg - cog + 540) % 360 - 180))
+        else:
+            closing = closing_made_good(track, (float(port["lat"]), float(port["lon"])))
+            if closing is None:
+                continue
         if not (closing >= CAPTURE_CLOSING_KN or closing <= -CAPTURE_LEAVING_KN):
             continue
         way = "closing at" if closing > 0 else "standing out at"
-        print(f"* she is {off:.1f} nm from {port['name']}, {way} {abs(closing):.1f} kn "
-              f"- capturing from {len(cams)} camera(s)")
+        print(f"* she is {off:.1f} nm from {port['name']}, {way} {abs(closing):.1f} kn"
+              f"{'' if have_reported else ' (worked out from her track)'}"
+              f" - capturing from {len(cams)} camera(s)")
         return port
     return None
 
@@ -2494,7 +2537,10 @@ def capture_frames(seconds: int) -> None:
     """
     plan = read_json(DATA / "ports.json", {}) or {}
     where = read_json(LATEST, {}).get("position") or {}
-    port = capture_port(where, plan)
+    # Her track as well as her latest fix: when the fix carries no speed, the track still
+    # says whether the distance to the port is shrinking, which is the real question.
+    track = (read_json(TRACK, {}) or {}).get("points") or []
+    port = capture_port(where, plan, track)
     if not port:
         return
 
