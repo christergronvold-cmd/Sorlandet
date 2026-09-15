@@ -1185,7 +1185,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "7f6021b180";
+const BUILD = "7445a5bd73";
 
 async function checkForNewBuild() {
   try {
@@ -3678,7 +3678,19 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // never point a hundred and forty families at a camera she is nowhere near.
   const atInPort = (leg.inPort && p.lat !== undefined)
     ? nm([p.lat, p.lon], [leg.inPort.lat, leg.inPort.lon]) : 999;
-  const camAtPort = (leg.inPort && leg.berthed && (leg.inPort.cameras || []).length
+  // Berthed or not. She only has to BE there, with a camera, close enough to be seen.
+  //
+  // This used to demand leg.berthed, and on 15 September it emptied the page at the worst
+  // possible moment: she weighed anchor in Dublin Bay and started up the channel, 4.3 nm
+  // off the port and closing - and because the track already counted her as "at Dublin,
+  // not yet alongside", this test failed and the next branch went looking at the NEXT
+  // port instead. St. Malo. Three hundred and seventy-seven miles away. So the cameras
+  // watching the water she was actually entering were the one thing not on the screen.
+  //
+  // The berthed flag still matters, but for the WORDING, not for which port's cameras to
+  // show - see `alongside` below, which is what must never call a ship at anchor
+  // "alongside now".
+  const camAtPort = (leg.inPort && (leg.inPort.cameras || []).length
                    && atInPort <= CAM_SEE_NM)
                     ? leg.inPort
                 : coming ? nextPort
@@ -3713,12 +3725,25 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // answers. Block-scoped inside the card, they were simply missing there - and a
   // ReferenceError inside the render leaves the whole page half-drawn without a word.
   let alongside = false, fromNorth = false, camOff = 0;
+  // `closing` and `minsOut` were worked out against the NEXT port, which is right while
+  // she is at sea and wrong the moment the camera port is the one she is already at. Redo
+  // them against the port actually in front of the lens, or the card offers her speed
+  // towards St. Malo as an estimate of when she reaches a quay in Dublin.
+  if (camPort && camPort === leg.inPort && !leg.berthed && p.lat !== undefined) {
+    closing = closingKn([p.lat, p.lon], [camPort.lat, camPort.lon], p.cog_deg, p.sog_kn);
+    const away = nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
+    const ageMin = p.seen_utc ? Math.max(0, (Date.now() - new Date(p.seen_utc)) / 6e4) : 0;
+    minsOut = closing > 0 ? Math.max(0, (away / closing) * 60 - ageMin) : null;
+  }
   if (camPort) {
     // "Alongside" means tied up at the quay, and nothing else. It used to mean "camPort is
     // the port she is at", which quietly became true the moment she anchored off Lerwick -
     // and that flipped the camera ranking into its quay-side order, which looks at the
     // berth she is not on yet and ignores the default camera entirely.
-    alongside = !lyingOff && camPort === leg.inPort;
+    // ...and this is where berthed earns its keep: "alongside" means tied up at the quay
+    // and nothing else. She lay six days at anchor off Lerwick and this flag, without the
+    // berthed test, announced her alongside for every one of them.
+    alongside = !lyingOff && camPort === leg.inPort && !!leg.berthed;
     const off = camOff = alongside ? 0 : nm([p.lat, p.lon], [camPort.lat, camPort.lon]);
     // About a mile of slack, so a ship drifting either side of the latitude does not make
     // the list flip back and forth between refreshes.
