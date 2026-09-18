@@ -2,21 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-18T10:03:10Z",
+ "updated_utc": "2026-09-18T10:32:41Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 53.34611,
-  "lon": -6.23756,
-  "sog_kn": null,
-  "cog_deg": null,
+  "lat": 53.34612833333333,
+  "lon": -6.237538333333333,
+  "sog_kn": 0.0,
+  "cog_deg": 90,
   "heading_deg": null,
-  "nav_status": null,
-  "seen_utc": "2026-09-18T09:54:56Z",
-  "source": "aisstream.io",
-  "destination": "IE DUB",
-  "draught_m": 4.1,
-  "eta_text": "21.03 12:34"
+  "seen_utc": "2026-09-18T10:31:09Z",
+  "source": "foundation",
+  "sog_derived": true
  },
  "voyage": {
   "destination": "IE DUB",
@@ -25,34 +22,34 @@
   "heard_utc": "2026-09-18T09:54:56Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-18T10:03:08Z",
+  "fetched_utc": "2026-09-18T10:32:39Z",
   "sea": {
-   "wave_height_m": 0.4,
-   "wave_direction_deg": 186,
-   "wave_period_s": 2.7,
+   "wave_height_m": 0.46,
+   "wave_direction_deg": 184,
+   "wave_period_s": 2.85,
    "swell_height_m": 0.1,
-   "swell_period_s": 3.85,
-   "wind_wave_height_m": 0.36,
+   "swell_period_s": 3.95,
+   "wind_wave_height_m": 0.42,
    "sea_temp_c": 16.4,
-   "time_utc": "2026-09-18T10:00"
+   "time_utc": "2026-09-18T10:30"
   },
   "air": {
-   "temp_c": 14.1,
-   "feels_c": 11.3,
+   "temp_c": 14.3,
+   "feels_c": 11.6,
    "wind_ms": 5.0,
    "gust_ms": 10.2,
-   "wind_direction_deg": 224,
-   "pressure_hpa": 1009.0,
+   "wind_direction_deg": 222,
+   "pressure_hpa": 1008.7,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-09-18T10:00"
+   "time_utc": "2026-09-18T10:30"
   }
  },
  "sun": {
   "moon": {
    "age_days": 6.6,
-   "illumination": 0.41,
+   "illumination": 0.42,
    "phase": "first quarter"
   },
   "civil_timezone": "Europe/Dublin",
@@ -63,7 +60,7 @@
   "daylight_hours": 12.5
  },
  "stats": {
-  "points": 1122,
+  "points": 1125,
   "distance_nm": 1189.7,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
