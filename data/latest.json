@@ -2,53 +2,56 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-19T04:34:53Z",
+ "updated_utc": "2026-09-19T05:04:24Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 53.34613,
-  "lon": -6.237565,
-  "sog_kn": 0.0,
-  "cog_deg": 246,
+  "lat": 53.34612,
+  "lon": -6.23755,
+  "sog_kn": null,
+  "cog_deg": null,
   "heading_deg": null,
-  "seen_utc": "2026-09-19T04:34:11Z",
-  "source": "foundation",
-  "sog_derived": true
+  "nav_status": null,
+  "seen_utc": "2026-09-19T05:00:58Z",
+  "source": "aisstream.io",
+  "destination": "IE DUB",
+  "draught_m": 4.1,
+  "eta_text": "21.03 12:34"
  },
  "voyage": {
   "destination": "IE DUB",
   "eta_text": "21.03 12:34",
   "draught_m": 4.1,
-  "heard_utc": "2026-09-19T03:52:14Z"
+  "heard_utc": "2026-09-19T05:00:58Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-19T04:34:51Z",
+  "fetched_utc": "2026-09-19T05:04:22Z",
   "sea": {
    "wave_height_m": 0.52,
-   "wave_direction_deg": 195,
+   "wave_direction_deg": 197,
    "wave_period_s": 3.95,
    "swell_height_m": 0.44,
-   "swell_period_s": 3.7,
+   "swell_period_s": 3.75,
    "wind_wave_height_m": 0.22,
    "sea_temp_c": 16.2,
-   "time_utc": "2026-09-19T04:30"
+   "time_utc": "2026-09-19T05:00"
   },
   "air": {
-   "temp_c": 16.3,
-   "feels_c": 14.3,
-   "wind_ms": 5.2,
-   "gust_ms": 10.1,
-   "wind_direction_deg": 253,
-   "pressure_hpa": 1007.3,
-   "cloud_pct": 67,
+   "temp_c": 16.0,
+   "feels_c": 13.7,
+   "wind_ms": 5.6,
+   "gust_ms": 10.5,
+   "wind_direction_deg": 250,
+   "pressure_hpa": 1007.5,
+   "cloud_pct": 0,
    "precip_mm": 0.0,
-   "weather_code": 2,
-   "time_utc": "2026-09-19T04:30"
+   "weather_code": 0,
+   "time_utc": "2026-09-19T05:00"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 7.3,
+   "age_days": 7.4,
    "illumination": 0.5,
    "phase": "first quarter"
   },
@@ -60,7 +63,7 @@
   "daylight_hours": 12.4
  },
  "stats": {
-  "points": 1158,
+  "points": 1154,
   "distance_nm": 1189.6,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
