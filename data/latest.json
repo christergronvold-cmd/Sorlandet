@@ -2,18 +2,17 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-20T17:00:04Z",
+ "updated_utc": "2026-09-20T17:29:35Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 52.88327,
-  "lon": -5.861055,
-  "sog_kn": 4.0,
-  "cog_deg": 164,
+  "lat": 52.848441666666666,
+  "lon": -5.84552,
+  "sog_kn": null,
+  "cog_deg": null,
   "heading_deg": null,
-  "seen_utc": "2026-09-20T16:57:10Z",
-  "source": "foundation",
-  "sog_derived": true
+  "seen_utc": "2026-09-20T17:29:09Z",
+  "source": "foundation"
  },
  "voyage": {
   "destination": "FR SML",
@@ -22,46 +21,46 @@
   "heard_utc": "2026-09-20T16:29:38Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-20T17:00:03Z",
+  "fetched_utc": "2026-09-20T17:29:32Z",
   "sea": {
-   "wave_height_m": 0.4,
+   "wave_height_m": 0.42,
    "wave_direction_deg": 196,
-   "wave_period_s": 4.0,
+   "wave_period_s": 3.9,
    "swell_height_m": 0.26,
-   "swell_period_s": 4.6,
-   "wind_wave_height_m": 0.26,
+   "swell_period_s": 4.7,
+   "wind_wave_height_m": 0.3,
    "sea_temp_c": 15.6,
-   "time_utc": "2026-09-20T17:00"
+   "time_utc": "2026-09-20T17:15"
   },
   "air": {
-   "temp_c": 16.3,
+   "temp_c": 16.2,
    "feels_c": 12.3,
-   "wind_ms": 8.1,
-   "gust_ms": 10.5,
+   "wind_ms": 8.0,
+   "gust_ms": 10.4,
    "wind_direction_deg": 202,
-   "pressure_hpa": 1029.2,
+   "pressure_hpa": 1029.4,
    "cloud_pct": 0,
    "precip_mm": 0.0,
    "weather_code": 0,
-   "time_utc": "2026-09-20T17:00"
+   "time_utc": "2026-09-20T17:15"
   }
  },
  "sun": {
   "moon": {
    "age_days": 8.9,
-   "illumination": 0.65,
+   "illumination": 0.66,
    "phase": "first quarter"
   },
   "civil_timezone": "Europe/Paris",
   "civil_place": "St. Malo",
   "civil_country": "France",
   "sunrise_utc": "2026-09-20T06:05",
-  "sunset_utc": "2026-09-20T18:27",
+  "sunset_utc": "2026-09-20T18:26",
   "daylight_hours": 12.4
  },
  "stats": {
-  "points": 1239,
-  "distance_nm": 1218.6,
+  "points": 1245,
+  "distance_nm": 1220.7,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
