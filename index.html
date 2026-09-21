@@ -1276,14 +1276,31 @@ seamarks.addTo(map);
 // coasts, in channels and in harbour entrances - in open water there is nothing to mark,
 // so zoomed in on her in the middle of the North Sea the layer is correctly empty.
 
-const shipIcon = (heading, ghost = false) => L.divIcon({
-  className: ghost ? "ship-marker ghost-marker" : "ship-marker",
-  html: `<svg width="34" height="34" viewBox="0 0 34 34" style="transform:rotate(${heading ?? 0}deg)">
-      <circle cx="17" cy="17" r="8.5" fill="${ghost ? "#e0803a" : "#0b6ea8"}" stroke="#fff" stroke-width="2.5"/>
-      <path d="M17 1.5 L22 11 L12 11 Z" fill="${ghost ? "#e0803a" : "#0b6ea8"}" stroke="#fff" stroke-width="1.6"/>
+// No arrow when we do not know which way she is pointing.
+//
+// The foundation's feed carries positions and nothing else, and the job only works a
+// course out from two fixes that are between a few minutes and three hours apart. On
+// 21 September the gap was eleven and a half hours, so heading and course were both
+// empty - and `rotate(heading ?? 0)` quietly became rotate(0), which is due north. She
+// had been steering 180 all night. The map drew her pointing back the way she came, and
+// the first thing it made a parent ask was whether she had turned round.
+//
+// A direction we do not have is better drawn as no direction at all: the plain circle
+// says she is here and claims nothing else. Her track still shows which way she came.
+const shipIcon = (heading, ghost = false) => {
+  const known = heading !== null && heading !== undefined && isFinite(heading);
+  const fill = ghost ? "#e0803a" : "#0b6ea8";
+  return L.divIcon({
+    className: ghost ? "ship-marker ghost-marker" : "ship-marker",
+    html: `<svg width="34" height="34" viewBox="0 0 34 34"${
+        known ? ` style="transform:rotate(${heading}deg)"` : ""}>
+      <circle cx="17" cy="17" r="8.5" fill="${fill}" stroke="#fff" stroke-width="2.5"/>
+      ${known ? `<path d="M17 1.5 L22 11 L12 11 Z" fill="${fill}" stroke="#fff" stroke-width="1.6"/>`
+              : ""}
     </svg>`,
-  iconSize: [34, 34], iconAnchor: [17, 17]
-});
+    iconSize: [34, 34], iconAnchor: [17, 17]
+  });
+};
 
 // A position that has not happened yet: hollow, so it never reads as a logged fix.
 const futureIcon = () => L.divIcon({
