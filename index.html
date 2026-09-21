@@ -31,7 +31,9 @@
     font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1040px; margin:0 auto; padding:20px 16px 48px}
+  /* 1040 was chosen when the cards were short. Two cards of 498px each still folded their
+     longest line, and the room to fix that was sitting unused down both margins. */
+  .wrap{max-width:1200px; margin:0 auto; padding:20px 16px 48px}
   /* The pill is lifted out of the flow and pinned to the top right corner. As a flex item
      it wrapped onto a line of its own on a phone - and 93% of the people reading this are
      on a phone - which cost a whole line to one short badge and pushed the figures down.
@@ -212,10 +214,23 @@
   .big .sky{font-size:23px; vertical-align:-1px}
   .arrow{display:inline-block; color:var(--accent)}
   .card.wide{grid-column:1/-1}
-  /* Voyage plan absorbed the old Position card, so it carries the most rows of any of them
-     and is the first thing anyone reads. Given two columns it stops being a narrow strip of
-     wrapped labels, and the five cards fill the row more evenly than 4 + 1. */
-  @media (min-width:900px){ .card.plan{grid-column:span 2} }
+  /* Voyage plan and the clock carry the compound values - "26 Sept 08:00 · as the crew set
+     it, 12 hours ago", "nautical zone UTC+0 · 2 hours behind St. Malo". In a 243px column
+     those fold onto two and three lines, and a folded line is harder to read than the fact
+     it carries. Measured at every width from 360 to 1700: nothing here fits until the card
+     is about 520px wide, and the old 1040px page could not give it that even at full span.
+     So the page grew to 1200, and the two of them take half the row each. The plan already
+     spanned two of four columns here and the clock one, leaving a column empty; giving the
+     clock the fourth column costs no height at all. From about 1100px up nothing folds.
+
+     Stacking them full width below that was the first attempt, and it pushed the shore
+     album below the fold on a 900px window, where lazy-loaded pictures then never load.
+     The test caught it. Narrower windows keep the old layout and the old folded lines,
+     which is what a phone has always done. */
+  @media (min-width:900px){
+    .grid{grid-template-columns:repeat(4,1fr)}
+    .card.plan, .card.board{grid-column:span 2}
+  }
   /* Folding cards. <details> does this natively - keyboard, screen readers and find-in-page
      all work, and it needs no script to open and close. The script only remembers the
      choice. The summary is styled to look exactly like the h2 it replaces, plus a chevron,
@@ -557,6 +572,9 @@ const wideCard = (title, html, fold) => fold
        <div class="foldbody">${html}</div></details>`
   : `<div class="card wide"><h2>${title}</h2>${html}</div>`;
 const card = (title, html) => `<div class="card"><h2>${title}</h2>${html}</div>`;
+// The clock sits beside the Voyage plan and needs the same width for the same reason.
+const boardcard = (title, html) =>
+  card(title, html).replace('class="card"', 'class="card board"');
 
 // Shown on the weather cards only while the slider is away from now - see .nowchip.
 const NOWCHIP = '<span class="nowchip" title="What is measured where she is, at this ' +
@@ -3389,7 +3407,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
     };
     const zoneGap = sOff - zone;
 
-    boardCard = card(tz ? `Clock in ${shorePort.name}` : "Ship's clock", `
+    boardCard = boardcard(tz ? `Clock in ${shorePort.name}` : "Ship's clock", `
       <div class="big" id="shipclock">--:--</div>
       <div style="color:var(--muted);font-size:13px;margin:-2px 0 8px">
         ${tz ? `${sLabel} · ${sVsYou}` : `nautical zone ${label} · ${vsYou}`}
