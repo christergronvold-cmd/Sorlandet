@@ -2,18 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-20T23:59:22Z",
+ "updated_utc": "2026-09-21T00:01:15Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 52.26078,
-  "lon": -5.88176,
-  "sog_kn": 5.5,
-  "cog_deg": 179.1,
-  "heading_deg": 179,
-  "nav_status": 0,
-  "seen_utc": "2026-09-20T23:55:38Z",
-  "source": "aisstream.io"
+  "lat": 52.26227,
+  "lon": -5.88174,
+  "sog_kn": 5.7,
+  "cog_deg": 181,
+  "heading_deg": null,
+  "seen_utc": "2026-09-20T23:54:38Z",
+  "source": "foundation",
+  "sog_derived": true
  },
  "voyage": {
   "destination": "FR SML",
@@ -22,28 +22,28 @@
   "heard_utc": "2026-09-20T23:27:59Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-20T23:59:18Z",
+  "fetched_utc": "2026-09-21T00:01:12Z",
   "sea": {
    "wave_height_m": 0.56,
    "wave_direction_deg": 219,
-   "wave_period_s": 5.7,
+   "wave_period_s": 5.65,
    "swell_height_m": 0.48,
    "swell_period_s": 4.75,
    "wind_wave_height_m": 0.2,
    "sea_temp_c": 15.9,
-   "time_utc": "2026-09-20T23:45"
+   "time_utc": "2026-09-21T00:00"
   },
   "air": {
    "temp_c": 16.4,
-   "feels_c": 15.0,
-   "wind_ms": 4.6,
-   "gust_ms": 5.8,
+   "feels_c": 14.9,
+   "wind_ms": 4.8,
+   "gust_ms": 6.1,
    "wind_direction_deg": 200,
    "pressure_hpa": 1031.2,
-   "cloud_pct": 73,
+   "cloud_pct": 95,
    "precip_mm": 0.0,
-   "weather_code": 2,
-   "time_utc": "2026-09-20T23:45"
+   "weather_code": 3,
+   "time_utc": "2026-09-21T00:00"
   }
  },
  "sun": {
@@ -55,9 +55,9 @@
   "civil_timezone": "Europe/Paris",
   "civil_place": "St. Malo",
   "civil_country": "France",
-  "sunrise_utc": "2026-09-20T06:06",
-  "sunset_utc": "2026-09-20T18:26",
-  "daylight_hours": 12.4
+  "sunrise_utc": "2026-09-21T06:07",
+  "sunset_utc": "2026-09-21T18:24",
+  "daylight_hours": 12.3
  },
  "stats": {
   "points": 1272,
