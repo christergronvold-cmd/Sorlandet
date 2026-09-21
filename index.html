@@ -2974,6 +2974,10 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   const drawAhead = ahead?.route?.length > 1 && aheadAgeH <= 6 && aheadNearNm > AHEAD_MIN_NM;
   if (drawAhead) {
     const sailed = ahead.route_basis === "course";
+    // She transmits whether she is under sail or under engine, and it changes what this
+    // line means. Under engine there are no boards to draw and she goes where she is
+    // pointed, so the line is the way to the port and says so.
+    const motoring = ahead.under_engine === true;
     layers.push(L.polyline(ahead.route, {
       color: "#0b6ea8", weight: sailed ? 2.5 : 2, opacity: sailed ? .75 : .55,
       dashArray: "7,5"
@@ -2982,7 +2986,14 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       `${Math.round(ahead.distance_nm)} nm through the water` +
       (sailed && ahead.direct_nm
         ? ` · ${Math.round(ahead.direct_nm)} nm direct, so ${
-            Math.round((ahead.winding - 1) * 100)}% further for the tacks` : ""),
+            Math.round((ahead.winding - 1) * 100)}% further for the tacks` : "") +
+      (motoring
+        ? (sailed
+            ? "<br>She is under engine just now, so she is not steering these boards -"
+              + " this is the course she would sail if she set canvas here."
+            : "<br>She is under engine just now, so this is the way to the port rather"
+              + " than a sailing course - no tacks to draw until she sets sail again.")
+        : ""),
       { sticky: true }).addTo(map));
 
     // Where she would come about. Worth marking: it is the difference between a line on a

@@ -1180,6 +1180,40 @@ PACE_TAU_H = float(os.environ.get("PACE_TAU_H", "18"))
 # measured rate, so one strange stretch of track cannot launch the projection into orbit.
 PACE_MAX_KN = float(os.environ.get("PACE_MAX_KN", "10"))
 
+# How far back to look for a transmitted navigational status.
+ENGINE_WINDOW_H = float(os.environ.get("ENGINE_WINDOW_H", "6"))
+
+
+def under_engine(points: list | None, window_h: float = ENGINE_WINDOW_H) -> bool | None:
+    """Is she motoring? True for engine, False for sail, None when she has not said.
+
+    Nav status 0 is under way using engine, 8 is under sail; the track keeps those two
+    and nothing else. It matters here because the route drawn ahead of her is the
+    SAILING COURSE - the boards a square rigger would steer against the forecast wind,
+    with the tacks marked. While she is motoring she steers none of them: she goes where
+    she is pointed. Leaving Dublin on 20 September she transmitted status 0 on every one
+    of 124 messages and made five and a half knots in three knots of wind, while the map
+    drew her nine tacks she was never going to make. That is not a wrong course, it is a
+    course for a passage that is not happening.
+
+    None rather than False when she has said nothing recently: an old status is not
+    evidence about now, and with no evidence the sailing course stands, which is what
+    the page did before this existed.
+    """
+    cut = now_utc() - timedelta(hours=window_h)
+    for p in reversed(points or []):
+        ns = p.get("ns")
+        if ns is None:
+            continue
+        try:
+            when = parse_iso(p["t"])
+        except Exception:
+            continue
+        if when < cut:
+            break
+        return ns == 0
+    return None
+
 
 def pace_along(legs_nm: float, vmg_kn: float | None, plan_h: float | None,
                cruise_kn: float, hold_h: float = 24.0, tau_h: float = PACE_TAU_H):
@@ -1828,6 +1862,15 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         course = read_json(COURSE, {}) or {}
         cpts = course.get("points") or []
         route, route_basis = None, "direct"
+        # ...unless she is motoring, in which case the tacks are a fiction. See
+        # under_engine: she transmits the status herself, so this is read, not guessed.
+        # The course is still worked out either way, because the direct line is not always
+        # available - see the fallback below - and no line at all is the worst of the three.
+        motoring = under_engine(track_points)
+        if motoring:
+            print("  -> nav status says under engine; preferring the direct route"
+                  " to a sailing course she is not steering")
+        course_route = None
         if (course.get("to") == port["name"] and len(cpts) >= 2
                 and course.get("generated_utc")):
             try:
@@ -1835,10 +1878,9 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
             except Exception:
                 age_h = 999
             if age_h < 6:
-                route = [(float(q["lat"]), float(q["lon"])) for q in cpts]
+                course_route = [(float(q["lat"]), float(q["lon"])) for q in cpts]
                 # It starts where she was when the router ran; pin it to where she is now.
-                route[0] = (lat, lon)
-                route_basis = "course"
+                course_route[0] = (lat, lon)
 
                 # ...and then the same question we ask of every other line: does it go
                 # over land. The isochrone search itself only ever steps to cells the
@@ -1850,13 +1892,16 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                 # Falling back rather than truncating: the A* route below is checked leg
                 # by leg and walks in along the plan's own approach waypoints, so it is
                 # a line we can stand behind. A course with a lie on the end of it is not.
-                over = line_over_land(route, free=((lat, lon),
-                                                   (float(port["lat"]), float(port["lon"]))))
+                over = line_over_land(course_route,
+                                      free=((lat, lon),
+                                            (float(port["lat"]), float(port["lon"]))))
                 if over is not None:
                     print(f"  ! the sailing course to {port['name']} runs over land on leg"
-                          f" {over} of {len(route) - 1} - falling back to the sea route",
-                          file=sys.stderr)
-                    route, route_basis = None, "direct"
+                          f" {over} of {len(course_route) - 1} - falling back to the sea"
+                          " route", file=sys.stderr)
+                    course_route = None
+        if course_route and not motoring:
+            route, route_basis = course_route, "course"
         if route is None:
             # The fallback line needs the same pilotage the sailing course gets, and for the
             # same reason. A* snaps the goal to the nearest navigable cell - the sea mask
@@ -1908,6 +1953,14 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                          if head else None)
             else:
                 route = head
+        # Motoring is a reason to prefer the direct line, not a reason to draw nothing. The
+        # A* fallback fails on some legs - from the Irish Sea to St. Malo it cannot find a
+        # way round Cornwall through a six-kilometre mask - and an empty map is worse than a
+        # line the tooltip explains. So: keep the course, and say she is not steering it.
+        if (not route or len(route) < 2) and course_route and len(course_route) > 1:
+            print("  ! no direct route to draw while she motors - keeping the sailing"
+                  " course, labelled as one she is not steering", file=sys.stderr)
+            route, route_basis = course_route, "course"
         if not route or len(route) < 2:
             print("  ! could not route to the next port", file=sys.stderr)
             return
@@ -2021,6 +2074,7 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
             "distance_nm": round(legs, 1),
             "direct_nm": round(direct_nm, 1),
             "route_basis": route_basis,           # "course" = the sailing course, not a line
+            "under_engine": motoring,             # True/False as she transmits it, None unsaid
             "winding": round(winding, 2),         # route length / the gap it closes
             "tacks": course.get("tacks") if route_basis == "course" else None,
             "speed_kn": round(near_kn, 1),        # the rate the next few hours are drawn at
