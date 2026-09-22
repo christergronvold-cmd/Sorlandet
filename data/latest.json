@@ -2,16 +2,16 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-22T12:23:38Z",
+ "updated_utc": "2026-09-22T12:53:51Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 50.418816666666665,
-  "lon": -5.959333333333333,
-  "sog_kn": 0.2,
-  "cog_deg": 173,
+  "lat": 50.42334,
+  "lon": -5.954511666666667,
+  "sog_kn": 0.9,
+  "cog_deg": 33,
   "heading_deg": null,
-  "seen_utc": "2026-09-22T12:21:01Z",
+  "seen_utc": "2026-09-22T12:52:04Z",
   "source": "foundation",
   "sog_derived": true
  },
@@ -22,28 +22,28 @@
   "heard_utc": "2026-09-20T23:27:59Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-22T12:23:32Z",
+  "fetched_utc": "2026-09-22T12:53:48Z",
   "sea": {
-   "wave_height_m": 1.1,
+   "wave_height_m": 1.14,
    "wave_direction_deg": 276,
-   "wave_period_s": 11.1,
-   "swell_height_m": 0.96,
-   "swell_period_s": 7.5,
+   "wave_period_s": 11.3,
+   "swell_height_m": 0.98,
+   "swell_period_s": 7.4,
    "wind_wave_height_m": 0.0,
-   "sea_temp_c": 17.7,
-   "time_utc": "2026-09-22T12:15"
+   "sea_temp_c": 17.8,
+   "time_utc": "2026-09-22T12:45"
   },
   "air": {
-   "temp_c": 16.6,
-   "feels_c": 18.0,
-   "wind_ms": 0.9,
-   "gust_ms": 1.2,
-   "wind_direction_deg": 83,
-   "pressure_hpa": 1029.8,
-   "cloud_pct": 99,
-   "precip_mm": 0.0,
-   "weather_code": 3,
-   "time_utc": "2026-09-22T12:15"
+   "temp_c": 16.7,
+   "feels_c": 18.3,
+   "wind_ms": 0.6,
+   "gust_ms": 1.0,
+   "wind_direction_deg": 63,
+   "pressure_hpa": 1029.5,
+   "cloud_pct": 96,
+   "precip_mm": 0.1,
+   "weather_code": 51,
+   "time_utc": "2026-09-22T12:45"
   }
  },
  "sun": {
@@ -55,13 +55,13 @@
   "civil_timezone": "Europe/Paris",
   "civil_place": "St. Malo",
   "civil_country": "France",
-  "sunrise_utc": "2026-09-22T06:10",
+  "sunrise_utc": "2026-09-22T06:09",
   "sunset_utc": "2026-09-22T18:22",
   "daylight_hours": 12.2
  },
  "stats": {
-  "points": 1248,
-  "distance_nm": 1367.5,
+  "points": 1252,
+  "distance_nm": 1367.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
