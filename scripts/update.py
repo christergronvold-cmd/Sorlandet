@@ -2534,6 +2534,71 @@ def capture_port(position: dict, plan: dict, track: list | None = None) -> dict 
     return None
 
 
+# Some cameras publish each still at a dated path and offer no "current" alias. Skaping,
+# who carry Port Vauban in St. Malo, are one: a new picture every quarter of an hour at
+# .../port-vauban/video/2026/09/26/08-15.jpg, and their own page asks an API for the newest
+# timestamp before it builds that URL.
+#
+# The offset is not guessable and should not be guessed. On 22 September their newest frame
+# was stamped 11-30 while UTC read 10:31 and Paris read 12:31 - neither. But whatever it is,
+# it is a CLOCK offset: a whole number of hours, give or take. So the job tries its own
+# clock first, then an hour either side, then two, out to the far side of the world - and
+# within each, the last few buckets, because the newest picture may not be uploaded yet.
+#
+# The offset it lands on is remembered for the rest of the run, so a camera costs one scan
+# and then one request per picture. That matters when the server is somebody else's.
+STILL_BACK_STEPS = 6                     # buckets to walk back within an offset
+_STILL_SKEW: dict[str, int] = {}
+# A camera that is simply down would otherwise be re-scanned - a hundred-odd requests -
+# on every turn of the capture loop, which is the one time being rude would be pointless.
+_STILL_DEAD: set[str] = set()
+
+
+def still_offsets() -> list[int]:
+    """Clock offsets to try, in minutes: ours first, then outwards an hour at a time."""
+    out = [0]
+    for h in range(1, 14):
+        out += [h * 60, -h * 60]
+    return out
+
+
+def still_at(template: str, when: datetime, every_s: int = 900) -> str:
+    """The URL for the bucket `when` falls in. strftime, floored to the interval."""
+    step = max(1, int(every_s or 900) // 60)
+    t = when.replace(second=0, microsecond=0)
+    return t.replace(minute=(t.minute // step) * step).strftime(template)
+
+
+def resolve_still(template: str, every_s: int = 900) -> str | None:
+    """Newest existing frame at a dated-path camera, or None if nothing answers."""
+    if template in _STILL_DEAD:
+        return None
+    step = max(1, int(every_s or 900) // 60)
+    base = now_utc()
+    known = _STILL_SKEW.get(template)
+    offsets = ([known] if known is not None else []) + still_offsets()
+    tried = set()
+    for skew in offsets:
+        for back in range(STILL_BACK_STEPS):
+            url = still_at(template, base + timedelta(minutes=skew - back * step), every_s)
+            if url in tried:
+                continue
+            tried.add(url)
+            req = urllib.request.Request(url, method="HEAD",
+                                         headers={"User-Agent": USER_AGENT})
+            try:
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    if getattr(r, "status", 200) == 200:
+                        _STILL_SKEW[template] = skew
+                        return url
+            except Exception:
+                continue
+    _STILL_DEAD.add(template)
+    print(f"  ! nothing answered at {template} in {len(tried)} tries"
+          " - not asking again this run")
+    return None
+
+
 def grab_still(url: str, dest: Path) -> bool:
     """A camera that publishes one JPEG rather than a stream. Just fetch the JPEG.
 
@@ -2541,11 +2606,18 @@ def grab_still(url: str, dest: Path) -> bool:
     we are allowed to use; it replaces its picture about once a minute. ffmpeg has nothing
     to do here - the frame is already a frame - and refusing to save it because it did not
     arrive over HLS would have meant no picture of her in the sound at all.
+
+    A url with a % in it is a dated path - see resolve_still - and gets looked up first.
     """
+    if "%" in url:
+        found = resolve_still(url)
+        if not found:
+            return False
+        url = found
     try:
         req = urllib.request.Request(
             url + ("&" if "?" in url else "?") + f"t={int(time.time())}",
-            headers={"User-Agent": CONTACT_UA})
+            headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=30) as r:
             body = r.read()
     except Exception as exc:
@@ -2567,7 +2639,7 @@ def grab_frame(url: str, dest: Path) -> bool:
     try:
         out = subprocess.run(
             ["ffmpeg", "-y", "-loglevel", "error", "-nostdin",
-             "-user_agent", CONTACT_UA,
+             "-user_agent", USER_AGENT,
              "-i", url, "-frames:v", "1", "-q:v", "3", str(dest)],
             capture_output=True, text=True, timeout=40)
     except Exception as exc:
@@ -2626,8 +2698,6 @@ def capture_frames(seconds: int) -> None:
         # made it one frame per camera per minute. CAPTURE_EVERY_S was written down,
         # documented as five minutes, and never used by anything.
         stamp = now_utc().replace(second=0, microsecond=0)
-        every_min = max(1, CAPTURE_EVERY_S // 60)
-        stamp = stamp.replace(minute=(stamp.minute // every_min) * every_min)
         if tz:
             # The album's convention is the clock on the shore, because that is the clock
             # printed in the corner of the frame - so the file is named in it, and a frame
@@ -2639,7 +2709,14 @@ def capture_frames(seconds: int) -> None:
                 pass
         for cam in cams:
             slug_name = ascii_slug(cam.get("short") or cam["name"])
-            dest = PENDING_DIR / f"{stamp.strftime('%Y-%m-%d-%H%M')}-{slug_name}.jpg"
+            # Each camera is bucketed to its OWN interval, not to one figure for all of
+            # them. A stream can give a frame whenever we ask; Skaping replaces the Port
+            # Vauban picture once a quarter of an hour, and bucketing that to five minutes
+            # would have saved the same photograph three times over under three names, for
+            # somebody to sit and click through.
+            every_min = max(1, int(cam.get("img_every_s") or CAPTURE_EVERY_S) // 60)
+            at = stamp.replace(minute=(stamp.minute // every_min) * every_min)
+            dest = PENDING_DIR / f"{at.strftime('%Y-%m-%d-%H%M')}-{slug_name}.jpg"
             if dest.exists():
                 continue
             got = (grab_frame(cam["hls"], dest) if cam.get("hls")
@@ -2670,26 +2747,31 @@ def capture_latest() -> str | None:
     # It reports why it produced nothing, because on 6 September it had produced nothing
     # for two days and the only way to find that out was to fetch the published files and
     # notice they were 404. A capture that fails quietly is a capture nobody fixes.
-    if not shutil.which("ffmpeg"):
-        return ("no ffmpeg on the runner - .github/workflows/update.yml needs the install "
-                "step, and it must also stage images/ or nothing captured is ever pushed")
+    # ffmpeg is needed for a stream and not for a still, so the check moved down to where
+    # a stream is actually about to be grabbed. St. Malo's camera is a JPEG on a dated
+    # path: refusing the whole port for want of ffmpeg would have skipped it entirely.
     plan = read_json(DATA / "ports.json", {}) or {}
     pos = read_json(LATEST, {}).get("position") or {}
     lat, lon = pos.get("lat"), pos.get("lon")
     if lat is None or lon is None:
         return "no position yet"
     for port in (plan.get("ports") or []):
-        cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+        cams = [c for c in (port.get("cameras") or []) if c.get("hls") or c.get("img")]
         if not cams:
             continue
         off = nm_between((lat, lon), (port["lat"], port["lon"]))
         if off > CAPTURE_NM:
             continue
+        if any(c.get("hls") for c in cams) and not shutil.which("ffmpeg"):
+            return ("no ffmpeg on the runner - .github/workflows/update.yml needs the "
+                    "install step, and it must also stage images/ or nothing captured "
+                    "is ever pushed")
         got, failed = 0, []
         for cam in cams:
             dest = LATEST_DIR / f"{ascii_slug(cam.get('short') or cam['name'])}.jpg"
             tmp = dest.with_suffix(".tmp.jpg")
-            if grab_frame(cam["hls"], tmp):
+            if (grab_frame(cam["hls"], tmp) if cam.get("hls")
+                    else grab_still(cam["img"], tmp)):
                 tmp.replace(dest)
                 got += 1
             else:
