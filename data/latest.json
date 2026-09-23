@@ -2,18 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-23T04:27:02Z",
+ "updated_utc": "2026-09-23T04:56:34Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 49.88922,
-  "lon": -5.16226,
-  "sog_kn": 4.5,
-  "cog_deg": 90.9,
-  "heading_deg": 93,
-  "nav_status": 0,
-  "seen_utc": "2026-09-23T04:21:09Z",
-  "source": "aisstream.io"
+  "lat": 49.884456666666665,
+  "lon": -5.093156666666666,
+  "sog_kn": 4.8,
+  "cog_deg": 96,
+  "heading_deg": null,
+  "seen_utc": "2026-09-23T04:56:03Z",
+  "source": "foundation",
+  "sog_derived": true
  },
  "voyage": {
   "destination": "FR SML",
@@ -22,33 +22,33 @@
   "heard_utc": "2026-09-23T02:27:39Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-23T04:27:01Z",
+  "fetched_utc": "2026-09-23T04:56:31Z",
   "sea": {
    "wave_height_m": 1.48,
-   "wave_direction_deg": 275,
-   "wave_period_s": 12.85,
-   "swell_height_m": 1.36,
-   "swell_period_s": 11.0,
-   "wind_wave_height_m": 0.0,
-   "sea_temp_c": 17.7,
-   "time_utc": "2026-09-23T04:15"
+   "wave_direction_deg": 274,
+   "wave_period_s": 12.8,
+   "swell_height_m": 1.4,
+   "swell_period_s": 10.85,
+   "wind_wave_height_m": 0.02,
+   "sea_temp_c": 17.6,
+   "time_utc": "2026-09-23T04:45"
   },
   "air": {
-   "temp_c": 15.5,
-   "feels_c": 15.4,
-   "wind_ms": 3.48,
-   "gust_ms": 4.3,
-   "wind_direction_deg": 309,
-   "pressure_hpa": 1026.0,
-   "cloud_pct": 80,
+   "temp_c": 15.8,
+   "feels_c": 15.8,
+   "wind_ms": 3.28,
+   "gust_ms": 4.8,
+   "wind_direction_deg": 308,
+   "pressure_hpa": 1025.6,
+   "cloud_pct": 99,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-09-23T04:15"
+   "time_utc": "2026-09-23T04:45"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 11.3,
+   "age_days": 11.4,
    "illumination": 0.87,
    "phase": "waxing gibbous"
   },
@@ -60,8 +60,8 @@
   "daylight_hours": 12.1
  },
  "stats": {
-  "points": 1336,
-  "distance_nm": 1430.5,
+  "points": 1340,
+  "distance_nm": 1433.2,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
