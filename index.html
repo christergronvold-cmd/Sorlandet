@@ -439,8 +439,8 @@
 
   <div class="windbar" id="windbar" hidden>
     <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
-    <button id="wavetoggle" class="on" title="Show or hide the wave forecast">Waves ✓</button>
-    <button id="weathertoggle" title="Show or hide sky and temperature">Weather</button>
+    <button id="wavetoggle" title="Show or hide the wave forecast">Waves</button>
+    <button id="weathertoggle" class="on" title="Show or hide sky and temperature">Weather ✓</button>
     <button id="sattoggle" title="Swap the map for the actual satellite picture of her weather">Satellite</button>
     <button id="playbtn" title="Play the last two days">▶</button>
     <label for="windtime" title="Which hour of weather the arrows show - not when the position last came in">Weather</label>
@@ -1331,7 +1331,13 @@ const scaleColor = (v, table) => {
 };
 
 let gridData = { wind: null, waves: null };
-let gridIndex = 0, show = { wind: true, waves: true, weather: false, sat: false };
+// What is on when the page opens. Wind and weather; waves off. Three layers of arrows and
+// numbers over the same water is more than anyone reads, and of the three the sea state is
+// the one a parent asks about least - it is on the card under the map anyway, as a figure,
+// for where she actually is. The button is still there for whoever wants it.
+// The buttons in the markup must agree with this: `class="on"` and a tick on each one that
+// starts true.
+let gridIndex = 0, show = { wind: true, waves: false, weather: true, sat: false };
 
 // ---------------------------------------------------------------- satellite imagery
 // NASA's Global Imagery Browse Services serves the actual pictures, free and without a
