@@ -2,16 +2,16 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-09-28T23:59:07Z",
+ "updated_utc": "2026-09-29T00:28:33Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 48.646676666666664,
-  "lon": -2.020426666666667,
+  "lat": 48.64669,
+  "lon": -2.0204516666666668,
   "sog_kn": 0.0,
-  "cog_deg": 87,
+  "cog_deg": 343,
   "heading_deg": null,
-  "seen_utc": "2026-09-28T23:47:04Z",
+  "seen_utc": "2026-09-29T00:23:00Z",
   "source": "foundation",
   "sog_derived": true
  },
@@ -22,45 +22,45 @@
   "heard_utc": "2026-09-25T05:48:18Z"
  },
  "weather": {
-  "fetched_utc": "2026-09-28T23:59:05Z",
+  "fetched_utc": "2026-09-29T00:28:31Z",
   "sea": {
-   "wave_height_m": 0.42,
-   "wave_direction_deg": 304,
-   "wave_period_s": 8.0,
-   "swell_height_m": 0.36,
-   "swell_period_s": 8.35,
-   "wind_wave_height_m": 0.04,
+   "wave_height_m": 0.48,
+   "wave_direction_deg": 308,
+   "wave_period_s": 6.95,
+   "swell_height_m": 0.38,
+   "swell_period_s": 8.5,
+   "wind_wave_height_m": 0.24,
    "sea_temp_c": 19.7,
-   "time_utc": "2026-09-28T23:45"
+   "time_utc": "2026-09-29T00:15"
   },
   "air": {
-   "temp_c": 16.9,
-   "feels_c": 17.4,
-   "wind_ms": 2.66,
-   "gust_ms": 4.0,
-   "wind_direction_deg": 124,
-   "pressure_hpa": 1015.8,
-   "cloud_pct": 27,
+   "temp_c": 16.6,
+   "feels_c": 17.1,
+   "wind_ms": 2.42,
+   "gust_ms": 3.9,
+   "wind_direction_deg": 114,
+   "pressure_hpa": 1015.7,
+   "cloud_pct": 56,
    "precip_mm": 0.0,
-   "weather_code": 1,
-   "time_utc": "2026-09-28T23:45"
+   "weather_code": 2,
+   "time_utc": "2026-09-29T00:15"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 17.1,
+   "age_days": 17.2,
    "illumination": 0.94,
    "phase": "waning gibbous"
   },
   "civil_timezone": "Europe/Paris",
   "civil_place": "St. Malo",
   "civil_country": "France",
-  "sunrise_utc": "2026-09-28T06:03",
-  "sunset_utc": "2026-09-28T17:53",
+  "sunrise_utc": "2026-09-29T06:04",
+  "sunset_utc": "2026-09-29T17:51",
   "daylight_hours": 11.8
  },
  "stats": {
-  "points": 1504,
+  "points": 1505,
   "distance_nm": 1561.1,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
