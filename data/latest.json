@@ -2,16 +2,16 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-02T06:41:44Z",
+ "updated_utc": "2026-10-02T12:14:03Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 48.64668,
-  "lon": -2.0204566666666666,
-  "sog_kn": 0.0,
-  "cog_deg": 66,
+  "lat": 48.742158333333336,
+  "lon": -2.4469683333333334,
+  "sog_kn": 5.7,
+  "cog_deg": 291,
   "heading_deg": null,
-  "seen_utc": "2026-10-02T06:41:25Z",
+  "seen_utc": "2026-10-02T12:08:42Z",
   "source": "foundation",
   "sog_derived": true
  },
@@ -22,46 +22,46 @@
   "heard_utc": "2026-09-25T05:48:18Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-02T06:41:41Z",
+  "fetched_utc": "2026-10-02T12:13:58Z",
   "sea": {
-   "wave_height_m": 0.58,
-   "wave_direction_deg": 292,
-   "wave_period_s": 10.6,
-   "swell_height_m": 0.58,
-   "swell_period_s": 8.9,
-   "wind_wave_height_m": 0.02,
-   "sea_temp_c": 19.1,
-   "time_utc": "2026-10-02T06:30"
+   "wave_height_m": 0.34,
+   "wave_direction_deg": 297,
+   "wave_period_s": 10.15,
+   "swell_height_m": 0.32,
+   "swell_period_s": 8.95,
+   "wind_wave_height_m": 0.0,
+   "sea_temp_c": 19.0,
+   "time_utc": "2026-10-02T12:00"
   },
   "air": {
-   "temp_c": 12.4,
-   "feels_c": 11.7,
-   "wind_ms": 2.01,
-   "gust_ms": 2.7,
-   "wind_direction_deg": 174,
-   "pressure_hpa": 1030.8,
-   "cloud_pct": 50,
+   "temp_c": 17.2,
+   "feels_c": 16.1,
+   "wind_ms": 2.75,
+   "gust_ms": 3.7,
+   "wind_direction_deg": 57,
+   "pressure_hpa": 1030.6,
+   "cloud_pct": 0,
    "precip_mm": 0.0,
-   "weather_code": 2,
-   "time_utc": "2026-10-02T06:30"
+   "weather_code": 0,
+   "time_utc": "2026-10-02T12:00"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 20.4,
-   "illumination": 0.68,
+   "age_days": 20.7,
+   "illumination": 0.66,
    "phase": "last quarter"
   },
-  "civil_timezone": "Europe/Paris",
-  "civil_place": "St. Malo",
-  "civil_country": "France",
-  "sunrise_utc": "2026-10-02T06:08",
-  "sunset_utc": "2026-10-02T17:45",
+  "civil_timezone": "Europe/Madrid",
+  "civil_place": "Vigo",
+  "civil_country": "Spain",
+  "sunrise_utc": "2026-10-02T06:10",
+  "sunset_utc": "2026-10-02T17:46",
   "daylight_hours": 11.6
  },
  "stats": {
-  "points": 1449,
-  "distance_nm": 1553.1,
+  "points": 1461,
+  "distance_nm": 1571.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
