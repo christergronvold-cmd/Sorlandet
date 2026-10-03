@@ -2,48 +2,51 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-03T01:25:03Z",
+ "updated_utc": "2026-10-03T01:54:33Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 48.90971,
-  "lon": -3.80233,
+  "lat": 48.89972,
+  "lon": -3.87701,
   "sog_kn": 5.4,
-  "cog_deg": 256.2,
-  "heading_deg": 256,
+  "cog_deg": 265.3,
+  "heading_deg": 260,
   "nav_status": 0,
-  "seen_utc": "2026-10-03T01:21:22Z",
-  "source": "aisstream.io"
+  "seen_utc": "2026-10-03T01:53:20Z",
+  "source": "aisstream.io",
+  "destination": "ESVGO",
+  "draught_m": 4.1,
+  "eta_text": "10.10 08:00"
  },
  "voyage": {
   "destination": "ESVGO",
   "eta_text": "10.10 08:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-03T00:24:41Z"
+  "heard_utc": "2026-10-03T01:53:20Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-03T01:25:00Z",
+  "fetched_utc": "2026-10-03T01:54:31Z",
   "sea": {
-   "wave_height_m": 1.38,
+   "wave_height_m": 1.42,
    "wave_direction_deg": 286,
-   "wave_period_s": 9.75,
-   "swell_height_m": 1.38,
-   "swell_period_s": 8.15,
+   "wave_period_s": 9.8,
+   "swell_height_m": 1.42,
+   "swell_period_s": 8.2,
    "wind_wave_height_m": 0.0,
-   "sea_temp_c": 17.5,
-   "time_utc": "2026-10-03T01:15"
+   "sea_temp_c": 17.1,
+   "time_utc": "2026-10-03T01:45"
   },
   "air": {
    "temp_c": 17.1,
    "feels_c": 16.7,
-   "wind_ms": 1.49,
-   "gust_ms": 1.9,
-   "wind_direction_deg": 20,
-   "pressure_hpa": 1029.8,
+   "wind_ms": 2.08,
+   "gust_ms": 2.6,
+   "wind_direction_deg": 35,
+   "pressure_hpa": 1029.5,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-10-03T01:15"
+   "time_utc": "2026-10-03T01:45"
   }
  },
  "sun": {
@@ -56,12 +59,12 @@
   "civil_place": "Vigo",
   "civil_country": "Spain",
   "sunrise_utc": "2026-10-03T06:17",
-  "sunset_utc": "2026-10-03T17:49",
+  "sunset_utc": "2026-10-03T17:50",
   "daylight_hours": 11.5
  },
  "stats": {
-  "points": 1537,
-  "distance_nm": 1628.2,
+  "points": 1545,
+  "distance_nm": 1631.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
