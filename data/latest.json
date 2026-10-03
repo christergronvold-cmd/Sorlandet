@@ -2,48 +2,51 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-03T10:55:01Z",
+ "updated_utc": "2026-10-03T11:24:30Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 48.71364,
-  "lon": -4.7681016666666665,
-  "sog_kn": 1.6,
-  "cog_deg": 241,
+  "lat": 48.70639,
+  "lon": -4.79053,
+  "sog_kn": null,
+  "cog_deg": null,
   "heading_deg": null,
-  "seen_utc": "2026-10-03T10:53:04Z",
-  "source": "foundation",
-  "sog_derived": true
+  "nav_status": null,
+  "seen_utc": "2026-10-03T11:22:42Z",
+  "source": "aisstream.io",
+  "destination": "ESVGO",
+  "draught_m": 4.1,
+  "eta_text": "10.10 08:00"
  },
  "voyage": {
   "destination": "ESVGO",
   "eta_text": "10.10 08:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-03T03:22:31Z"
+  "heard_utc": "2026-10-03T11:22:42Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-03T10:54:59Z",
+  "fetched_utc": "2026-10-03T11:24:28Z",
   "sea": {
    "wave_height_m": 1.8,
    "wave_direction_deg": 284,
    "wave_period_s": 9.55,
-   "swell_height_m": 1.8,
-   "swell_period_s": 8.05,
+   "swell_height_m": 1.78,
+   "swell_period_s": 8.0,
    "wind_wave_height_m": 0.02,
    "sea_temp_c": 16.1,
-   "time_utc": "2026-10-03T10:45"
+   "time_utc": "2026-10-03T11:15"
   },
   "air": {
    "temp_c": 15.7,
-   "feels_c": 15.8,
+   "feels_c": 15.1,
    "wind_ms": 3.22,
-   "gust_ms": 4.2,
-   "wind_direction_deg": 54,
-   "pressure_hpa": 1030.4,
+   "gust_ms": 3.7,
+   "wind_direction_deg": 60,
+   "pressure_hpa": 1030.3,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-10-03T10:45"
+   "time_utc": "2026-10-03T11:15"
   }
  },
  "sun": {
@@ -56,12 +59,12 @@
   "civil_place": "Vigo",
   "civil_country": "Spain",
   "sunrise_utc": "2026-10-03T06:21",
-  "sunset_utc": "2026-10-03T17:53",
+  "sunset_utc": "2026-10-03T17:54",
   "daylight_hours": 11.5
  },
  "stats": {
-  "points": 1618,
-  "distance_nm": 1668.8,
+  "points": 1620,
+  "distance_nm": 1669.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
