@@ -2,16 +2,16 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-03T03:52:32Z",
+ "updated_utc": "2026-10-03T04:21:58Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 48.860551666666666,
-  "lon": -4.150753333333333,
-  "sog_kn": 5.5,
-  "cog_deg": 252,
+  "lat": 48.854371666666665,
+  "lon": -4.216555,
+  "sog_kn": 4.9,
+  "cog_deg": 265,
   "heading_deg": null,
-  "seen_utc": "2026-10-03T03:50:14Z",
+  "seen_utc": "2026-10-03T04:20:43Z",
   "source": "foundation",
   "sog_derived": true
  },
@@ -22,28 +22,28 @@
   "heard_utc": "2026-10-03T03:22:31Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-03T03:52:30Z",
+  "fetched_utc": "2026-10-03T04:21:55Z",
   "sea": {
-   "wave_height_m": 1.62,
-   "wave_direction_deg": 284,
+   "wave_height_m": 1.68,
+   "wave_direction_deg": 283,
    "wave_period_s": 9.75,
-   "swell_height_m": 1.62,
+   "swell_height_m": 1.68,
    "swell_period_s": 8.15,
    "wind_wave_height_m": 0.0,
    "sea_temp_c": 16.5,
-   "time_utc": "2026-10-03T03:45"
+   "time_utc": "2026-10-03T04:15"
   },
   "air": {
-   "temp_c": 16.4,
-   "feels_c": 16.3,
-   "wind_ms": 2.97,
-   "gust_ms": 3.3,
-   "wind_direction_deg": 45,
+   "temp_c": 16.5,
+   "feels_c": 16.1,
+   "wind_ms": 2.92,
+   "gust_ms": 3.5,
+   "wind_direction_deg": 52,
    "pressure_hpa": 1029.1,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-10-03T03:45"
+   "time_utc": "2026-10-03T04:15"
   }
  },
  "sun": {
@@ -55,13 +55,13 @@
   "civil_timezone": "Europe/Madrid",
   "civil_place": "Vigo",
   "civil_country": "Spain",
-  "sunrise_utc": "2026-10-03T06:18",
+  "sunrise_utc": "2026-10-03T06:19",
   "sunset_utc": "2026-10-03T17:51",
   "daylight_hours": 11.5
  },
  "stats": {
-  "points": 1578,
-  "distance_nm": 1642.3,
+  "points": 1585,
+  "distance_nm": 1644.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
