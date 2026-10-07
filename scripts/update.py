@@ -2548,6 +2548,7 @@ def capture_port(position: dict, plan: dict, track: list | None = None) -> dict 
 # The offset it lands on is remembered for the rest of the run, so a camera costs one scan
 # and then one request per picture. That matters when the server is somebody else's.
 STILL_BACK_STEPS = 6                     # buckets to walk back within an offset
+STILL_MIN_BYTES = 8000                   # smaller than this is an error page, not a photo
 _STILL_SKEW: dict[str, int] = {}
 # A camera that is simply down would otherwise be re-scanned - a hundred-odd requests -
 # on every turn of the capture loop, which is the one time being rude would be pointless.
@@ -2569,32 +2570,51 @@ def still_at(template: str, when: datetime, every_s: int = 900) -> str:
     return t.replace(minute=(t.minute // step) * step).strftime(template)
 
 
-def resolve_still(template: str, every_s: int = 900) -> str | None:
-    """Newest existing frame at a dated-path camera, or None if nothing answers."""
+def resolve_still(template: str, every_s: int = 900) -> tuple[str, bytes] | None:
+    """Newest existing frame at a dated-path camera, as (url, jpeg), or None.
+
+    It fetches rather than probes with HEAD. The first version used HEAD, because asking
+    for a hundred headers is politer than asking for a hundred pictures - and that was an
+    assumption about somebody else's server that I could not test from here and shipped
+    anyway. When she came into St. Malo on 25 September the rule fired on eight fixes and
+    not one frame was saved. A GET is the request we actually want answered, every object
+    store serves it, and the body it returns IS the picture, so the hit costs one request
+    instead of two and nothing is wasted.
+
+    The scan is still bounded and still remembered, so the hundred-request case only
+    happens once, and only when a camera is genuinely not there.
+    """
     if template in _STILL_DEAD:
         return None
     step = max(1, int(every_s or 900) // 60)
     base = now_utc()
     known = _STILL_SKEW.get(template)
     offsets = ([known] if known is not None else []) + still_offsets()
-    tried = set()
+    tried, seen = set(), {}
     for skew in offsets:
         for back in range(STILL_BACK_STEPS):
             url = still_at(template, base + timedelta(minutes=skew - back * step), every_s)
             if url in tried:
                 continue
             tried.add(url)
-            req = urllib.request.Request(url, method="HEAD",
-                                         headers={"User-Agent": USER_AGENT})
+            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             try:
-                with urllib.request.urlopen(req, timeout=15) as r:
-                    if getattr(r, "status", 200) == 200:
-                        _STILL_SKEW[template] = skew
-                        return url
-            except Exception:
-                continue
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    body = r.read()
+                if len(body) >= STILL_MIN_BYTES:
+                    _STILL_SKEW[template] = skew
+                    return url, body
+                seen[f"{len(body)} B"] = seen.get(f"{len(body)} B", 0) + 1
+            except urllib.error.HTTPError as exc:
+                seen[f"HTTP {exc.code}"] = seen.get(f"HTTP {exc.code}", 0) + 1
+            except Exception as exc:
+                k = type(exc).__name__
+                seen[k] = seen.get(k, 0) + 1
     _STILL_DEAD.add(template)
-    print(f"  ! nothing answered at {template} in {len(tried)} tries"
+    # What came back, not just that nothing did. The old message said "nothing answered"
+    # and left us with no way to tell a wrong path from a refused method from a dead host.
+    what = ", ".join(f"{k} x{v}" for k, v in sorted(seen.items(), key=lambda kv: -kv[1])[:4])
+    print(f"  ! no frame at {template} in {len(tried)} tries ({what or 'no replies'})"
           " - not asking again this run")
     return None
 
@@ -2607,13 +2627,16 @@ def grab_still(url: str, dest: Path) -> bool:
     to do here - the frame is already a frame - and refusing to save it because it did not
     arrive over HLS would have meant no picture of her in the sound at all.
 
-    A url with a % in it is a dated path - see resolve_still - and gets looked up first.
+    A url with a % in it is a dated path - see resolve_still - which has already fetched
+    the picture while finding it, so it is written straight out rather than asked for twice.
     """
     if "%" in url:
         found = resolve_still(url)
         if not found:
             return False
-        url = found
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(found[1])
+        return True
     try:
         req = urllib.request.Request(
             url + ("&" if "?" in url else "?") + f"t={int(time.time())}",
@@ -2623,9 +2646,10 @@ def grab_still(url: str, dest: Path) -> bool:
     except Exception as exc:
         print(f"  ! {dest.name}: {exc}")
         return False
-    if len(body) < 8000:
+    if len(body) < STILL_MIN_BYTES:
         print(f"  ! {dest.name}: only {len(body)} bytes back - not a picture")
         return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(body)
     return True
 
