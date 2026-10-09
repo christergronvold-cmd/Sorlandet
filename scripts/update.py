@@ -561,7 +561,7 @@ def fetch_weather(lat: float, lon: float) -> dict:
 # and on 30 August it spent the whole daily allowance and came back 429 for the rest of the
 # day. The wind simply vanished off the map.
 #
-# One fetch here serves all hundred and forty families instead. So this grid is now dense
+# One fetch here serves all seventy-two families instead. So this grid is now dense
 # enough to be the only one: 9 x 9 over 300 nm is a point every 37 miles, which is what the
 # map shows when it is looking at her.
 GRID_CELLS = int(os.environ.get("GRID_CELLS", "9"))        # 9 x 9 points
@@ -2325,7 +2325,7 @@ def shrink_frame(path: Path) -> Path:
     """Bring an oversized frame down to something a phone can afford, in place.
 
     The snapshot button on the webcam player saves PNG, and a 1080p PNG is about two
-    megabytes. A hundred and forty families, most of them on a phone, should not each
+    megabytes. Seventy-two families, most of them on a phone, should not each
     download two megabytes to see one picture of a ship - and Christer should not have to
     re-export every frame by hand either, because that is the work the drop-in folder
     exists to remove.
@@ -2682,7 +2682,7 @@ def capture_frames(seconds: int) -> None:
 
     Runs in a thread beside the AIS listeners, so it costs the job no extra time. Frames
     land in images/shore/pending, which the album does NOT read: Christer looks at them
-    first. Nothing reaches the page - a hundred and forty families - until a person has
+    first. Nothing reaches the page - seventy-two families - until a person has
     seen it. Publishing is a rename, and the file is already named for it.
     """
     plan = read_json(DATA / "ports.json", {}) or {}
@@ -2874,7 +2874,7 @@ def images_are_committed() -> bool:
     A real hazard, not a theoretical one. Shrinking a 2 MB PNG means writing a new .jpg and
     deleting the PNG, and shore.json then points at the .jpg. If the commit step still
     stages only data/, the album gets published pointing at ten files that were never
-    pushed - ten broken pictures on a page a hundred and forty families read, and the
+    pushed - ten broken pictures on a page seventy-two families read, and the
     originals still sitting there at 2 MB each.
 
     So the job reads its own workflow and checks. If images/ is not staged it leaves every

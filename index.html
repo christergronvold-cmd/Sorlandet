@@ -675,7 +675,7 @@ const PORT_NM = 5, PORT_DWELL_H = 2.5, PORT_CALM_KN = 2.0, PORT_REJOIN_H = 6;
 // cannot tell the two apart: the log would have announced "Arrived Lerwick" the day she
 // dropped the hook, the plan card would have read "In port now", and the camera section
 // would have sat open for six days saying she was alongside. All of it wrong, and wrong on
-// a page a hundred and forty families read.
+// a page seventy-two families read.
 //
 // Geometry can tell them apart, because a quay is where the port IS and an anchorage is
 // out in the approaches. Inside this radius she is at the berth; outside it but inside
@@ -1749,8 +1749,8 @@ function buildFeed(args) {
       // referrerpolicy is load-bearing, and the obvious privacy-minded choice is the
       // wrong one. YouTube decides whether an embed is allowed by looking at WHO is
       // embedding it - the referrer - so "no-referrer" makes every one of its players
-      // refuse with "Konfigurasjonsfeil for videospilleren, Feil 153", which is what a
-      // hundred and forty families saw the morning she anchored in Dublin Bay. It had
+      // refuse with "Konfigurasjonsfeil for videospilleren, Feil 153", which is what
+      // seventy-two families saw the morning she anchored in Dublin Bay. It had
       // been wrong since the day the Dublin cameras went in; it only showed when she
       // finally arrived and the box opened for the first time.
       //
@@ -2713,7 +2713,7 @@ function nowIndexOf(times) {
 //
 // The job fetches it once instead, for everybody: 9 x 9 over 300 nm centred on her, a
 // point every 37 miles, refreshed when it is over an hour old or she has sailed 40 nm out
-// of the middle of it. One request serves a hundred and forty families rather than one
+// of the middle of it. One request serves seventy-two families rather than one
 // request serving one map view, and there is no allowance left to spend.
 
 // Nearest step to a given moment. Used whenever the time axis changes underneath us:
@@ -3693,7 +3693,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // So there is a third state. The cameras stay reachable, the card is FOLDED rather than
   // open, and the live view does not start itself: it shows what it is and waits to be
   // asked. That last part is not politeness, it is Andy's bandwidth - autoplaying his
-  // stream above the map on every load, for six days, to a hundred and forty families, is
+  // stream above the map on every load, for six days, to seventy-two families, is
   // not what he lent it to us for.
   // Which port she is lying off, or null. It has to ask leg.inPort first and nextPort
   // second, and that order is the whole trick: once she has sat off Lerwick long enough to
@@ -3727,7 +3727,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // back to the calendar, which says she is alongside from her arrival date onwards - so
   // on 6 September a fixture 200 miles out in the North Sea put the Lerwick cameras on the
   // page, because the plan said she was due. A wrong or optimistic date in the plan must
-  // never point a hundred and forty families at a camera she is nowhere near.
+  // never point seventy-two families at a camera she is nowhere near.
   const atInPort = (leg.inPort && p.lat !== undefined)
     ? nm([p.lat, p.lon], [leg.inPort.lat, leg.inPort.lon]) : 999;
   // Berthed or not. She only has to BE there, with a camera, close enough to be seen.
@@ -4043,7 +4043,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   //
   // The job photographs her by itself while she is coming in, because nobody can promise to
   // be awake at 06:40 on a Sunday. But an automatic camera pointed at somebody else's
-  // stream must not publish straight to a page a hundred and forty families read: what it
+  // stream must not publish straight to a page seventy-two families read: what it
   // catches might be fog, a ferry, or nothing at all, and the permission we have is for
   // frames of Sorlandet. So the frames wait in images/shore/pending, which the album does
   // not read, and this card - only ever visible to somebody who typed ?review - is where
