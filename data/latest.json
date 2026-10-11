@@ -2,17 +2,17 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-11T06:46:54Z",
+ "updated_utc": "2026-10-11T07:17:03Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
   "lat": 42.24298,
-  "lon": -8.72567,
+  "lon": -8.72569,
   "sog_kn": 0.0,
   "cog_deg": 152.1,
-  "heading_deg": 141,
+  "heading_deg": 142,
   "nav_status": 5,
-  "seen_utc": "2026-10-11T06:40:24Z",
+  "seen_utc": "2026-10-11T07:16:27Z",
   "source": "aisstream.io",
   "destination": "ESVGO",
   "draught_m": 4.1,
@@ -22,31 +22,31 @@
   "destination": "ESVGO",
   "eta_text": "10.10 08:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-11T06:40:24Z"
+  "heard_utc": "2026-10-11T07:16:27Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-11T06:46:49Z",
+  "fetched_utc": "2026-10-11T07:17:02Z",
   "sea": {
-   "wave_height_m": 0.76,
+   "wave_height_m": 0.78,
    "wave_direction_deg": 310,
-   "wave_period_s": 9.8,
-   "swell_height_m": 0.7,
-   "swell_period_s": 9.25,
+   "wave_period_s": 9.9,
+   "swell_height_m": 0.72,
+   "swell_period_s": 9.1,
    "wind_wave_height_m": 0.0,
    "sea_temp_c": 15.7,
-   "time_utc": "2026-10-11T06:45"
+   "time_utc": "2026-10-11T07:15"
   },
   "air": {
-   "temp_c": 15.9,
-   "feels_c": 17.4,
-   "wind_ms": 0.81,
-   "gust_ms": 2.6,
-   "wind_direction_deg": 173,
+   "temp_c": 15.8,
+   "feels_c": 16.7,
+   "wind_ms": 1.17,
+   "gust_ms": 3.2,
+   "wind_direction_deg": 160,
    "pressure_hpa": 1017.4,
    "cloud_pct": 100,
    "precip_mm": 0.0,
-   "weather_code": 45,
-   "time_utc": "2026-10-11T06:45"
+   "weather_code": 3,
+   "time_utc": "2026-10-11T07:15"
   }
  },
  "sun": {
@@ -58,13 +58,13 @@
   "civil_timezone": "Europe/Madrid",
   "civil_place": "Vigo",
   "civil_country": "Spain",
-  "sunrise_utc": "2026-10-11T06:42",
+  "sunrise_utc": "2026-10-11T06:43",
   "sunset_utc": "2026-10-11T17:59",
   "daylight_hours": 11.3
  },
  "stats": {
-  "points": 1332,
-  "distance_nm": 2166.9,
+  "points": 1334,
+  "distance_nm": 2166.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
