@@ -2,48 +2,51 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-12T08:13:51Z",
+ "updated_utc": "2026-10-12T08:43:27Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
   "lat": 42.24298,
-  "lon": -8.72569,
-  "sog_kn": 0.0,
-  "cog_deg": 143.4,
-  "heading_deg": 143,
-  "nav_status": 5,
-  "seen_utc": "2026-10-12T08:07:32Z",
-  "source": "aisstream.io"
+  "lon": -8.72567,
+  "sog_kn": null,
+  "cog_deg": null,
+  "heading_deg": null,
+  "nav_status": null,
+  "seen_utc": "2026-10-12T08:37:15Z",
+  "source": "aisstream.io",
+  "destination": "ESVGO",
+  "draught_m": 4.1,
+  "eta_text": "10.10 08:00"
  },
  "voyage": {
   "destination": "ESVGO",
   "eta_text": "10.10 08:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-12T07:40:25Z"
+  "heard_utc": "2026-10-12T08:37:15Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-12T08:13:49Z",
+  "fetched_utc": "2026-10-12T08:43:21Z",
   "sea": {
-   "wave_height_m": 1.38,
-   "wave_direction_deg": 294,
-   "wave_period_s": 10.05,
-   "swell_height_m": 1.38,
-   "swell_period_s": 8.4,
+   "wave_height_m": 1.4,
+   "wave_direction_deg": 293,
+   "wave_period_s": 10.1,
+   "swell_height_m": 1.4,
+   "swell_period_s": 8.45,
    "wind_wave_height_m": 0.0,
-   "sea_temp_c": 15.6,
-   "time_utc": "2026-10-12T08:00"
+   "sea_temp_c": 15.7,
+   "time_utc": "2026-10-12T08:30"
   },
   "air": {
-   "temp_c": 16.0,
-   "feels_c": 17.0,
-   "wind_ms": 1.17,
-   "gust_ms": 2.6,
-   "wind_direction_deg": 110,
-   "pressure_hpa": 1019.6,
-   "cloud_pct": 64,
+   "temp_c": 16.7,
+   "feels_c": 17.7,
+   "wind_ms": 1.08,
+   "gust_ms": 2.7,
+   "wind_direction_deg": 112,
+   "pressure_hpa": 1019.7,
+   "cloud_pct": 73,
    "precip_mm": 0.0,
-   "weather_code": 2,
-   "time_utc": "2026-10-12T08:00"
+   "weather_code": 3,
+   "time_utc": "2026-10-12T08:30"
   }
  },
  "sun": {
@@ -60,7 +63,7 @@
   "daylight_hours": 11.2
  },
  "stats": {
-  "points": 1434,
+  "points": 1437,
   "distance_nm": 2163.5,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
