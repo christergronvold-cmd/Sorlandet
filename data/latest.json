@@ -2,18 +2,17 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-14T13:04:17Z",
+ "updated_utc": "2026-10-14T13:33:46Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
   "lat": 42.1684,
   "lon": -8.88234,
   "sog_kn": 4.3,
-  "cog_deg": 224.7,
-  "heading_deg": 228,
-  "nav_status": 0,
+  "cog_deg": 225,
+  "heading_deg": null,
   "seen_utc": "2026-10-14T12:36:02Z",
-  "source": "aisstream.io"
+  "source": "foundation"
  },
  "voyage": {
   "destination": "PT FNC",
@@ -22,28 +21,28 @@
   "heard_utc": "2026-10-14T11:00:11Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-14T13:04:16Z",
+  "fetched_utc": "2026-10-14T13:33:44Z",
   "sea": {
-   "wave_height_m": 1.56,
+   "wave_height_m": 1.58,
    "wave_direction_deg": 289,
-   "wave_period_s": 11.1,
-   "swell_height_m": 1.26,
-   "swell_period_s": 8.1,
+   "wave_period_s": 11.2,
+   "swell_height_m": 1.34,
+   "swell_period_s": 8.6,
    "wind_wave_height_m": 0.0,
-   "sea_temp_c": 16.0,
-   "time_utc": "2026-10-14T13:00"
+   "sea_temp_c": 15.9,
+   "time_utc": "2026-10-14T13:30"
   },
   "air": {
-   "temp_c": 22.9,
+   "temp_c": 23.6,
    "feels_c": 24.9,
-   "wind_ms": 1.79,
+   "wind_ms": 1.51,
    "gust_ms": 3.9,
-   "wind_direction_deg": 297,
-   "pressure_hpa": 1025.3,
-   "cloud_pct": 6,
+   "wind_direction_deg": 262,
+   "pressure_hpa": 1024.8,
+   "cloud_pct": 0,
    "precip_mm": 0.0,
-   "weather_code": 1,
-   "time_utc": "2026-10-14T13:00"
+   "weather_code": 0,
+   "time_utc": "2026-10-14T13:30"
   }
  },
  "sun": {
@@ -56,12 +55,12 @@
   "civil_place": "Funchal",
   "civil_country": "Madeira",
   "sunrise_utc": "2026-10-14T06:46",
-  "sunset_utc": "2026-10-14T17:55",
+  "sunset_utc": "2026-10-14T17:54",
   "daylight_hours": 11.1
  },
  "stats": {
   "points": 1591,
-  "distance_nm": 2161.5,
+  "distance_nm": 2161.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
