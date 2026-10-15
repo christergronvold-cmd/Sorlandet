@@ -2,54 +2,57 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-15T19:12:44Z",
+ "updated_utc": "2026-10-15T19:43:05Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 40.79072,
-  "lon": -10.22304,
-  "sog_kn": 5.9,
-  "cog_deg": 204.4,
-  "heading_deg": 210,
-  "nav_status": 8,
-  "seen_utc": "2026-10-15T19:07:22Z",
-  "source": "aisstream.io"
+  "lat": 40.74441,
+  "lon": -10.26267,
+  "sog_kn": null,
+  "cog_deg": null,
+  "heading_deg": null,
+  "nav_status": null,
+  "seen_utc": "2026-10-15T19:42:36Z",
+  "source": "aisstream.io",
+  "destination": "PT FNC",
+  "draught_m": 4.1,
+  "eta_text": "22.10 10:00"
  },
  "voyage": {
   "destination": "PT FNC",
   "eta_text": "22.10 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-15T13:34:33Z"
+  "heard_utc": "2026-10-15T19:42:36Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-15T19:12:42Z",
+  "fetched_utc": "2026-10-15T19:43:01Z",
   "sea": {
-   "wave_height_m": 2.42,
-   "wave_direction_deg": 304,
-   "wave_period_s": 12.4,
-   "swell_height_m": 2.28,
-   "swell_period_s": 10.75,
-   "wind_wave_height_m": 0.38,
-   "sea_temp_c": 19.5,
-   "time_utc": "2026-10-15T19:00"
+   "wave_height_m": 2.44,
+   "wave_direction_deg": 305,
+   "wave_period_s": 12.35,
+   "swell_height_m": 2.22,
+   "swell_period_s": 10.9,
+   "wind_wave_height_m": 0.4,
+   "sea_temp_c": 19.6,
+   "time_utc": "2026-10-15T19:30"
   },
   "air": {
    "temp_c": 18.8,
-   "feels_c": 17.4,
-   "wind_ms": 6.7,
-   "gust_ms": 8.8,
-   "wind_direction_deg": 358,
-   "pressure_hpa": 1023.1,
-   "cloud_pct": 81,
+   "feels_c": 17.2,
+   "wind_ms": 6.9,
+   "gust_ms": 9.1,
+   "wind_direction_deg": 360,
+   "pressure_hpa": 1023.2,
+   "cloud_pct": 73,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-10-15T19:00"
+   "time_utc": "2026-10-15T19:30"
   }
  },
  "sun": {
   "moon": {
    "age_days": 4.4,
-   "illumination": 0.2,
+   "illumination": 0.21,
    "phase": "waxing crescent"
   },
   "civil_timezone": "Atlantic/Madeira",
@@ -57,11 +60,11 @@
   "civil_country": "Madeira",
   "sunrise_utc": "2026-10-15T06:52",
   "sunset_utc": "2026-10-15T18:00",
-  "daylight_hours": 11.1
+  "daylight_hours": 11.2
  },
  "stats": {
-  "points": 1646,
-  "distance_nm": 2265.1,
+  "points": 1651,
+  "distance_nm": 2268.4,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
