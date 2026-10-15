@@ -2,17 +2,17 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-15T00:35:56Z",
+ "updated_utc": "2026-10-15T01:07:25Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 41.74687,
-  "lon": -9.53271,
-  "sog_kn": 2.2,
-  "cog_deg": 223.9,
-  "heading_deg": 176,
+  "lat": 41.7338,
+  "lon": -9.54149,
+  "sog_kn": 2.5,
+  "cog_deg": 154.5,
+  "heading_deg": 201,
   "nav_status": 8,
-  "seen_utc": "2026-10-15T00:35:13Z",
+  "seen_utc": "2026-10-15T01:05:22Z",
   "source": "aisstream.io"
  },
  "voyage": {
@@ -22,33 +22,33 @@
   "heard_utc": "2026-10-14T17:32:23Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-15T00:35:52Z",
+  "fetched_utc": "2026-10-15T01:06:10Z",
   "sea": {
-   "wave_height_m": 2.46,
+   "wave_height_m": 2.44,
    "wave_direction_deg": 302,
    "wave_period_s": 11.75,
-   "swell_height_m": 2.44,
+   "swell_height_m": 2.42,
    "swell_period_s": 9.85,
    "wind_wave_height_m": 0.14,
    "sea_temp_c": 20.5,
-   "time_utc": "2026-10-15T00:30"
+   "time_utc": "2026-10-15T01:00"
   },
   "air": {
-   "temp_c": 18.8,
-   "feels_c": 19.5,
-   "wind_ms": 3.77,
-   "gust_ms": 5.1,
-   "wind_direction_deg": 349,
+   "temp_c": 18.9,
+   "feels_c": 19.4,
+   "wind_ms": 3.91,
+   "gust_ms": 5.3,
+   "wind_direction_deg": 347,
    "pressure_hpa": 1024.0,
-   "cloud_pct": 60,
+   "cloud_pct": 68,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-10-15T00:30"
+   "time_utc": "2026-10-15T01:00"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 3.6,
+   "age_days": 3.7,
    "illumination": 0.14,
    "phase": "waxing crescent"
   },
@@ -56,12 +56,12 @@
   "civil_place": "Funchal",
   "civil_country": "Madeira",
   "sunrise_utc": "2026-10-15T06:50",
-  "sunset_utc": "2026-10-15T17:56",
+  "sunset_utc": "2026-10-15T17:57",
   "daylight_hours": 11.1
  },
  "stats": {
-  "points": 1614,
-  "distance_nm": 2201.3,
+  "points": 1619,
+  "distance_nm": 2202.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
