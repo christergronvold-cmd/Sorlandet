@@ -1,40 +1,47 @@
 {
- "generated_utc": "2026-10-18T23:03:22Z",
+ "generated_utc": "2026-10-18T23:32:57Z",
  "to": "Funchal",
  "country": "Madeira",
- "distance_nm": 139.5,
+ "distance_nm": 145.6,
  "direct_nm": 120.1,
  "route_basis": "course",
  "under_engine": null,
- "winding": 1.16,
- "tacks": [],
- "speed_kn": 9.0,
+ "winding": 1.21,
+ "tacks": [
+  2,
+  3
+ ],
+ "speed_kn": 9.4,
  "vmg_kn": 7.78,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good",
  "due_utc": "2026-10-22T12:00:00Z",
- "eta_utc": "2026-10-19T15:03:22Z",
+ "eta_utc": "2026-10-19T15:32:57Z",
  "route": [
   [
    34.1583,
    -15.3433
   ],
   [
-   33.8587,
-   -15.6457
+   33.8839,
+   -15.7364
   ],
   [
-   33.591,
-   -16.0279
+   33.4754,
+   -15.65
   ],
   [
-   33.3165,
-   -16.3033
+   33.2265,
+   -16.0038
   ],
   [
-   33.0825,
-   -16.5374
+   33.0227,
+   -16.2931
+  ],
+  [
+   32.8249,
+   -16.4904
   ],
   [
    32.7,
@@ -67,30 +74,30 @@
   {
    "hours": 6,
    "time_utc": "2026-10-19T05:00:00Z",
-   "lat": 33.5166,
-   "lon": -16.1026,
-   "wind_ms": 7.46,
-   "wind_dir": 18,
-   "gust_ms": 10.5,
-   "temp_c": 20.8,
+   "lat": 33.4097,
+   "lon": -15.7434,
+   "wind_ms": 7.78,
+   "wind_dir": 20,
+   "gust_ms": 10.8,
+   "temp_c": 20.7,
    "weather_code": 2,
    "wave_m": 3.08,
-   "wave_dir": 12,
-   "wave_period_s": 9.3
+   "wave_dir": 10,
+   "wave_period_s": 9.25
   },
   {
    "hours": 12,
    "time_utc": "2026-10-19T11:00:00Z",
-   "lat": 32.7484,
-   "lon": -16.5921,
-   "wind_ms": 5.0,
-   "wind_dir": 1,
-   "gust_ms": 7.2,
-   "temp_c": 20.5,
+   "lat": 32.7575,
+   "lon": -16.5495,
+   "wind_ms": 4.92,
+   "wind_dir": 13,
+   "gust_ms": 6.9,
+   "temp_c": 20.9,
    "weather_code": 3,
-   "wave_m": 1.66,
-   "wave_dir": 25,
-   "wave_period_s": 8.4
+   "wave_m": 2.36,
+   "wave_dir": 11,
+   "wave_period_s": 9.3
   },
   {
    "hours": 24,
