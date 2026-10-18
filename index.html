@@ -3582,6 +3582,15 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // a headland wants three - and this is only the default for those that do not.
   const PASS_SEE_NM = 5.0;
 
+  // A port's own reach, when the default is wrong for it. The nine miles above was written
+  // when every camera on the page stood in the harbour it belonged to, so the distance to
+  // the port WAS the distance to the lens. Funchal broke that: its approach cameras are at
+  // Canical and Machico, round the eastern corner of Madeira, ten and eleven miles from the
+  // quay. She passes closest to them twelve miles out - and the section, measured from the
+  // quay, was still shut. The cameras put there to catch her first were the two that could
+  // not. A port may now widen its own reach the way a passage already could.
+  const seeNm = q => (q && q.see_nm) || CAM_SEE_NM;
+
   // The rate she is closing on the port: her speed through the water resolved onto the
   // bearing to it. Negative means she is going the other way.
   function closingKn(from, to, cog, sog) {
@@ -3681,7 +3690,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
     // second is what carries a ship ghosting in under sail: at two and a half knots
     // "forty minutes" is a mile and a half, and by then she has already sailed past
     // Kirkabister in full view of it.
-    return minsOut <= APPROACH_MIN || off <= CAM_SEE_NM;
+    return minsOut <= APPROACH_MIN || off <= seeNm(nextPort);
   })();
   // She has stopped, close in, with cameras looking at her. This is the state the page
   // spent the whole of September in: anchored off Lerwick from 31 August, alongside on the
@@ -3707,7 +3716,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
     if (p.lat === undefined || !(p.sog_kn <= CLOSING_KN)) return null;   // still making way
     for (const q of [leg.inPort, nextPort]) {
       if (!q || !(q.cameras || []).length) continue;
-      if (nm([p.lat, p.lon], [q.lat, q.lon]) <= CAM_SEE_NM) return q;
+      if (nm([p.lat, p.lon], [q.lat, q.lon]) <= seeNm(q)) return q;
     }
     return null;
   })();
@@ -3743,7 +3752,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // show - see `alongside` below, which is what must never call a ship at anchor
   // "alongside now".
   const camAtPort = (leg.inPort && (leg.inPort.cameras || []).length
-                   && atInPort <= CAM_SEE_NM)
+                   && atInPort <= seeNm(leg.inPort))
                     ? leg.inPort
                 : coming ? nextPort
                 : lyingOffPort ? lyingOffPort
