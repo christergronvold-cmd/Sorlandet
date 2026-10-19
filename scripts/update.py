@@ -1915,13 +1915,7 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
             #
             # So: aim the search at the first approach waypoint and walk the rest of the
             # way in along the waypoints somebody already chose, in the plan's own order.
-            approach = []
-            for w in reversed(port.get("waypoints") or []):
-                if nm_between((float(w[0]), float(w[1])),
-                              (float(port["lat"]), float(port["lon"]))) > APPROACH_NM:
-                    break
-                approach.append((float(w[0]), float(w[1])))
-            approach.reverse()
+            approach = approach_waypoints(port, (lat, lon))
             goal_pt = (float(port["lat"]), float(port["lon"]))
             head = sea_route((lat, lon), approach[0] if approach else goal_pt)
 
@@ -2132,6 +2126,48 @@ def build_polar() -> None:
 # How near a port one of its waypoints has to be to count as part of the approach
 # rather than part of the ocean crossing before it.
 APPROACH_NM = float(os.environ.get("APPROACH_NM", "30"))
+# How much longer than the straight line a run in through the plan's waypoints may be
+# before it stops being an approach and becomes a detour. See approach_waypoints.
+DETOUR_MAX = float(os.environ.get("DETOUR_MAX", "1.4"))
+DETOUR_SLACK_NM = float(os.environ.get("DETOUR_SLACK_NM", "3"))
+
+
+def approach_waypoints(port: dict, frm: tuple) -> list:
+    """The port's pilotage waypoints for the run in, judged from where she actually is.
+
+    The trailing waypoints of a port's list are the approach; the ones before them are the
+    ocean crossing and none of the router's business. That much is only a distance test.
+
+    The second test is newer, and Madeira wrote it. Funchal's waypoints run down the EAST
+    side of the island, because that is the way the plan had her coming. On 19 October she
+    came round the north-west corner instead, under sail, three days early - and the route
+    drew her back east around the whole island to pick up a waypoint she had already passed
+    the far side of. Fifty-one miles of dashed line to cover nineteen. No one would steer
+    that, and no parent reading the map should be shown it.
+
+    A waypoint is pilotage for ONE direction of arrival. Reached from somewhere else it is
+    not an approach, it is a detour. So a waypoint is kept only if going via it is not
+    appreciably further than going straight at the port; otherwise it is dropped and the
+    router, which checks the land mask leg by leg, finds its own way in.
+    """
+    goal = (float(port["lat"]), float(port["lon"]))
+    near = []
+    for w in reversed(port.get("waypoints") or []):
+        p = (float(w[0]), float(w[1]))
+        if nm_between(p, goal) > APPROACH_NM:
+            break
+        near.append(p)
+    near.reverse()
+    if not near:
+        return []
+
+    direct = nm_between(frm, goal)
+    allowed = max(direct * DETOUR_MAX, direct + DETOUR_SLACK_NM)
+    kept = [p for p in near if nm_between(frm, p) + nm_between(p, goal) <= allowed]
+    if len(kept) != len(near):
+        print(f"  -> {port['name']}: dropped {len(near) - len(kept)} of {len(near)} approach"
+              f" waypoints - from where she is they are a detour, not a run in")
+    return kept
 COURSE_MAX_HOURS = float(os.environ.get("COURSE_MAX_HOURS", "168"))
 COURSE_STEP_H = float(os.environ.get("COURSE_STEP_H", "3"))
 
@@ -2207,12 +2243,7 @@ def build_course(lat: float, lon: float, points: list | None = None) -> None:
         # The port's own approach waypoints, for the run in. Only the trailing ones that
         # are genuinely near the port: the same list also carries the ocean waypoints for
         # the whole leg, which are hundreds of miles away and none of the router's business.
-        approach = []
-        for w in reversed(port.get("waypoints") or []):
-            if nm_between((float(w[0]), float(w[1])), goal) > APPROACH_NM:
-                break
-            approach.append((float(w[0]), float(w[1])))
-        approach.reverse()
+        approach = approach_waypoints(port, start)
 
         # Sail to the sea entrance, then walk the rest in. See _unwind in sailrouter.
         router_goal = approach[0] if approach else goal
