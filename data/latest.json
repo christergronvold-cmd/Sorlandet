@@ -2,17 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-19T12:30:56Z",
+ "updated_utc": "2026-10-19T13:00:26Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 32.873333333333335,
-  "lon": -17.28,
-  "sog_kn": null,
-  "cog_deg": null,
+  "lat": 32.693886666666664,
+  "lon": -17.220036666666665,
+  "sog_kn": 5.0,
+  "cog_deg": 127,
   "heading_deg": null,
-  "seen_utc": "2026-10-19T09:53:52Z",
-  "source": "foundation"
+  "seen_utc": "2026-10-19T12:45:53Z",
+  "source": "foundation",
+  "sog_derived": true
  },
  "voyage": {
   "destination": "PT FNC",
@@ -21,46 +22,46 @@
   "heard_utc": "2026-10-15T22:13:11Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-19T12:30:55Z",
+  "fetched_utc": "2026-10-19T13:00:23Z",
   "sea": {
-   "wave_height_m": 2.52,
-   "wave_direction_deg": 0,
-   "wave_period_s": 10.8,
-   "swell_height_m": 2.26,
-   "swell_period_s": 8.0,
-   "wind_wave_height_m": 0.3,
-   "sea_temp_c": 23.2,
-   "time_utc": "2026-10-19T12:30"
+   "wave_height_m": 1.92,
+   "wave_direction_deg": 354,
+   "wave_period_s": 11.6,
+   "swell_height_m": 1.38,
+   "swell_period_s": 9.55,
+   "wind_wave_height_m": 0.06,
+   "sea_temp_c": 23.6,
+   "time_utc": "2026-10-19T13:00"
   },
   "air": {
-   "temp_c": 22.4,
-   "feels_c": 22.7,
-   "wind_ms": 4.88,
-   "gust_ms": 9.3,
-   "wind_direction_deg": 26,
-   "pressure_hpa": 1016.5,
-   "cloud_pct": 99,
+   "temp_c": 23.3,
+   "feels_c": 24.9,
+   "wind_ms": 0.22,
+   "gust_ms": 2.6,
+   "wind_direction_deg": 333,
+   "pressure_hpa": 1016.0,
+   "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-10-19T12:30"
+   "time_utc": "2026-10-19T13:00"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 8.1,
+   "age_days": 8.2,
    "illumination": 0.58,
    "phase": "first quarter"
   },
   "civil_timezone": "Atlantic/Madeira",
   "civil_place": "Funchal",
   "civil_country": "Madeira",
-  "sunrise_utc": "2026-10-19T07:16",
+  "sunrise_utc": "2026-10-19T07:15",
   "sunset_utc": "2026-10-19T18:31",
   "daylight_hours": 11.3
  },
  "stats": {
-  "points": 1321,
-  "distance_nm": 2859.0,
+  "points": 1323,
+  "distance_nm": 2872.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
