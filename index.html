@@ -3887,8 +3887,22 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
           camPort.cameras.some(c => c.by === "Shetland Webcams")
             ? `thanks to Andy${lyingOff ? ", who has been steering one of them at her" : ""}`
             : "luck"}.
-        ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
-        so she may already be ${passing ? "past" : "further in than"} this says.`}
+        ${alongside || preview ? "" : fixAgeMin > STALE_MIN
+          // The old line said she "may already be further in than this says", which
+          // assumed she was coming in. On 19 October she was going the other way: out to
+          // sea off the north-west of Madeira, three days early, crossing under sail. The
+          // warning has no business guessing her direction.
+          //
+          // It also matters more than it used to. The camera at the top of the list is now
+          // chosen by which lens is nearest HER - which is a better rule, and it makes a
+          // stale position worse, not better. Before, an old fix drew the map slightly
+          // wrong. Now it can open a window on water she left two hours ago, and do it with
+          // every appearance of knowing what it is doing.
+          ? `<b>Her position here was last heard ${ago(p.seen_utc)}</b>. The camera at the
+             top is the one nearest to THAT position, not necessarily the one she is in
+             front of now - under sail she can be miles away by now, or on another tack
+             entirely.`
+          : `Her position here was last heard ${ago(p.seen_utc)}.`}
       </div>
       <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth,
           p.lat === undefined ? null : [p.lat, p.lon]).map(c => `
