@@ -16,9 +16,10 @@ Two checks, because one alone would not have caught it:
   1. The live page, driven to the position where she passes Caniçal, must actually show
      the section. This is the behaviour; everything else is a proxy for it.
 
-  2. Every camera that has coordinates must sit inside its port's reach, with two miles
-     of slack for her passing offshore rather than over the top of it. This is cheap, it
-     runs without a browser, and it will catch the next camera placed out of reach.
+  2. A port must place all of its cameras or none. Reach is per camera now: a camera with
+     a position opens when she comes within CAM_SEE_NM of IT. But a port where only some
+     carry one falls back to the old port radius for the gate and turns off the
+     nearest-camera ordering, silently, and the half that are placed look like they work.
 """
 import http.server
 import json
@@ -34,7 +35,6 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-OFFING_NM = 2.0          # how far off a camera she may pass and still want it open
 fails = []
 
 
@@ -56,23 +56,26 @@ def default_see_nm():
     return 9.0
 
 
-# ---------------------------------------------------------------- 2. every camera in reach
+# ------------------------------------------------------------ 2. placed all, or none
 DEFAULT_SEE = default_see_nm()
 plan = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))
 placed = 0
 for port in plan["ports"]:
-    reach = port.get("see_nm") or DEFAULT_SEE
-    for cam in port.get("cameras") or []:
-        if cam.get("lat") is None:
-            continue                      # not placed yet; nothing to check
-        placed += 1
-        away = nm((port["lat"], port["lon"]), (cam["lat"], cam["lon"]))
-        if away + OFFING_NM > reach:
-            fails.append(
-                f"{port['name']} / {cam['short']}: the camera is {away:.1f} nm from the "
-                f"port and the section only opens at {reach:.0f} nm. She can pass it with "
-                f"the section shut. Set see_nm on {port['name']} to at least "
-                f"{math.ceil(away + OFFING_NM)}.")
+    cams = port.get("cameras") or []
+    have = [c for c in cams if c.get("lat") is not None and c.get("lon") is not None]
+    placed += len(have)
+    if have and len(have) != len(cams):
+        missing = [c["short"] for c in cams if c.get("lat") is None]
+        fails.append(
+            f"{port['name']}: {len(have)} of {len(cams)} cameras have a position. Mixed is "
+            f"the worst case - the port falls back to its own radius and the nearest-camera "
+            f"ordering switches off. Place or remove: {', '.join(missing)}")
+    for c in have:
+        away = nm((port["lat"], port["lon"]), (c["lat"], c["lon"]))
+        if away > 60:
+            fails.append(f"{port['name']} / {c['short']}: {away:.0f} nm from the port. That "
+                         f"is further than a camera belonging to it should be - check the "
+                         f"coordinates.")
 
 # ---------------------------------------------------------- 1. the page, at the real spot
 # Where she passes closest to Caniçal, worked out along the planned approach: six miles off
@@ -160,8 +163,8 @@ if WANT not in body:
         f"she is 6 nm off {WANT} and 12.5 nm from Funchal, steering for it at {SOG} kn, "
         f"and the camera section is shut - '{WANT}' is nowhere on the page")
 
-print(f"{placed} placed cameras checked against their port's reach "
-      f"(default {DEFAULT_SEE:.0f} nm), and the page driven to 32.658N 16.663W")
+print(f"{placed} placed cameras checked, default lens reach {DEFAULT_SEE:.0f} nm,"
+      f" and the page driven to 32.658N 16.663W")
 if fails:
     print("FAILURES")
     for f in fails:

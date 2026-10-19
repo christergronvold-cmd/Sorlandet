@@ -3590,6 +3590,26 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // quay, was still shut. The cameras put there to catch her first were the two that could
   // not. A port may now widen its own reach the way a passage already could.
   const seeNm = q => (q && q.see_nm) || CAM_SEE_NM;
+  // ...and then the question the radius was always a stand-in for: how far is she from
+  // the nearest LENS. Measuring to the port was fine while every camera stood in the
+  // harbour. It stopped being fine the day they spread out along a coast. On 19 October
+  // she sailed past the Porto Moniz camera at five and a half miles with the section
+  // shut, because the quay it was measured from lay nineteen miles away round the far
+  // side of Madeira. Widening the port radius only chases her: it went nine, then
+  // fourteen, then twenty-two in one morning, and she was at twenty-three.
+  //
+  // A camera sees what is near IT. Cameras carrying a position are measured one by one; a
+  // port whose cameras have none falls back to the old port-radius test, which is what
+  // Lerwick and the rest still use until somebody places them.
+  const placedCams = q => ((q && q.cameras) || []).filter(c => c.lat != null && c.lon != null);
+  const camNm = (q, from) => {
+    const placed = placedCams(q);
+    if (!placed.length) return q ? nm(from, [q.lat, q.lon]) : Infinity;
+    return Math.min(...placed.map(c => nm(from, [c.lat, c.lon])));
+  };
+  const inLensRange = (q, from) => !!q && (placedCams(q).length
+    ? camNm(q, from) <= CAM_SEE_NM
+    : nm(from, [q.lat, q.lon]) <= seeNm(q));
 
   // The rate she is closing on the port: her speed through the water resolved onto the
   // bearing to it. Negative means she is going the other way.
@@ -3617,7 +3637,18 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // never goes near it, and the camera at the north end of the harbour is the one she
   // crosses. Getting this wrong sends a reader to a window looking at empty water for the
   // one quarter of an hour that mattered.
-  const camOrder = (cams, alongside, fromNorth) => {
+  const camOrder = (cams, alongside, fromNorth, from) => {
+    // Once the cameras carry positions there is no guessing which one she crosses: the
+    // nearest is the one looking at her. This stands in for the hand-set entrance hints
+    // wherever a port's cameras are all placed, and leaves them in charge where they are
+    // not. Alongside keeps its own order - then the quay is what matters, not a headland
+    // she passed hours ago.
+    if (!alongside && from && cams.length
+        && cams.every(c => c.lat != null && c.lon != null)) {
+      return cams.map((c, i) => [nm(from, [c.lat, c.lon]), i, c])
+                 .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+                 .map(x => x[2]);
+    }
     const side = fromNorth ? "north" : "south";
     const rank = c => {
       if (alongside) return c.best === "alongside" ? 0 : c.best ? 2 : 1;
@@ -3678,6 +3709,14 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
     const anchored = leg.inPort === nextPort && !leg.berthed && !(p.sog_kn > CLOSING_KN);
     if (off <= ALWAYS_NM && !anchored) { minsOut = 0; return true; }
     closing = closingKn([p.lat, p.lon], [nextPort.lat, nextPort.lon], p.cog_deg, p.sog_kn);
+    // Whether a lens has her in it is geometry, not intent, so it is settled before the
+    // question of where she is heading. Off Porto Moniz she was five miles from a camera
+    // and steering away from the port at the same time, crossing under sail with three
+    // days in hand. "Not closing" was true and beside the point: the camera could see her.
+    if (inLensRange(nextPort, [p.lat, p.lon]) && !anchored) {
+      minsOut = Infinity;                            // in shot, but no honest countdown
+      return true;
+    }
     if (closing < CLOSING_KN) return false;          // loitering, or on her way elsewhere
     // The fix this is computed from is not new. Out here it can be an hour and a half old,
     // and even in good coverage the job publishes at the end of a half-hour round. So the
@@ -3716,7 +3755,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
     if (p.lat === undefined || !(p.sog_kn <= CLOSING_KN)) return null;   // still making way
     for (const q of [leg.inPort, nextPort]) {
       if (!q || !(q.cameras || []).length) continue;
-      if (nm([p.lat, p.lon], [q.lat, q.lon]) <= seeNm(q)) return q;
+      if (inLensRange(q, [p.lat, p.lon])) return q;
     }
     return null;
   })();
@@ -3752,7 +3791,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // show - see `alongside` below, which is what must never call a ship at anchor
   // "alongside now".
   const camAtPort = (leg.inPort && (leg.inPort.cameras || []).length
-                   && atInPort <= seeNm(leg.inPort))
+                   && inLensRange(leg.inPort, [p.lat, p.lon]))
                     ? leg.inPort
                 : coming ? nextPort
                 : lyingOffPort ? lyingOffPort
@@ -3836,7 +3875,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
           ? `She is alongside in ${camPort.name} now.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
              ${N(closing)} knots${!timedFix() || minsOut > APPROACH_MIN
-               ? ` — <b>near enough to be in shot</b>${timedFix() && minsOut > 120
+               ? ` — <b>near enough to be in shot</b>${timedFix() && isFinite(minsOut) && minsOut > 120
                    ? `, though ${Math.round(minsOut / 60)} hours off at that rate` : ""}. A
                    tall ship under sail is visible from these lenses well before she is
                    close.`
@@ -3851,7 +3890,8 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         ${alongside || preview ? "" : `Her position here was last heard ${ago(p.seen_utc)},
         so she may already be ${passing ? "past" : "further in than"} this says.`}
       </div>
-      <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth).map(c => `
+      <ul class="log">${camOrder(camPort.cameras, alongside, fromNorth,
+          p.lat === undefined ? null : [p.lat, p.lon]).map(c => `
         <li><span class="ic">\u{1F4F9}</span>
           <span><a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>${
             c.view ? ` <span style="color:var(--muted)">— ${c.view}</span>` : ""}${
@@ -3896,7 +3936,8 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   if (camPort) {
     buildFeed({
       port: camPort,
-      ordered: camOrder(camPort.cameras, alongside, fromNorth),
+      ordered: camOrder(camPort.cameras, alongside, fromNorth,
+          p.lat === undefined ? null : [p.lat, p.lon]),
       lyingOff, preview,
       when: preview ? "preview \u2014 not on the approach yet"
         : passing ? "passing now"
