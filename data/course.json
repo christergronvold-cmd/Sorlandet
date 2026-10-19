@@ -1,22 +1,24 @@
 {
- "generated_utc": "2026-10-19T14:29:41Z",
+ "generated_utc": "2026-10-19T14:59:10Z",
  "to": "Funchal",
- "depart_utc": "2026-10-19T14:29:40Z",
+ "depart_utc": "2026-10-19T14:59:09Z",
  "reached": true,
- "hours": 4.9,
- "plan_hours": 69.5,
+ "hours": 10.1,
+ "plan_hours": 69.0,
  "direct_nm": 15.9,
- "sailed_nm": 30.4,
- "tacks": [],
+ "sailed_nm": 36.8,
+ "tacks": [
+  2
+ ],
  "wind_kn": {
-  "min": 11.4,
-  "max": 11.4
+  "min": 11.3,
+  "max": 11.9
  },
  "points": [
   {
    "lat": 32.6939,
    "lon": -17.22,
-   "t": "2026-10-19T14:29:40Z",
+   "t": "2026-10-19T14:59:09Z",
    "hours": 0.0,
    "course": null,
    "twa": null,
@@ -24,20 +26,30 @@
    "sog": null
   },
   {
-   "lat": 32.4574,
-   "lon": -16.9851,
-   "t": "2026-10-19T17:29:40Z",
+   "lat": 32.4499,
+   "lon": -16.9776,
+   "t": "2026-10-19T17:59:09Z",
    "hours": 3.0,
    "course": 140,
-   "twa": 127,
-   "tws": 11.4,
-   "sog": 6.2
+   "twa": 126,
+   "tws": 11.9,
+   "sog": 6.4
+  },
+  {
+   "lat": 32.5462,
+   "lon": -17.0736,
+   "t": "2026-10-19T20:59:09Z",
+   "hours": 6.0,
+   "course": 320,
+   "twa": -62,
+   "tws": 11.3,
+   "sog": 2.5
   },
   {
    "lat": 32.645,
    "lon": -16.91,
-   "t": "2026-10-19T19:24:43Z",
-   "hours": 4.9,
+   "t": "2026-10-20T01:03:32Z",
+   "hours": 10.1,
    "course": null,
    "twa": null,
    "tws": null,
