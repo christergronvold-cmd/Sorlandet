@@ -536,7 +536,13 @@ def _vf_point(body) -> dict | None:
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
             continue
         head = low.get("heading")
+        # TER or SAT. Worth keeping and worth printing: a satellite record costs ten
+        # credits against one, and this is the receipt that we are only ever buying the
+        # cheap kind. If SAT ever appears in a log without &sat=1 having been sent, the
+        # assumption this whole budget rests on is wrong.
+        src = str(low.get("src") or "").strip().upper() or None
         return {
+            "ais_src": src,
             "lat": round(lat, 5),
             "lon": round(lon, 5),
             "sog_kn": clean_sog(low.get("speed")),
@@ -607,7 +613,11 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         print(f"  ! VesselFinder: nothing usable in the reply ({str(body)[:160]})",
               file=sys.stderr)
         return []
-    print(f"  -> VesselFinder: {pt['lat']}, {pt['lon']} at {pt['seen_utc']}")
+    print(f"  -> VesselFinder: {pt['lat']}, {pt['lon']} at {pt['seen_utc']}"
+          f" ({pt.get('ais_src') or 'source not stated'})")
+    if pt.get("ais_src") == "SAT":
+        print("  ! VesselFinder returned a SATELLITE record - that is ten credits, not one,"
+              " and this code never asks for one. Check the request.", file=sys.stderr)
     return [pt]
 
 

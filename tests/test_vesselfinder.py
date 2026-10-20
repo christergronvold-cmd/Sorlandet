@@ -13,12 +13,15 @@ have gone quiet, AND she is near enough to a port for the answer to change the p
 request is a credit. The tests below are about not spending them, and about surviving the
 day the trial runs out.
 
-The parser was written from VesselFinder's documentation, not from a reply this code had
-seen. That is exactly how the still-image fetcher was written in September, and it ran
-for three weeks bringing back nothing, because the real server answered differently from
-the document. So the sample below is the shape they document, the parser reads fields
-case-insensitively, and anything it does not recognise is refused rather than guessed at.
-Until a reply from the real server has been through it, treat this as unproven.
+The sample below is a REAL reply from their server, fetched on 20 October while she lay
+at anchor off Funchal, not a shape copied out of the documentation. That distinction is
+the whole point: the still-image fetcher in September was written from a document, ran
+for three weeks and brought back nothing, because the real server answered differently.
+A recorded reply cannot drift, and when they change the shape this test is where it shows.
+
+It also carries SRC: "TER". A terrestrial record costs one credit and a satellite one
+costs ten, and this code never asks for satellite - so that field is the receipt, and the
+fetcher shouts if SAT ever appears in it.
 """
 import json
 import sys
@@ -48,25 +51,35 @@ NEAR = {"lat": 32.65, "lon": -16.90, "seen_utc": None, "source": "foundation"}  
 FAR = {"lat": 38.00, "lon": -20.00, "seen_utc": None, "source": "foundation"}    # mid-ocean
 
 # ------------------------------------------------------------------ the reply, parsed
-# The shape VesselFinder's Vessels method documents.
-SAMPLE = [{"AIS": {"MMSI": 257165000, "TIMESTAMP": "2026-10-20 11:10:17 UTC",
-                   "LATITUDE": 32.64334, "LONGITUDE": -16.89501, "COURSE": 116.0,
-                   "SPEED": 0.1, "HEADING": 511, "NAVSTAT": 1, "IMO": 5334561,
-                   "NAME": "SORLANDET", "CALLSIGN": "LDTY", "DESTINATION": "PT FNC",
-                   "DRAUGHT": 4.1}}]
+# Recorded from api.vesselfinder.com on 2026-10-20, she being at anchor off Funchal.
+SAMPLE = [{"AIS": {"MMSI": 257165000, "TIMESTAMP": "2026-10-20 11:27:17 UTC",
+                   "LATITUDE": 32.64436, "LONGITUDE": -16.89606, "COURSE": 247.2,
+                   "SPEED": 0.3, "HEADING": 190, "NAVSTAT": 1, "IMO": 5334561,
+                   "NAME": "SORLANDET", "CALLSIGN": "LDTY", "TYPE": 36, "A": 55, "B": 9,
+                   "C": 5, "D": 4, "DRAUGHT": 4.1, "DESTINATION": "PT FNC",
+                   "LOCODE": "PTFNC", "ETA_AIS": "10-22 10:00",
+                   "ETA": "2026-10-22 10:00:00", "SRC": "TER", "ZONE": "West Africa",
+                   "ECA": False, "DISTANCE_REMAINING": None, "ETA_PREDICTED": None}}]
 
 pt = update._vf_point(SAMPLE)
 if not pt:
-    fails.append("the documented reply shape did not parse at all")
+    fails.append("a real reply from their server did not parse at all")
 else:
-    check("lat", pt["lat"], 32.64334)
-    check("lon", pt["lon"], -16.89501)
-    check("timestamp", pt["seen_utc"], "2026-10-20T11:10:17Z")
+    check("lat", pt["lat"], 32.64436)
+    check("lon", pt["lon"], -16.89606)
+    check("timestamp", pt["seen_utc"], "2026-10-20T11:27:17Z")
     check("source", pt["source"], "vesselfinder")
     check("destination", pt["destination"], "PT FNC")
     check("nav status kept", pt["nav_status"], 1)
-    # 511 is the AIS value for "no heading", and it must not reach the map as a bearing.
-    check("heading 511 dropped", pt["heading_deg"], None)
+    check("speed", pt["sog_kn"], 0.3)
+    check("course", pt["cog_deg"], 247.2)
+    check("heading kept", pt["heading_deg"], 190)
+    # The receipt: one credit, not ten.
+    check("terrestrial", pt["ais_src"], "TER")
+
+# ...and 511, the AIS value for "no heading", must never reach the map as a bearing.
+noHead = update._vf_point([{"AIS": dict(SAMPLE[0]["AIS"], HEADING=511)}])
+check("heading 511 dropped", noHead and noHead["heading_deg"], None)
 
 # A bare object rather than a list, which some replies use.
 if not update._vf_point(SAMPLE[0]):
@@ -100,7 +113,7 @@ for label, have, ports in cases:
 
 update.VF_KEY = saved
 
-print(f"parsed the documented reply, refused 6 bad ones, and held the credit in "
+print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in "
       f"{len(cases) + 1} cases where it would have bought nothing")
 if fails:
     print("FAILURES")
