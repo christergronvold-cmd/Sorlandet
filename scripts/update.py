@@ -469,6 +469,148 @@ def bw_latest_position() -> dict | None:
     return None
 
 
+# ------------------------------------------------- VesselFinder (paid, asked last)
+# The only source on this page that costs money, so it is asked last, rarely, and under
+# conditions it has to earn.
+#
+# The free ones are good and they are not enough. aisstream listens twenty-nine minutes
+# in every thirty and hears her all over European waters - and heard nothing at all for
+# the nine days around Madeira, because a community network needs a volunteer with a
+# receiver and a remote island may not have one. The foundation's own feed is satellite
+# and sparse: on 20 October its newest fix was twelve and a half HOURS old while she lay
+# at anchor off Funchal. VesselFinder's API had her from twelve MINUTES earlier.
+#
+# That gap only matters in one place. The page opens the harbour cameras by asking which
+# lens is nearest her, and it cannot answer that from a position half a day old - on 19
+# October it opened a camera on the wrong side of Madeira for exactly that reason. Out in
+# the ocean nobody is watching a camera and a stale dot is honest enough.
+#
+# So the rule, and it is the rule the credits were bought for: ask only when the free
+# sources have gone quiet AND she is close enough to a port for a camera to care. One
+# request per run at most. Terrestrial only - satellite costs ten credits against one and
+# would be spent on the ocean, where it buys nothing we need.
+VF_KEY = os.environ.get("VESSELFINDER_KEY", "").strip()
+VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
+# How stale the free sources must be before this one is worth a credit.
+VF_STALE_H = float(os.environ.get("VF_STALE_H", "3"))
+# ...and how near a port she must be for the answer to change anything on the page.
+VF_NEAR_NM = float(os.environ.get("VF_NEAR_NM", "50"))
+
+
+def _vf_time(raw: str) -> str | None:
+    """Their stamps read "2026-10-20 11:10:17 UTC", which parse_iso does not take."""
+    txt = (raw or "").strip().replace(" UTC", "").replace("Z", "")
+    for shape in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return iso(datetime.strptime(txt, shape).replace(tzinfo=timezone.utc))
+        except ValueError:
+            continue
+    try:
+        return iso(parse_iso(raw))
+    except Exception:
+        return None
+
+
+def _vf_point(body) -> dict | None:
+    """One position out of their reply, whatever shape it arrives in.
+
+    Written from the documentation rather than from a reply this code has seen, so it
+    takes the fields case-insensitively and refuses rather than guesses. The last time a
+    fetcher here was written against a document instead of a server - the stills, in
+    September - it ran for three weeks and brought back nothing.
+    """
+    rows = body if isinstance(body, list) else [body]
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ais = row.get("AIS") if isinstance(row.get("AIS"), dict) else row
+        low = {str(k).lower(): v for k, v in ais.items()}
+        lat, lon = low.get("latitude"), low.get("longitude")
+        seen = _vf_time(str(low.get("timestamp") or ""))
+        if lat is None or lon is None or not seen:
+            continue
+        try:
+            lat, lon = float(lat), float(lon)
+        except (TypeError, ValueError):
+            continue
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            continue
+        head = low.get("heading")
+        return {
+            "lat": round(lat, 5),
+            "lon": round(lon, 5),
+            "sog_kn": clean_sog(low.get("speed")),
+            "cog_deg": low.get("course"),
+            "heading_deg": None if head in (511, None, "") else head,
+            "nav_status": low.get("navstat"),
+            "destination": (str(low.get("destination") or "").strip() or None),
+            "draught_m": low.get("draught"),
+            "seen_utc": seen,
+            "source": "vesselfinder",
+        }
+    return None
+
+
+def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) -> list:
+    """A paid position, but only when the free ones have left the page unable to do its job."""
+    if not VF_KEY:
+        return []
+    newest = max((p["seen_utc"] for p in (have or []) if p.get("seen_utc")), default=None)
+    if newest:
+        try:
+            age_h = (now_utc() - parse_iso(newest)).total_seconds() / 3600
+        except Exception:
+            age_h = 999
+        if age_h < VF_STALE_H:
+            print(f"  -> VesselFinder: not needed, the free sources are {age_h * 60:.0f} min old")
+            return []
+    else:
+        age_h = 999
+
+    # Where she was last seen, and whether that is anywhere a camera could care about.
+    here = None
+    for p in reversed(have or []):
+        if p.get("lat") is not None:
+            here = (float(p["lat"]), float(p["lon"]))
+            break
+    if here is None and track_points:
+        last = track_points[-1]
+        here = (float(last["lat"]), float(last["lon"]))
+    port = next_port(plan_ports or [], track_points)
+    if here and port:
+        off = nm_between(here, (float(port["lat"]), float(port["lon"])))
+        if off > VF_NEAR_NM:
+            print(f"  -> VesselFinder: not spending a credit, she is {off:.0f} nm from"
+                  f" {port['name']} and no camera is looking at her out there")
+            return []
+    elif here is None:
+        print("  -> VesselFinder: no position to judge by, leaving it alone")
+        return []
+
+    url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}&imo={IMO}"
+    shown = f"{VF_URL}?userkey=***&imo={IMO}"
+    print(f"  * VesselFinder: free sources {age_h:.1f} h old and she is near"
+          f" {port['name'] if port else 'a port'} - asking {shown}")
+    try:
+        body = get_json(url, timeout=30)
+    except Exception as exc:
+        print(f"  ! VesselFinder: {type(exc).__name__}: {exc} - carrying on without it",
+              file=sys.stderr)
+        return []
+    if body is None:
+        print("  ! VesselFinder: no reply body - carrying on without it", file=sys.stderr)
+        return []
+    pt = _vf_point(body)
+    if not pt:
+        # An expired key, a spent balance or a changed shape all land here, and all of them
+        # mean the same thing to this program: carry on with what the free sources gave.
+        print(f"  ! VesselFinder: nothing usable in the reply ({str(body)[:160]})",
+              file=sys.stderr)
+        return []
+    print(f"  -> VesselFinder: {pt['lat']}, {pt['lon']} at {pt['seen_utc']}")
+    return [pt]
+
+
 def demo_position() -> dict:
     """Sample position mid-Atlantic, so the page can be shown without a key."""
     return {
@@ -3188,6 +3330,12 @@ def main() -> int:
         # few days rather than a live stream, so it also repairs anything the two
         # streams missed while nobody was listening - including whole hours between runs.
         for pt in fetch_from_foundation():
+            pot.setdefault(pt["seen_utc"], pt)
+        merged = [pot[t] for t in sorted(pot)]
+
+        # Fourth, and only if the three free ones have left us blind near a port.
+        plan_ports = (read_json(DATA / "ports.json", {}) or {}).get("ports") or []
+        for pt in fetch_from_vesselfinder(merged, plan_ports, points):
             pot.setdefault(pt["seen_utc"], pt)
         merged = [pot[t] for t in sorted(pot)]
 

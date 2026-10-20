@@ -97,6 +97,7 @@ jobs:
       - name: Listen, save, repeat
         env:
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          VESSELFINDER_KEY: ${{ secrets.VESSELFINDER_KEY }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
           LISTEN_SECONDS: "1740"
