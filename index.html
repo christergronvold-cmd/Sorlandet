@@ -3218,6 +3218,19 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
   // port to the day she is due at this one, so they include whatever the programme has
   // her doing on the way. The first Kristiansand has no passage into it - that is where
   // the year starts - and it says so instead of showing a zero.
+  // The arrival alone answers "when is she there" and not "how long have I got", and the
+  // second question is the one a parent acts on. Somebody deciding whether to fly down to
+  // Funchal needs the window, and the window was in the plan all along - it just was never
+  // printed. Same month collapses to one month name, because the tiles are 96 px wide and
+  // "22 Oct - 28 Oct" wraps into three ragged lines.
+  const stay = (a, b) => {
+    if (!a) return "";
+    if (!b || b === a) return dayName(a);
+    const A = new Date(a + "T12:00:00Z"), B = new Date(b + "T12:00:00Z");
+    return A.getUTCFullYear() === B.getUTCFullYear() && A.getUTCMonth() === B.getUTCMonth()
+      ? `${A.getUTCDate()}\u2013${dayName(b)}`
+      : `${dayName(a)} \u2013 ${dayName(b)}`;
+  };
   const legCum = ports.length > 1 ? routeDistances(ports) : [0];
   const dayMs = d => d ? new Date(d + "T00:00:00Z").getTime() : null;
   const routeStrip = ports.map((q, i) => {
@@ -3241,14 +3254,17 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       : `The passage from ${prev.name}: ${legNm != null
           ? Math.round(legNm).toLocaleString("en-GB") + " nm along the planned track" : ""}${
           legDays != null ? `, ${legDays} days from her departure on ${
-            dayName(prev.depart || prev.arrive)}` : ""}.`;
+            dayName(prev.depart || prev.arrive)}` : ""}.${
+          q.depart && q.depart !== q.arrive
+            ? ` Then ${Math.round((dayMs(q.depart) - dayMs(q.arrive)) / 864e5)} days
+                alongside, sailing again on ${dayName(q.depart)}.` : ""}`;
     // A column with the passage pinned to the bottom: "United Kingdom" wraps onto two
     // lines and "France" does not, so anchored to the text above it the rule under each
     // tile sat at a different height in every tile.
     return `<div style="display:flex;flex-direction:column;${passed ? "opacity:.45" : ""}${
       here || isNext ? "border-color:var(--accent);border-width:2px" : ""}">
       <b>${q.name}</b><div class="ic">${here ? "⚓" : isNext ? "🧭" : passed ? "✓" : "·"}</div>
-      ${dayName(q.arrive)}<br><span style="color:var(--muted)">${q.country}</span>
+      ${stay(q.arrive, q.depart)}<br><span style="color:var(--muted)">${q.country}</span>
       <div title="${why}" style="margin:9px 0 0;padding-top:7px;font-size:11.5px;
                   margin-top:auto;
                   border-top:1px solid var(--line);color:var(--ink)">${passage}</div></div>`;
