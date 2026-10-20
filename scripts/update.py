@@ -489,12 +489,39 @@ def bw_latest_position() -> dict | None:
 # sources have gone quiet AND she is close enough to a port for a camera to care. One
 # request per run at most. Terrestrial only - satellite costs ten credits against one and
 # would be spent on the ocean, where it buys nothing we need.
+#
+# And one more condition, added after Alex sent the price list and the arithmetic became
+# possible: ask only while she can still walk out of the shot. A position buys one thing
+# here - which lens is nearest her - and a ship that has not moved cannot have changed the
+# answer. The first version of this gate did not know that. At Funchal, where the free
+# feeds went thirteen hours quiet while she lay at anchor for six days, it would have
+# bought the same answer every thirty minutes for the whole stay: close to three hundred
+# credits spent learning that a ship at anchor is still at anchor.
 VF_KEY = os.environ.get("VESSELFINDER_KEY", "").strip()
 VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
-# How stale the free sources must be before this one is worth a credit.
-VF_STALE_H = float(os.environ.get("VF_STALE_H", "3"))
-# ...and how near a port she must be for the answer to change anything on the page.
+# Running in, half an hour is four miles and quite possibly a different camera, so that
+# is how often this is worth a credit while she is moving...
+VF_MOVING_MIN = float(os.environ.get("VF_MOVING_MIN", "30"))
+# ...and this is how often while she is not. Not never: the point of still asking at all
+# is to catch the hour she slips her anchor, because the free feeds may not.
+VF_QUIET_H = float(os.environ.get("VF_QUIET_H", "6"))
+# How near a port she must be for the answer to change anything on the page.
 VF_NEAR_NM = float(os.environ.get("VF_NEAR_NM", "50"))
+# What counts as lying still, on the days the ship herself does not say: every fix we
+# have from the last VF_STILL_BACK_H hours inside a VF_STILL_NM circle, and those fixes
+# spanning at least VF_STILL_H of real time. The look-back is deliberately wider than
+# the span, because while she lies at anchor the only fixes arriving are the ones this
+# source buys - six hours apart - and a four-hour window would hold exactly one of them
+# and conclude, wrongly, that we know nothing.
+VF_STILL_BACK_H = float(os.environ.get("VF_STILL_BACK_H", "12"))
+VF_STILL_H = float(os.environ.get("VF_STILL_H", "4"))
+VF_STILL_NM = float(os.environ.get("VF_STILL_NM", "0.6"))
+# The receipt. Every request this program makes is written here before it is made, so
+# that the next run can see it, and so that a person can count the credits by hand.
+VF_STATE = DATA / "vesselfinder.json"
+# AIS navigational status, the few values that answer "is she going anywhere".
+NAV_STOPPED = (1, 5)                      # at anchor, moored
+NAV_UNDER_WAY = (0, 8)                    # under engine, under sail
 
 
 def _vf_time(raw: str) -> str | None:
@@ -557,21 +584,96 @@ def _vf_point(body) -> dict | None:
     return None
 
 
+def _lying_still(track_points: list) -> bool:
+    """True when everything heard over the last few hours sits inside one small circle.
+
+    Track points are written in the short shape - "t", "lat", "lon", "sog" - not the long
+    one the fetchers hand round, which is why this reads "t" and not "seen_utc".
+
+    One dot is never evidence of stillness. Neither is a handful of dots from the same
+    minute: the window has to cover real time before "she has not moved" means anything,
+    which is the difference between a ship at anchor and a ship we simply stopped hearing.
+    """
+    pts = [p for p in (track_points or []) if p.get("t") and p.get("lat") is not None]
+    if len(pts) < 3:
+        return False
+    try:
+        newest = parse_iso(pts[-1]["t"])
+    except Exception:
+        return False
+    here = (float(pts[-1]["lat"]), float(pts[-1]["lon"]))
+    covered_h = 0.0
+    for q in reversed(pts):
+        try:
+            gap_h = (newest - parse_iso(q["t"])).total_seconds() / 3600
+        except Exception:
+            continue
+        if gap_h > VF_STILL_BACK_H:
+            break
+        if nm_between(here, (float(q["lat"]), float(q["lon"]))) > VF_STILL_NM:
+            return False
+        covered_h = gap_h
+    return covered_h >= VF_STILL_H
+
+
+def _going_somewhere(track_points: list) -> bool:
+    """Can she have moved out of the shot since we last looked?
+
+    The ship's own answer first. VesselFinder returns NAVSTAT, the navigational status
+    the bridge sets by hand - 1 at anchor, 5 moored, 0 under engine, 8 under sail - and
+    at Funchal on 20 October she returned 1 at 0.3 knots, which is a ship at anchor
+    saying so. But it is set by hand, and hands forget: a ship can lie at anchor all
+    afternoon still broadcasting "under way". So the status is read for AGREEMENT rather
+    than trusted alone - speed over the ground always wins the argument - and it is only
+    consulted while that answer is still the freshest thing we hold.
+    """
+    last = read_json(VF_STATE, {}) or {}
+    fix = last.get("fix_utc")
+    freshest = False
+    if fix:
+        try:
+            newest_track = max((parse_iso(q["t"]) for q in (track_points or []) if q.get("t")),
+                               default=None)
+            freshest = newest_track is None or parse_iso(fix) >= newest_track
+        except Exception:
+            freshest = False
+    if freshest:
+        sog, status = last.get("sog_kn"), last.get("nav_status")
+        try:
+            sog = None if sog is None else float(sog)
+        except (TypeError, ValueError):
+            sog = None
+        if sog is not None and sog >= 1.0:
+            return True
+        if status in NAV_STOPPED and (sog is None or sog < 1.0):
+            return False
+        if sog is not None and sog < 0.5:
+            return False
+    return not _lying_still(track_points)
+
+
 def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) -> list:
     """A paid position, but only when the free ones have left the page unable to do its job."""
     if not VF_KEY:
         return []
-    newest = max((p["seen_utc"] for p in (have or []) if p.get("seen_utc")), default=None)
-    if newest:
-        try:
-            age_h = (now_utc() - parse_iso(newest)).total_seconds() / 3600
-        except Exception:
-            age_h = 999
-        if age_h < VF_STALE_H:
-            print(f"  -> VesselFinder: not needed, the free sources are {age_h * 60:.0f} min old")
-            return []
-    else:
-        age_h = 999
+
+    # What we already know, which includes a position we have already BOUGHT. The first
+    # version counted only what this run's listeners happened to hear, so a fix paid for
+    # half an hour ago did not count as knowing where she was - and the job would have
+    # bought it again on the next run, and the next.
+    stamps = [p["seen_utc"] for p in (have or []) if p.get("seen_utc")]
+    stamps += [q["t"] for q in (track_points or []) if q.get("t")]
+    receipt = read_json(VF_STATE, {}) or {}
+    # The moment of the last REQUEST counts too, not only the last answer. A dead key or
+    # a spent balance returns nothing usable, and without this that silence would read as
+    # "we know nothing, ask again" every half hour forever.
+    if receipt.get("asked_utc"):
+        stamps.append(receipt["asked_utc"])
+    newest = max(stamps, default=None)
+    try:
+        quiet_min = 99999 if not newest else (now_utc() - parse_iso(newest)).total_seconds() / 60
+    except Exception:
+        quiet_min = 99999
 
     # Where she was last seen, and whether that is anywhere a camera could care about.
     here = None
@@ -582,20 +684,34 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     if here is None and track_points:
         last = track_points[-1]
         here = (float(last["lat"]), float(last["lon"]))
+    if here is None:
+        print("  -> VesselFinder: no position to judge by, leaving it alone")
+        return []
     port = next_port(plan_ports or [], track_points)
-    if here and port:
+    if port:
         off = nm_between(here, (float(port["lat"]), float(port["lon"])))
         if off > VF_NEAR_NM:
             print(f"  -> VesselFinder: not spending a credit, she is {off:.0f} nm from"
                   f" {port['name']} and no camera is looking at her out there")
             return []
-    elif here is None:
-        print("  -> VesselFinder: no position to judge by, leaving it alone")
+
+    moving = _going_somewhere(track_points)
+    wait_min = VF_MOVING_MIN if moving else VF_QUIET_H * 60
+    if quiet_min < wait_min:
+        state = "under way" if moving else "lying still"
+        print(f"  -> VesselFinder: not needed, she is {state} and we last had her"
+              f" {quiet_min:.0f} min ago (asking every {wait_min:.0f} min while {state})")
         return []
+
+    # Written BEFORE the request, not after. If this program dies mid-call the credit is
+    # spent all the same, and the next run must know that.
+    write_json(VF_STATE, dict(receipt, asked_utc=iso(now_utc()),
+                              requests=int(receipt.get("requests") or 0) + 1))
 
     url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}&imo={IMO}"
     shown = f"{VF_URL}?userkey=***&imo={IMO}"
-    print(f"  * VesselFinder: free sources {age_h:.1f} h old and she is near"
+    print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is"
+          f" {'under way' if moving else 'lying still'} near"
           f" {port['name'] if port else 'a port'} - asking {shown}")
     try:
         body = get_json(url, timeout=30)
@@ -613,8 +729,14 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         print(f"  ! VesselFinder: nothing usable in the reply ({str(body)[:160]})",
               file=sys.stderr)
         return []
+    write_json(VF_STATE, dict(read_json(VF_STATE, {}) or {},
+                              fix_utc=pt["seen_utc"], lat=pt["lat"], lon=pt["lon"],
+                              sog_kn=pt.get("sog_kn"), nav_status=pt.get("nav_status"),
+                              ais_src=pt.get("ais_src"),
+                              near=(port["name"] if port else None)))
     print(f"  -> VesselFinder: {pt['lat']}, {pt['lon']} at {pt['seen_utc']}"
-          f" ({pt.get('ais_src') or 'source not stated'})")
+          f" ({pt.get('ais_src') or 'source not stated'}, navstat"
+          f" {pt.get('nav_status')}, {pt.get('sog_kn')} kn)")
     if pt.get("ais_src") == "SAT":
         print("  ! VesselFinder returned a SATELLITE record - that is ten credits, not one,"
               " and this code never asks for one. Check the request.", file=sys.stderr)

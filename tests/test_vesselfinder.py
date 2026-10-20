@@ -23,6 +23,8 @@ It also carries SRC: "TER". A terrestrial record costs one credit and a satellit
 costs ten, and this code never asks for satellite - so that field is the receipt, and the
 fetcher shouts if SAT ever appears in it.
 """
+import contextlib
+import io
 import json
 import sys
 from datetime import datetime, timedelta, timezone
@@ -113,8 +115,120 @@ for label, have, ports in cases:
 
 update.VF_KEY = saved
 
+# ------------------------------------------------------ the six days she lies at anchor
+# This is the defect Alex's price list made visible, and it belongs in the suite counted
+# in credits rather than argued in prose.
+#
+# The job runs every half hour. The free feeds went thirteen hours quiet while she lay at
+# anchor off Funchal, and she lies there six days. The first version of this gate asked
+# whenever the free feeds were quiet and she was near a port - both true, continuously,
+# for the whole stay - so it would have bought the same answer 288 times. The answer never
+# changed. The page spends a position on one question, which lens is nearest her, and a
+# ship that has not moved cannot have changed the answer.
+#
+# Two things stop it now. A fix we have already BOUGHT counts as knowing where she is
+# (the old gate looked only at what this run's listeners heard, so it did not), and while
+# she is not moving the question is only worth asking every few hours - not never, because
+# the free feeds may well miss the hour she slips her anchor, and that hour is one the
+# cameras care about.
+ANCHOR = (32.64436, -16.89606)            # where she actually lay, a mile off Funchal
+START = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
+
+
+def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False):
+    """Every run of the job across a stretch of hours, the free sources silent throughout.
+
+    Returns how many credits it spent. Everything is faked but the gate: the clock, the
+    server, and the file the receipt is written to.
+    """
+    import tempfile
+    was = (update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY)
+    clock = {"now": START, "n": 0}
+    update.now_utc = lambda: clock["now"]
+    update.VF_STATE = Path(tempfile.mkdtemp()) / "vesselfinder.json"
+    update.VF_KEY = "test-key"
+
+    def server(url, timeout=30):
+        clock["n"] += 1
+        drift = 0.02 * clock["n"] if moves else 0.0
+        return [{"AIS": dict(SAMPLE[0]["AIS"],
+                             TIMESTAMP=clock["now"].strftime("%Y-%m-%d %H:%M:%S UTC"),
+                             LATITUDE=ANCHOR[0] + drift, LONGITUDE=ANCHOR[1],
+                             SPEED=speed, NAVSTAT=navstat)}]
+
+    update.get_json = server
+    # The track as it stood when the feeds went quiet: five hours of fixes in one circle,
+    # which is what a ship at anchor looks like from here.
+    track = [{"t": update.iso(START - timedelta(hours=h)), "lat": ANCHOR[0],
+              "lon": ANCHOR[1], "sog": 0.2, "cog": None}
+             for h in (18, 17.5, 17, 16.5, 16, 15.5, 15, 14.5, 14, 13.5, 13)]
+    stale = {"lat": ANCHOR[0], "lon": ANCHOR[1], "source": "foundation",
+             "seen_utc": update.iso(START - timedelta(hours=13))}
+
+    bought = 0
+    hush = io.StringIO()
+    with contextlib.redirect_stdout(hush), contextlib.redirect_stderr(hush):
+        for _ in range(int(hours * 60 / step_min)):
+            got = update.fetch_from_vesselfinder([stale], [FUNCHAL], track)
+            if got:
+                bought += 1
+                g = got[0]
+                track.append({"t": g["seen_utc"], "lat": g["lat"], "lon": g["lon"],
+                              "sog": g["sog_kn"], "cog": g["cog_deg"]})
+            clock["now"] += timedelta(minutes=step_min)
+    update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY = was
+    return bought
+
+
+# Six days at anchor. One request every six hours is 24; the old gate would spend 288.
+at_anchor = run_the_stay(6 * 24)
+if at_anchor > 30:
+    fails.append(f"spent {at_anchor} credits on six days at anchor - the ship never moved,"
+                 f" and anything near 288 is the old gate asking every half hour")
+if at_anchor < 12:
+    fails.append(f"only {at_anchor} credits across six days - that is not often enough to"
+                 f" catch the hour she slips her anchor")
+
+# ...and the run in, which is the thing the credits were actually bought for: eight hours
+# of approach at half-hourly fixes is sixteen, and must not be throttled to the anchored
+# cadence just because the previous answer said she was lying still.
+approach = run_the_stay(8, speed=6.4, navstat=8, moves=True)
+if approach < 12:
+    fails.append(f"only {approach} credits across an eight-hour approach - she is moving"
+                 f" four miles between fixes and the page is choosing a camera from them")
+
+# The same eight hours, but the bridge forgot to change NAVSTAT off "at anchor". The
+# speed over the ground has to win that argument, or a clerical slip blinds the cameras.
+sloppy = run_the_stay(8, speed=6.4, navstat=1, moves=True)
+if sloppy < 12:
+    fails.append(f"only {sloppy} credits when she was making 6.4 knots with NAVSTAT still"
+                 f" reading 'at anchor' - the speed must win over the hand-set status")
+
+# A request that brings back nothing usable - dead key, spent balance - still cost a
+# credit, so the next run must not simply try again.
+import tempfile as _tf
+_was = (update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY)
+update.VF_STATE = Path(_tf.mkdtemp()) / "vesselfinder.json"
+update.VF_KEY = "test-key"
+update.get_json = lambda url, timeout=30: {"error": "Invalid user key"}
+_track = [{"t": update.iso(update.now_utc() - timedelta(hours=h)), "lat": ANCHOR[0] + h * 0.1,
+           "lon": ANCHOR[1], "sog": 6.0, "cog": 180} for h in (3, 2, 1)][::-1]
+_near = {"lat": ANCHOR[0], "lon": ANCHOR[1], "source": "foundation",
+         "seen_utc": update.iso(update.now_utc() - timedelta(hours=9))}
+_hush = io.StringIO()
+with contextlib.redirect_stdout(_hush), contextlib.redirect_stderr(_hush):
+    first = update.fetch_from_vesselfinder([_near], [FUNCHAL], _track)
+    second = update.fetch_from_vesselfinder([_near], [FUNCHAL], _track)
+check("a dead key returns nothing", first, [])
+if second != [] or "asked_utc" not in (update.read_json(update.VF_STATE, {}) or {}):
+    fails.append("asked again straight after a request that brought back nothing - a"
+                 " request costs a credit whether or not the answer is usable")
+update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY = _was
+
 print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in "
       f"{len(cases) + 1} cases where it would have bought nothing")
+print(f"six days at anchor cost {at_anchor} credits, not 288; an eight-hour run in cost"
+      f" {approach}, and {sloppy} with the status left reading 'at anchor'")
 if fails:
     print("FAILURES")
     for f in fails:
