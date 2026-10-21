@@ -584,6 +584,32 @@ def _vf_point(body) -> dict | None:
     return None
 
 
+def _ports_in_reach(plan_ports: list, track_points: list) -> list:
+    """The ports whose cameras could plausibly be pointed at her just now.
+
+    Not "the next port". That was the first version of this test and it was wrong in a
+    way that took a day to show: the moment the track registered her as ARRIVED at
+    Funchal, next_port became Sevilla, 606 nm away, and the gate concluded that no
+    camera was looking at her - while she lay at anchor a mile off the Funchal
+    waterfront with eleven lenses on her. It is the Madeira route bug again in a
+    different coat: a distance measured to the wrong port.
+
+    Three ports can matter, and at most two of them at once: the one she is lying at,
+    the one she is bound for, and - once she has sailed - the one she has just left,
+    because the hour after she drops her lines is exactly when a harbour camera has
+    something worth showing.
+    """
+    ports = plan_ports or []
+    if not ports:
+        return []
+    st = voyage_state(ports, track_points)
+    out = [q for q in (st.get("in_port"), st.get("to")) if q]
+    done = st.get("done") or 0
+    if not st.get("in_port") and 0 < done <= len(ports):
+        out.append(ports[done - 1])
+    return out
+
+
 def _lying_still(track_points: list) -> bool:
     """True when everything heard over the last few hours sits inside one small circle.
 
@@ -687,13 +713,16 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     if here is None:
         print("  -> VesselFinder: no position to judge by, leaving it alone")
         return []
-    port = next_port(plan_ports or [], track_points)
-    if port:
-        off = nm_between(here, (float(port["lat"]), float(port["lon"])))
-        if off > VF_NEAR_NM:
-            print(f"  -> VesselFinder: not spending a credit, she is {off:.0f} nm from"
-                  f" {port['name']} and no camera is looking at her out there")
-            return []
+    reach = _ports_in_reach(plan_ports, track_points)
+    port, off = None, None
+    for q in reach:
+        d = nm_between(here, (float(q["lat"]), float(q["lon"])))
+        if off is None or d < off:
+            port, off = q, d
+    if off is not None and off > VF_NEAR_NM:
+        print(f"  -> VesselFinder: not spending a credit, the nearest port that could be"
+              f" looking at her is {port['name']}, {off:.0f} nm off")
+        return []
 
     moving = _going_somewhere(track_points)
     wait_min = VF_MOVING_MIN if moving else VF_QUIET_H * 60

@@ -133,9 +133,24 @@ update.VF_KEY = saved
 # cameras care about.
 ANCHOR = (32.64436, -16.89606)            # where she actually lay, a mile off Funchal
 START = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
+# The real plan, nineteen ports of it. These tests used to pass a one-port list, and
+# that was the hole the next bug walked through: with nothing AFTER Funchal in the list,
+# "the next port" could never become the wrong one, so the suite was blind to the day
+# the track registered her as ARRIVED and the next port became Sevilla, 606 nm away.
+# She lay a mile off the Funchal waterfront with eleven lenses on her and the gate said
+# no camera could be looking at her. Real data, or the test proves nothing.
+PLAN = json.loads((ROOT / "data" / "ports.json").read_text())["ports"]
 
 
-def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False):
+def anchored_track(upto, hours=range(1, 49)):
+    """Two days of fixes in one circle off Funchal - a ship at anchor, from the track's
+    point of view, which is how voyage_state comes to call her arrived."""
+    return [{"t": update.iso(upto - timedelta(hours=h)), "lat": ANCHOR[0],
+             "lon": ANCHOR[1], "sog": 0.2, "cog": None} for h in sorted(hours, reverse=True)]
+
+
+def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False, track=None,
+                 ports=None):
     """Every run of the job across a stretch of hours, the free sources silent throughout.
 
     Returns how many credits it spent. Everything is faked but the gate: the clock, the
@@ -157,19 +172,17 @@ def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False):
                              SPEED=speed, NAVSTAT=navstat)}]
 
     update.get_json = server
-    # The track as it stood when the feeds went quiet: five hours of fixes in one circle,
-    # which is what a ship at anchor looks like from here.
-    track = [{"t": update.iso(START - timedelta(hours=h)), "lat": ANCHOR[0],
-              "lon": ANCHOR[1], "sog": 0.2, "cog": None}
-             for h in (18, 17.5, 17, 16.5, 16, 15.5, 15, 14.5, 14, 13.5, 13)]
-    stale = {"lat": ANCHOR[0], "lon": ANCHOR[1], "source": "foundation",
-             "seen_utc": update.iso(START - timedelta(hours=13))}
+    # The track as it stood when the feeds went quiet.
+    track = list(track if track is not None else anchored_track(START - timedelta(hours=13)))
+    ports = ports if ports is not None else PLAN
+    stale = {"lat": track[-1]["lat"], "lon": track[-1]["lon"], "source": "foundation",
+             "seen_utc": track[-1]["t"]}
 
     bought = 0
     hush = io.StringIO()
     with contextlib.redirect_stdout(hush), contextlib.redirect_stderr(hush):
         for _ in range(int(hours * 60 / step_min)):
-            got = update.fetch_from_vesselfinder([stale], [FUNCHAL], track)
+            got = update.fetch_from_vesselfinder([stale], ports, track)
             if got:
                 bought += 1
                 g = got[0]
@@ -181,7 +194,12 @@ def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False):
 
 
 # Six days at anchor. One request every six hours is 24; the old gate would spend 288.
+# Run against the real plan, so that "she has arrived at Funchal, therefore the next
+# port is Sevilla, therefore nobody can see her" has a chance to happen - because it did.
 at_anchor = run_the_stay(6 * 24)
+if at_anchor == 0:
+    fails.append("spent nothing at all across six days at anchor a mile off Funchal -"
+                 " the distance is being measured to the wrong port")
 if at_anchor > 30:
     fails.append(f"spent {at_anchor} credits on six days at anchor - the ship never moved,"
                  f" and anything near 288 is the old gate asking every half hour")
@@ -192,17 +210,30 @@ if at_anchor < 12:
 # ...and the run in, which is the thing the credits were actually bought for: eight hours
 # of approach at half-hourly fixes is sixteen, and must not be throttled to the anchored
 # cadence just because the previous answer said she was lying still.
-approach = run_the_stay(8, speed=6.4, navstat=8, moves=True)
+inbound = [{"t": update.iso(START - timedelta(hours=h)), "lat": ANCHOR[0] + h * 0.05,
+            "lon": ANCHOR[1], "sog": 6.4, "cog": 180} for h in (4, 3, 2, 1)]
+approach = run_the_stay(8, speed=6.4, navstat=8, moves=True, track=inbound)
 if approach < 12:
     fails.append(f"only {approach} credits across an eight-hour approach - she is moving"
                  f" four miles between fixes and the page is choosing a camera from them")
 
 # The same eight hours, but the bridge forgot to change NAVSTAT off "at anchor". The
 # speed over the ground has to win that argument, or a clerical slip blinds the cameras.
-sloppy = run_the_stay(8, speed=6.4, navstat=1, moves=True)
+sloppy = run_the_stay(8, speed=6.4, navstat=1, moves=True, track=list(inbound))
 if sloppy < 12:
     fails.append(f"only {sloppy} credits when she was making 6.4 knots with NAVSTAT still"
                  f" reading 'at anchor' - the speed must win over the hand-set status")
+
+# And the morning she sails. She has left Funchal, so the next port is Sevilla, 600 nm
+# off - but the cameras that matter are the ones she is sailing away from, and the hour
+# after she drops her lines is the hour they have something worth showing.
+outbound = anchored_track(START - timedelta(hours=10), hours=range(10, 72))
+outbound += [{"t": update.iso(START - timedelta(hours=h)), "lat": ANCHOR[0] - (10 - h) * 0.03,
+              "lon": ANCHOR[1], "sog": 5.5, "cog": 200} for h in (8, 6, 4, 2)]
+leaving = run_the_stay(6, speed=5.5, navstat=8, moves=True, track=outbound)
+if leaving < 8:
+    fails.append(f"only {leaving} credits in the six hours after she sailed from Funchal -"
+                 f" the port she has just left is the one with cameras on her")
 
 # A request that brings back nothing usable - dead key, spent balance - still cost a
 # credit, so the next run must not simply try again.
@@ -217,8 +248,8 @@ _near = {"lat": ANCHOR[0], "lon": ANCHOR[1], "source": "foundation",
          "seen_utc": update.iso(update.now_utc() - timedelta(hours=9))}
 _hush = io.StringIO()
 with contextlib.redirect_stdout(_hush), contextlib.redirect_stderr(_hush):
-    first = update.fetch_from_vesselfinder([_near], [FUNCHAL], _track)
-    second = update.fetch_from_vesselfinder([_near], [FUNCHAL], _track)
+    first = update.fetch_from_vesselfinder([_near], PLAN, _track)
+    second = update.fetch_from_vesselfinder([_near], PLAN, _track)
 check("a dead key returns nothing", first, [])
 if second != [] or "asked_utc" not in (update.read_json(update.VF_STATE, {}) or {}):
     fails.append("asked again straight after a request that brought back nothing - a"
@@ -228,7 +259,8 @@ update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY = _was
 print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in "
       f"{len(cases) + 1} cases where it would have bought nothing")
 print(f"six days at anchor cost {at_anchor} credits, not 288; an eight-hour run in cost"
-      f" {approach}, and {sloppy} with the status left reading 'at anchor'")
+      f" {approach}, {sloppy} with the status left reading 'at anchor', and the six hours"
+      f" after she sailed cost {leaving}")
 if fails:
     print("FAILURES")
     for f in fails:
