@@ -3272,7 +3272,7 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
             dayName(prev.depart || prev.arrive)}` : ""}.${
           q.depart && q.depart !== q.arrive
             ? ` Then ${Math.round((dayMs(q.depart) - dayMs(q.arrive)) / 864e5)} days
-                alongside, sailing again on ${dayName(q.depart)}.` : ""}`;
+                in port, sailing again on ${dayName(q.depart)}.` : ""}`;
     // A column with the passage pinned to the bottom: "United Kingdom" wraps onto two
     // lines and "France" does not, so anchored to the text above it the rule under each
     // tile sat at a different height in every tile.
@@ -3895,7 +3895,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
                ? "about a mile" : Math.round(off) + " nm"} out`} and not going anywhere —
              anchored, in shot from the cameras below. Worth a look at any point over the
              next few days.${declaredAnchor && declaredAnchor.lying_off.until
-               ? ` She is due alongside on ${new Date(declaredAnchor.lying_off.until
+               ? ` She is due in on ${new Date(declaredAnchor.lying_off.until
                    + "T12:00:00Z").toLocaleDateString("en-GB",
                    { day: "numeric", month: "long" })}.` : ""}${
              declaredAnchor && declaredAnchor.lying_off.source
@@ -3903,7 +3903,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
                    — her satellite positions out here are hours apart and cannot show
                    it.)</span>` : ""}`
           : alongside
-          ? `She is alongside in ${camPort.name} now.`
+          ? `She has arrived in ${camPort.name}.`
           : `She is ${Math.round(off)} nm from ${camPort.name} in a straight line, closing at
              ${N(closing)} knots${!timedFix() || minsOut > APPROACH_MIN
                ? ` — <b>near enough to be in shot</b>${timedFix() && isFinite(minsOut) && minsOut > 120
@@ -3958,7 +3958,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         note: preview ? "preview"
             : passing ? "passing now"
             : lyingOff ? `lying off ${camPort.name}`
-            : alongside ? "alongside now"
+            : alongside ? "she has arrived"
             : !timedFix() || minsOut > APPROACH_MIN ? "in sight"
             : minsOut < 12 ? "coming in now"
             : `~${Math.round(minsOut / 5) * 5} min out` });
@@ -3988,7 +3988,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         : passing ? "passing now"
         : (lyingOff && !feedAsked) ? "at anchor \u2014 tap to watch"
         : lyingOff ? "at anchor off " + camPort.name
-        : alongside ? "alongside now"
+        : alongside ? "she has arrived"
         : !timedFix() || minsOut > APPROACH_MIN ? "close enough to be in shot"
         : minsOut < 12 ? "coming in now"
         : `about ${Math.round(minsOut / 5) * 5} min out`,
@@ -4113,7 +4113,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         <figcaption>
           <b>${when.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</b>
           ${when.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ·
-          ${port ? `alongside in ${port.name}` : "at sea"}<br>
+          ${port ? `in ${port.name}` : "at sea"}<br>
           <span style="color:var(--muted)">${span} m across · 10 m per pixel${
             h.cloud_pct != null ? ` · ${Math.round(h.cloud_pct)} % cloud` : ""}</span>
         </figcaption>
