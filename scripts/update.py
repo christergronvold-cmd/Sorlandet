@@ -505,6 +505,12 @@ VF_MOVING_MIN = float(os.environ.get("VF_MOVING_MIN", "30"))
 # ...and this is how often while she is not. Not never: the point of still asking at all
 # is to catch the hour she slips her anchor, because the free feeds may not.
 VF_QUIET_H = float(os.environ.get("VF_QUIET_H", "6"))
+# ...except on the two days a move is actually expected - the day she is due in and the
+# day she is due to sail. Six hours is the right spacing for a ship that will still be
+# there this evening; it is the wrong spacing for the morning she weighs anchor, when
+# the whole point is to catch the hour it happens. On 22 October the free feeds went
+# from 23:20 to 05:42 without a word, and she was due alongside at ten.
+VF_WATCH_MIN = float(os.environ.get("VF_WATCH_MIN", "60"))
 # How near a port she must be for the answer to change anything on the page.
 VF_NEAR_NM = float(os.environ.get("VF_NEAR_NM", "50"))
 # What counts as lying still, on the days the ship herself does not say: every fix we
@@ -608,6 +614,17 @@ def _ports_in_reach(plan_ports: list, track_points: list) -> list:
     if not st.get("in_port") and 0 < done <= len(ports):
         out.append(ports[done - 1])
     return out
+
+
+def _move_expected_today(reach: list) -> bool:
+    """Is today a day the plan says she arrives somewhere or sails from somewhere?
+
+    The plan is tentative and the page says so, but it is right about the SHAPE of the
+    voyage even when it is a day or two out about the dates, and a day either way costs
+    a few credits rather than a missed departure.
+    """
+    today = today_iso()
+    return any(q.get(k) == today for q in (reach or []) for k in ("arrive", "depart"))
 
 
 def _lying_still(track_points: list) -> bool:
@@ -724,10 +741,13 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
               f" looking at her is {port['name']}, {off:.0f} nm off")
         return []
 
-    moving = _going_somewhere(track_points)
-    wait_min = VF_MOVING_MIN if moving else VF_QUIET_H * 60
+    if _going_somewhere(track_points):
+        wait_min, state = VF_MOVING_MIN, "under way"
+    elif _move_expected_today(reach):
+        wait_min, state = VF_WATCH_MIN, "lying still on a day she is due to move"
+    else:
+        wait_min, state = VF_QUIET_H * 60, "lying still"
     if quiet_min < wait_min:
-        state = "under way" if moving else "lying still"
         print(f"  -> VesselFinder: not needed, she is {state} and we last had her"
               f" {quiet_min:.0f} min ago (asking every {wait_min:.0f} min while {state})")
         return []
@@ -739,9 +759,8 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
 
     url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}&imo={IMO}"
     shown = f"{VF_URL}?userkey=***&imo={IMO}"
-    print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is"
-          f" {'under way' if moving else 'lying still'} near"
-          f" {port['name'] if port else 'a port'} - asking {shown}")
+    print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is {state}"
+          f" near {port['name'] if port else 'a port'} - asking {shown}")
     try:
         body = get_json(url, timeout=30)
     except Exception as exc:
@@ -770,6 +789,49 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         print("  ! VesselFinder returned a SATELLITE record - that is ten credits, not one,"
               " and this code never asks for one. Check the request.", file=sys.stderr)
     return [pt]
+
+
+# How long a navigational status is worth repeating. It is set by hand on the bridge and
+# it is not a measurement, but "at anchor" does not go stale in an afternoon the way a
+# position does - and where nobody has said anything for half a day, saying nothing is
+# the honest answer.
+NAV_FRESH_H = float(os.environ.get("NAV_FRESH_H", "12"))
+
+
+def position_with_status(position: dict, collected: list, track_points: list) -> dict:
+    """The position the page reads, with the ship's own word on it where she has given one.
+
+    Three places can hold it, and the newest wins: a fix heard this run, the receipt from
+    the last paid request, and the track. The receipt matters because the paid source is
+    the only one of ours that carries NAVSTAT at all, and its answer can lose the merge
+    above to a free copy of the very same message.
+    """
+    best, when = None, None
+    def offer(status, stamp):
+        nonlocal best, when
+        if status not in (0, 1, 5, 8) or not stamp:
+            return
+        try:
+            t = parse_iso(stamp)
+        except Exception:
+            return
+        if when is None or t > when:
+            best, when = status, t
+
+    for fix in collected or []:
+        offer(fix.get("nav_status"), fix.get("seen_utc"))
+    receipt = read_json(VF_STATE, {}) or {}
+    offer(receipt.get("nav_status"), receipt.get("fix_utc"))
+    for q in reversed(track_points or []):
+        if q.get("ns") is not None:
+            offer(q.get("ns"), q.get("t"))
+            break
+
+    if best is None or when is None:
+        return position
+    if (now_utc() - when).total_seconds() / 3600 > NAV_FRESH_H:
+        return position
+    return dict(position, nav_status=best, nav_status_utc=iso(when))
 
 
 def demo_position() -> dict:
@@ -1506,7 +1568,10 @@ def under_engine(points: list | None, window_h: float = ENGINE_WINDOW_H) -> bool
     cut = now_utc() - timedelta(hours=window_h)
     for p in reversed(points or []):
         ns = p.get("ns")
-        if ns is None:
+        # Only the two values that answer THIS question. The track carries 1 (at anchor)
+        # and 5 (moored) as well now, and "she is not under engine" is not a thing to
+        # conclude about a ship that is not going anywhere at all.
+        if ns not in (0, 8):
             continue
         try:
             when = parse_iso(p["t"])
@@ -3497,7 +3562,23 @@ def main() -> int:
         # Fourth, and only if the three free ones have left us blind near a port.
         plan_ports = (read_json(DATA / "ports.json", {}) or {}).get("ports") or []
         for pt in fetch_from_vesselfinder(merged, plan_ports, points):
-            pot.setdefault(pt["seen_utc"], pt)
+            held = pot.get(pt["seen_utc"])
+            if held is None:
+                pot[pt["seen_utc"]] = pt
+            else:
+                # The same AIS message, reported by two sources - which is not a clash but
+                # a confirmation, and it happens every time the foundation's feed and the
+                # paid one both hear her transmit. The free copy keeps its place; the paid
+                # one hands over the fields only it carries.
+                #
+                # Without this the paid answer was simply dropped. On 22 October that is
+                # how "at anchor" - the one field we had actually spent a credit on, and
+                # the one the page needed to stop calling her alongside - never reached
+                # the page at all.
+                for field in ("nav_status", "destination", "draught_m", "heading_deg",
+                              "ais_src"):
+                    if held.get(field) is None and pt.get(field) is not None:
+                        held[field] = pt[field]
         merged = [pot[t] for t in sorted(pot)]
 
         if not merged:
@@ -3579,12 +3660,19 @@ def main() -> int:
             # carries it.
             if fix.get("sog_derived") and sog_v is not None:
                 entry["d"] = 1
-            # Navigational status, but only the two values that answer "was she sailing":
-            # 8 under sail, 0 under engine. It is what separates a polar learned from real
-            # sailing from one polluted by sail drills and motoring, and the ship's own feed
-            # does not carry it, so it is worth keeping where we do hear it.
+            # Navigational status, the four values that answer a question this page asks:
+            # 8 under sail and 0 under engine, which separate a polar learned from real
+            # sailing from one polluted by sail drills and motoring - and 1 at anchor and
+            # 5 moored, which are the only honest way to tell a ship at her cable from a
+            # ship at the quay.
+            #
+            # 1 and 5 were added on 22 October. The page had just told seventy-two
+            # families "alongside now" while she lay at anchor 0.68 nm off Funchal, inside
+            # the 0.8 nm circle it calls a berth - and VesselFinder's own page said "At
+            # anchor" in the same minute, because the bridge had said so. A radius cannot
+            # tell a quay from an anchorage. The bridge can.
             ns = fix.get("nav_status")
-            if ns in (0, 8):
+            if ns in (0, 1, 5, 8):
                 entry["ns"] = ns
             merged_pts.insert(k, (when, entry))
             stamps.insert(k, when)
@@ -3687,7 +3775,7 @@ def main() -> int:
             "updated_utc": iso(now_utc()),
             "fresh_fix": fresh_fix,
             "demo": demo,
-            "position": position,
+            "position": position_with_status(position, collected, points),
             "voyage": voyage or None,
             "weather": weather,
             "sun": sun or {},

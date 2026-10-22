@@ -150,7 +150,7 @@ def anchored_track(upto, hours=range(1, 49)):
 
 
 def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False, track=None,
-                 ports=None):
+                 ports=None, start=None):
     """Every run of the job across a stretch of hours, the free sources silent throughout.
 
     Returns how many credits it spent. Everything is faked but the gate: the clock, the
@@ -158,7 +158,8 @@ def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False, track=No
     """
     import tempfile
     was = (update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY)
-    clock = {"now": START, "n": 0}
+    begin = start or START
+    clock = {"now": begin, "n": 0}
     update.now_utc = lambda: clock["now"]
     update.VF_STATE = Path(tempfile.mkdtemp()) / "vesselfinder.json"
     update.VF_KEY = "test-key"
@@ -173,7 +174,7 @@ def run_the_stay(hours, step_min=30, speed=0.3, navstat=1, moves=False, track=No
 
     update.get_json = server
     # The track as it stood when the feeds went quiet.
-    track = list(track if track is not None else anchored_track(START - timedelta(hours=13)))
+    track = list(track if track is not None else anchored_track(begin - timedelta(hours=13)))
     ports = ports if ports is not None else PLAN
     stale = {"lat": track[-1]["lat"], "lon": track[-1]["lon"], "source": "foundation",
              "seen_utc": track[-1]["t"]}
@@ -200,7 +201,10 @@ at_anchor = run_the_stay(6 * 24)
 if at_anchor == 0:
     fails.append("spent nothing at all across six days at anchor a mile off Funchal -"
                  " the distance is being measured to the wrong port")
-if at_anchor > 30:
+# Six days from the 20th runs through the 22nd, the day the plan has her coming in, and
+# that day is deliberately watched hourly rather than six-hourly - so the honest figure
+# is a little over the bare 24, not the 288 of asking every half hour regardless.
+if at_anchor > 60:
     fails.append(f"spent {at_anchor} credits on six days at anchor - the ship never moved,"
                  f" and anything near 288 is the old gate asking every half hour")
 if at_anchor < 12:
@@ -223,6 +227,20 @@ sloppy = run_the_stay(8, speed=6.4, navstat=1, moves=True, track=list(inbound))
 if sloppy < 12:
     fails.append(f"only {sloppy} credits when she was making 6.4 knots with NAVSTAT still"
                  f" reading 'at anchor' - the speed must win over the hand-set status")
+
+# The two cadences, each on its own day, so the difference is a number and not a claim.
+# An ordinary day alongside buys four positions. The day the plan has her sailing buys
+# a position an hour, because the free feeds went six hours silent overnight on exactly
+# such a morning and she was due away at ten.
+quiet_day = run_the_stay(24, start=datetime(2026, 10, 24, 0, 0, tzinfo=timezone.utc))
+move_day = run_the_stay(24, start=datetime(2026, 10, 28, 0, 0, tzinfo=timezone.utc))
+if not 3 <= quiet_day <= 6:
+    fails.append(f"an ordinary day at anchor cost {quiet_day} credits, wanted about four")
+if move_day < 16:
+    fails.append(f"the day she is due to sail cost only {move_day} credits - she can weigh"
+                 f" anchor and be clear before the next look")
+if move_day <= quiet_day:
+    fails.append("the day she is due to move is watched no closer than any other day")
 
 # And the morning she sails. She has left Funchal, so the next port is Sevilla, 600 nm
 # off - but the cameras that matter are the ones she is sailing away from, and the hour
@@ -260,7 +278,8 @@ print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in
       f"{len(cases) + 1} cases where it would have bought nothing")
 print(f"six days at anchor cost {at_anchor} credits, not 288; an eight-hour run in cost"
       f" {approach}, {sloppy} with the status left reading 'at anchor', and the six hours"
-      f" after she sailed cost {leaving}")
+      f" after she sailed cost {leaving}; an ordinary day alongside costs {quiet_day} and"
+      f" the day she is due to sail costs {move_day}")
 if fails:
     print("FAILURES")
     for f in fails:

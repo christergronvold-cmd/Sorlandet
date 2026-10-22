@@ -68,7 +68,18 @@ check("just outside the window",
       U.under_engine([pt(int(U.ENGINE_WINDOW_H * 60) + 5, 0)]), None)
 
 # A status we do not recognise is not a claim either way.
-check("unknown status is not engine", U.under_engine([pt(20, 5)]), False)
+#
+# That comment has been here since the day this was written. The assertion under it used
+# to say False, which is a claim - "she is not under engine" - and it let the sailing
+# course stand for a ship tied to a quay. Nobody noticed, because 5 looked like a made-up
+# number. It is not: 5 is MOORED, and on 22 October the track started carrying it, along
+# with 1 for at anchor, so that the page could stop telling seventy-two families a ship
+# at her cable was alongside. The comment was right and the line below it was wrong.
+check("unknown status is not a claim", U.under_engine([pt(20, 5)]), None)
+check("at anchor is not a claim", U.under_engine([pt(20, 1)]), None)
+# ...but an unusable status must not stop the search either, any more than a missing one
+# does. The answer is behind it.
+check("looks past a status it cannot use", U.under_engine([pt(30, 0), pt(20, 1)]), True)
 
 # The case this was written for, replayed: 124 messages of status 0 and not one of 8.
 check("her Dublin departure reads as engine",

@@ -726,10 +726,13 @@ function portStays(points, ports) {
       last.out = pt.t;
     } else {
       stays.push({ pi, port: ports[pi].name, country: ports[pi].country,
-                   in: pt.t, out: pt.t, dist: 0, span: 0, berthIn: null });
+                   in: pt.t, out: pt.t, dist: 0, span: 0, berthIn: null, said: null });
     }
     const cur = stays[stays.length - 1];
-    if (!cur.berthIn && nm([pt.lat, pt.lon], [ports[pi].lat, ports[pi].lon]) <= BERTH_NM) {
+    // 1 at anchor, 5 moored. The ship's own word, the last time she gave one in this stay.
+    if (pt.ns === 1 || pt.ns === 5) cur.said = pt.ns;
+    if (!cur.berthIn && pt.ns !== 1 &&
+        nm([pt.lat, pt.lon], [ports[pi].lat, ports[pi].lon]) <= BERTH_NM) {
       cur.berthIn = pt.t;                       // the first fix actually at the quay
     }
     prev = pt;
@@ -740,7 +743,19 @@ function portStays(points, ports) {
     if (v.span > 0 && v.dist / v.span >= PORT_CALM_KN) return false;  // passing through
     // A stay she has not ended: the last one, with her still inside it.
     v.ended = !(i === stays.length - 1 && stillThere === v.pi);
-    v.berthed = !!v.berthIn;
+    // The ship's own word beats the circle, both ways.
+    //
+    // BERTH_NM is eight tenths of a mile. On 22 October she lay at anchor SIX tenths off
+    // Funchal - inside it - and this page told seventy-two families "alongside now" while
+    // she swung to her cable, with the harbour camera open on a quay she was not at.
+    // VesselFinder's own page said "At anchor" in the same minute, because the bridge had
+    // said so. The circle was not set too wide; a circle drawn round a harbour cannot
+    // tell a quay from an anchorage at all, at any radius, and tuning the number is how
+    // you spend a week discovering that. NAVSTAT answers the question directly.
+    //
+    // Where she has said nothing the circle still decides, which is every fix before this
+    // existed and every port whose AIS we only hear through a feed that drops the field.
+    v.berthed = v.said === 5 ? true : v.said === 1 ? false : !!v.berthIn;
     return true;
   });
 }
