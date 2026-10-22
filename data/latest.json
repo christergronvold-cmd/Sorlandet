@@ -2,55 +2,58 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-22T14:18:50Z",
+ "updated_utc": "2026-10-22T14:49:06Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 32.64168,
-  "lon": -16.9143,
-  "sog_kn": 0.7,
-  "cog_deg": 267,
-  "heading_deg": null,
-  "seen_utc": "2026-10-22T13:16:26Z",
-  "source": "foundation",
-  "nav_status": 1,
-  "nav_status_utc": "2026-10-22T13:16:26Z"
+  "ais_src": "TER",
+  "lat": 32.64156,
+  "lon": -16.91433,
+  "sog_kn": 0.1,
+  "cog_deg": 14.4,
+  "heading_deg": 81,
+  "nav_status": 5,
+  "destination": "PT FNC",
+  "draught_m": 4.1,
+  "seen_utc": "2026-10-22T14:47:16Z",
+  "source": "vesselfinder",
+  "nav_status_utc": "2026-10-22T14:47:16Z"
  },
  "voyage": {
   "destination": "PT FNC",
   "eta_text": "22.10 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-22T13:16:26Z"
+  "heard_utc": "2026-10-22T14:47:16Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-22T14:18:45Z",
+  "fetched_utc": "2026-10-22T14:49:04Z",
   "sea": {
-   "wave_height_m": 1.02,
-   "wave_direction_deg": 63,
-   "wave_period_s": 7.65,
-   "swell_height_m": 0.74,
-   "swell_period_s": 5.1,
-   "wind_wave_height_m": 0.26,
+   "wave_height_m": 1.0,
+   "wave_direction_deg": 62,
+   "wave_period_s": 7.7,
+   "swell_height_m": 0.72,
+   "swell_period_s": 5.2,
+   "wind_wave_height_m": 0.28,
    "sea_temp_c": 23.2,
-   "time_utc": "2026-10-22T14:15"
+   "time_utc": "2026-10-22T14:45"
   },
   "air": {
-   "temp_c": 22.8,
-   "feels_c": 23.0,
-   "wind_ms": 3.16,
+   "temp_c": 22.4,
+   "feels_c": 22.6,
+   "wind_ms": 3.28,
    "gust_ms": 6.4,
-   "wind_direction_deg": 79,
+   "wind_direction_deg": 78,
    "pressure_hpa": 1024.6,
-   "cloud_pct": 100,
+   "cloud_pct": 99,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-10-22T14:15"
+   "time_utc": "2026-10-22T14:45"
   }
  },
  "sun": {
   "moon": {
    "age_days": 11.2,
-   "illumination": 0.86,
+   "illumination": 0.87,
    "phase": "waxing gibbous"
   },
   "civil_timezone": "Atlantic/Madeira",
