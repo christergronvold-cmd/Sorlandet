@@ -4553,6 +4553,10 @@ function wireSharing() {
 // start_url, which drops any query string - so "open ?push and then add to home screen"
 // would not have carried the switch inside, and the one place the button is needed is
 // the one place it would not have appeared.
+// Where a new subscription should be sent to be kept. Empty means there is nowhere yet,
+// and the panel then hands it back as text for a person to carry. Fill this in when the
+// collector exists and the copy-paste disappears on its own.
+const PUSH_SIGNUP_URL = "";
 const VAPID_PUBLIC = "BGFvxMkjAnmb-UdXNr2L_f3c87c-HZe_0epsGrucuoGldXEALqLSd-2s4qDLrSM3RbKepYtE5UIwbdPKPRQXPUk";
 
 (function pushPanel() {
@@ -4602,13 +4606,33 @@ const VAPID_PUBLIC = "BGFvxMkjAnmb-UdXNr2L_f3c87c-HZe_0epsGrucuoGldXEALqLSd-2s4q
       }
       const sub = await reg.pushManager.subscribe(
         { userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC) });
-      note.innerHTML = "<b>Subscribed on this device.</b>" + (asked
-        ? " Until the page has somewhere to keep these, paste the line below into the "
-          + "repository secret <code>PUSH_SUBSCRIPTIONS</code>, as a one-item list: "
-          + "<code>[ … ]</code><textarea readonly rows=\"5\" style=\"width:100%;"
-          + "margin-top:7px;font:12px ui-monospace,monospace\"></textarea>"
-        : " You will be told when she moves.");
-      if (asked) note.querySelector("textarea").value = JSON.stringify(sub.toJSON());
+      if (PUSH_SIGNUP_URL) {
+        await fetch(PUSH_SIGNUP_URL, { method: "POST", keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(sub.toJSON()) });
+        note.innerHTML = "<b>Subscribed on this device.</b> You will be told when she moves.";
+        return;
+      }
+      // Nowhere to keep it yet, so it comes back as text. There is no address bar in an
+      // installed app on an iPhone, which is the only place this button works at all -
+      // so this cannot be hidden behind a query string the way the panel is.
+      note.innerHTML = "<b>Subscribed on this device.</b> There is nowhere to keep these "
+        + "yet, so copy the line below into the repository secret "
+        + "<code>PUSH_SUBSCRIPTIONS</code>, as a one-item list: <code>[ … ]</code>"
+        + "<textarea readonly rows=\"5\" style=\"width:100%;margin-top:7px;"
+        + "font:12px ui-monospace,monospace\"></textarea>"
+        + "<button id=\"pushcopy\" style=\"font:inherit;margin-top:6px;padding:5px 10px;"
+        + "border-radius:7px;border:1px solid var(--line);background:var(--card)\">Copy</button>";
+      const area = note.querySelector("textarea");
+      area.value = JSON.stringify(sub.toJSON());
+      note.querySelector("#pushcopy").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(area.value);
+          note.querySelector("#pushcopy").textContent = "Copied";
+        } catch (e) {
+          area.select();
+        }
+      });
     } catch (err) {
       note.textContent = "Could not subscribe: " + err;
       go.disabled = false;
