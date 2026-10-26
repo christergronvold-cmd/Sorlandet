@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sørlandet — notices</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="push.webmanifest">
+<meta name="robots" content="noindex">
+<!--
+  Not linked from anywhere, and deliberately not part of the page the families read.
+
+  A control that asks you to paste a line into a repository secret is a developer's tool
+  wearing the clothes of a feature: it can only ever work for the one person with access
+  to the repository. It sat at the bottom of the family page for about an hour on 26
+  October, where a parent could have turned it on, been asked for permission, said yes,
+  and then received nothing at all for the rest of the voyage. Silence that looks like
+  information is the one failure this project will not ship.
+
+  So it lives here, on its own, until there is somewhere to keep subscriptions - at which
+  point it goes back on the page as a plain button and this file is deleted.
+
+  On an iPhone it has to be added to the home screen and opened from there. Safari in a
+  tab cannot subscribe at all, whatever permission is granted.
+-->
+<style>
+  :root { color-scheme: light dark; --line: #d7dee5; --muted: #5c6b7a; --card: #fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --line: #2a3542; --muted: #93a3b4; --card: #131a22; }
+    body { background: #0c1117; color: #e6edf3; }
+  }
+  body { font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         margin: 0; padding: 24px 18px 60px; max-width: 640px; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 20px; }
+  button { font: inherit; padding: 9px 14px; border-radius: 9px; border: 1px solid var(--line);
+           background: var(--card); color: inherit; cursor: pointer; }
+  #note { margin-top: 14px; color: var(--muted); }
+  textarea { width: 100%; margin-top: 8px; font: 12px ui-monospace, SFMono-Regular, monospace;
+             padding: 8px; border-radius: 8px; border: 1px solid var(--line);
+             background: var(--card); color: inherit; }
+  code { font: 12.5px ui-monospace, SFMono-Regular, monospace; }
+</style>
+
+<h1>Tell me when she moves</h1>
+<p class="sub">A notice when she weighs anchor, when she passes somewhere with a camera on
+her, and when she ties up again. Nothing else.</p>
+<p id="why" class="sub"></p>
+<button id="go">Turn on notifications</button>
+<div id="note"></div>
+
+<script>
+// Where a new subscription should be sent to be kept. Empty means there is nowhere yet,
+// and the page hands it back as text for a person to carry instead.
+const PUSH_SIGNUP_URL = "";
+const VAPID_PUBLIC = "BGFvxMkjAnmb-UdXNr2L_f3c87c-HZe_0epsGrucuoGldXEALqLSd-2s4qDLrSM3RbKepYtE5UIwbdPKPRQXPUk";
+
+const why = document.getElementById("why");
+const go = document.getElementById("go");
+const note = document.getElementById("note");
+
+const standalone = window.matchMedia("(display-mode: standalone)").matches
+  || navigator.standalone;
+const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+  go.disabled = true;
+  why.textContent = iOS && !standalone
+    ? "On an iPhone this page has to be on your home screen: share icon, “Add to Home "
+      + "Screen”, then open it from there. Safari in a tab cannot receive notifications "
+      + "at all, whatever you allow."
+    : "This browser cannot receive push notifications.";
+}
+
+const keyBytes = k => {
+  const pad = "=".repeat((4 - k.length % 4) % 4);
+  const raw = atob((k + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+};
+
+go.addEventListener("click", async () => {
+  go.disabled = true;
+  note.textContent = "Asking…";
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    if (await Notification.requestPermission() !== "granted") {
+      note.textContent = "Not granted. Nothing will be sent.";
+      go.disabled = false;
+      return;
+    }
+    const sub = await reg.pushManager.subscribe(
+      { userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC) });
+    if (PUSH_SIGNUP_URL) {
+      await fetch(PUSH_SIGNUP_URL, { method: "POST", keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()) });
+      note.innerHTML = "<b>Subscribed on this device.</b> You will be told when she moves.";
+      return;
+    }
+    note.innerHTML = "<b>Subscribed on this device.</b> There is nowhere to keep these "
+      + "yet, so copy the line below into the repository secret "
+      + "<code>PUSH_SUBSCRIPTIONS</code>, as a one-item list: <code>[ … ]</code>"
+      + "<textarea readonly rows=\"6\"></textarea>"
+      + "<button id=\"copy\" style=\"margin-top:8px\">Copy</button>";
+    const area = note.querySelector("textarea");
+    area.value = JSON.stringify(sub.toJSON());
+    document.getElementById("copy").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(area.value);
+        document.getElementById("copy").textContent = "Copied";
+      } catch (e) { area.select(); }
+    });
+  } catch (err) {
+    note.textContent = "Could not subscribe: " + err;
+    go.disabled = false;
+  }
+});
+</script>
