@@ -15,6 +15,7 @@ check that the page works before getting a key.
 
 from __future__ import annotations
 
+import base64
 import json
 import math
 import os
@@ -882,9 +883,41 @@ PAGE_URL = os.environ.get("PAGE_URL", "https://christergronvold-cmd.github.io/So
 # next piece of work - but the sending will already have been proved by then.
 PUSH_SUBS = os.environ.get("PUSH_SUBSCRIPTIONS", "").strip()
 VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
-# The push services want to know who is sending. The page is a better answer than a
-# personal address, and it is the thing anyone receiving one would want to open anyway.
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", PAGE_URL)
+# Who is sending. It has to be a mailto: and nothing else - the spec allows an https URL
+# and py_vapid does not, which is how the first real attempt died:
+#
+#   VapidException: Missing 'sub' from claims. 'sub' is your admin email as a mailto: link
+#
+# said about a claim that was present and was a perfectly good https URL. The page would
+# have been a nicer answer than an address; it is not on offer.
+#
+# GitHub's noreply address is a real mailbox and belongs to the account that owns this
+# repository, so it reaches a person without putting a personal address in a public file.
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "") or (
+    f"mailto:{GH_REPO.split('/')[0]}@users.noreply.github.com" if "/" in GH_REPO
+    else "mailto:nobody@example.invalid")
+
+
+def vapid_key(raw: str) -> str:
+    """Hand py_vapid a key in a shape it will actually read.
+
+    It takes a PEM FILE, or a base64url DER string. It does not take the PEM TEXT - which
+    is exactly what a person copies out of a .pem and pastes into a repository secret,
+    because a secret cannot be a file. The error for that is "Could not deserialize key
+    data. The data may be in an incorrect format", which names everything except the one
+    thing that is wrong.
+
+    So both are accepted here and the conversion happens once, in the only place that
+    knows what the string is for.
+    """
+    if "-----BEGIN" not in raw:
+        return raw
+    from cryptography.hazmat.primitives import serialization
+    key = serialization.load_pem_private_key(raw.encode("utf-8"), password=None)
+    der = key.private_bytes(serialization.Encoding.DER,
+                            serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption())
+    return base64.urlsafe_b64encode(der).rstrip(b"=").decode("ascii")
 
 
 def send_push(title: str, line: str) -> int:
@@ -903,19 +936,27 @@ def send_push(title: str, line: str) -> int:
     except ImportError:
         print("  ! pywebpush is not installed - no push sent", file=sys.stderr)
         return 0
+    try:
+        key = vapid_key(VAPID_PRIVATE)
+    except Exception as exc:
+        print(f"  ! VAPID_PRIVATE_KEY could not be read ({type(exc).__name__}) - no push"
+              f" sent. It wants the PEM text or a base64url DER string.", file=sys.stderr)
+        return 0
     payload = json.dumps({"title": title, "body": line, "url": PAGE_URL})
     sent = 0
     for sub in subs:
         try:
-            webpush(subscription_info=sub, data=payload,
-                    vapid_private_key=VAPID_PRIVATE,
+            webpush(subscription_info=sub, data=payload, vapid_private_key=key,
                     vapid_claims={"sub": VAPID_SUBJECT})
             sent += 1
         except Exception as exc:
             # Never the endpoint itself in a log: it is the capability to push to that
             # phone, and the logs of this repository are public.
             code = getattr(getattr(exc, "response", None), "status_code", None)
-            print(f"  ! push to one device failed ({code or type(exc).__name__})"
+            # The message as well as the class. "VapidException" on its own took an
+            # afternoon to turn into "the sub claim has to be a mailto:".
+            print(f"  ! push to one device failed ({code or type(exc).__name__}: "
+                  f"{str(exc)[:120]})"
                   + (" - that subscription is dead and should be taken out"
                      if code in (404, 410) else ""), file=sys.stderr)
     if sent:
