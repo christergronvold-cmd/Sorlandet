@@ -1003,6 +1003,35 @@ def open_issue(title: str, body: str) -> bool:
         return False
 
 
+def test_notice(position: dict | None = None) -> bool:
+    """One message that means nothing, so that the one that means something is trusted.
+
+    Whether a notice reaches his phone cannot be settled by opening an issue by hand:
+    GitHub does not notify you about your own doing, so one he creates himself proves
+    nothing. It has to be the bot, through this code, with this token, assigned the same
+    way - which is all this does.
+    """
+    where = position or (read_json(LATEST, {}) or {}).get("position") or {}
+    return open_issue(
+        f"{SHIP_NAME}: test of the move notice",
+        "\n".join([
+            f"@{GH_REPO.split('/')[0]}" if "/" in GH_REPO else "",
+            "",
+            "This is the test. Nothing has happened to the ship.",
+            "",
+            "It was sent by the job, from the same code and the same token as the real"
+            " thing, and assigned to you the same way - so if this reached your phone,"
+            " the real one will too.",
+            "",
+            f"She was last heard at {where.get('seen_utc') or 'an unknown time'},"
+            f" {where.get('lat')}, {where.get('lon')}.",
+            "",
+            f"[Open the page]({PAGE_URL})",
+            "",
+            "_Close it. The next one will mean something._",
+        ]))
+
+
 def tell_him_she_moved(position: dict, plan_ports: list, track_points: list) -> None:
     """Work out whether anything happened, and if it did, send it.
 
@@ -1012,24 +1041,7 @@ def tell_him_she_moved(position: dict, plan_ports: list, track_points: list) -> 
     worse than silence.
     """
     if MOVE_TEST:
-        open_issue(
-            f"{SHIP_NAME}: test of the move notice",
-            "\n".join([
-                f"@{GH_REPO.split('/')[0]}" if "/" in GH_REPO else "",
-                "",
-                "This is the test. Nothing has happened to the ship.",
-                "",
-                "It was sent by the job, from the same code and the same token as the"
-                " real thing, and assigned to you the same way - so if this reached your"
-                " phone, the real one will too.",
-                "",
-                f"She was last heard at {position.get('seen_utc') or 'an unknown time'},"
-                f" {position.get('lat')}, {position.get('lon')}.",
-                "",
-                f"[Open the page]({PAGE_URL})",
-                "",
-                "_Close it. The next one will mean something._",
-            ]))
+        test_notice(position)
 
     before = read_json(MOVES, {}) or {}
     state, event = move_event(before, position, plan_ports, track_points)

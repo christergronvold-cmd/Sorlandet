@@ -1,0 +1,42 @@
+name: Test the move notice
+
+# One job, one question: does the message actually reach his phone?
+#
+# It cannot be answered by opening an issue by hand. GitHub does not notify you about
+# your own doing, so an issue he creates himself proves nothing at all. It has to be the
+# bot, through the same code, with the same token, assigned the same way.
+#
+# It cannot be answered from the main workflow either, which is where this started. That
+# one holds the concurrency group `position` for five hours at a time with
+# cancel-in-progress false, so a run started by hand queues behind the chain - and is
+# then cancelled by the chain's own successor before it ever begins. A button that can
+# never fire is worse than no button, because it looks like one that can.
+#
+# Hence: its own workflow, no concurrency group, nothing to wait behind. Thirty seconds.
+# Actions -> Test the move notice -> Run workflow.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  notice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Send one test notice
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "scripts")
+          import update
+          if not update.test_notice():
+              raise SystemExit("the notice could not be sent - see the error above")
+          print("sent. If it did not reach your phone, the fault is in GitHub's"
+                " notification settings and not in the job.")
+          PY
