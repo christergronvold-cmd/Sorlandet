@@ -38,6 +38,10 @@ on:
 permissions:
   contents: write
   actions: write
+  # ...and issues, which is how he hears that she has moved. An issue needs no service
+  # nobody is already running and no app nobody has installed: GitHub mails him and his
+  # phone buzzes, because the job assigns it to him and names him in the first line.
+  issues: write
 
 jobs:
   # Deliberately NOT in the concurrency group: a guard that queues is not a guard.
@@ -98,6 +102,7 @@ jobs:
         env:
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
           VESSELFINDER_KEY: ${{ secrets.VESSELFINDER_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
           LISTEN_SECONDS: "1740"

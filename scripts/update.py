@@ -528,6 +528,7 @@ VF_STATE = DATA / "vesselfinder.json"
 # AIS navigational status, the few values that answer "is she going anywhere".
 NAV_STOPPED = (1, 5)                      # at anchor, moored
 NAV_UNDER_WAY = (0, 8)                    # under engine, under sail
+NAV_WORDS = {0: "under engine", 1: "at anchor", 5: "moored", 8: "under sail"}
 
 
 def _vf_time(raw: str) -> str | None:
@@ -832,6 +833,191 @@ def position_with_status(position: dict, collected: list, track_points: list) ->
     if (now_utc() - when).total_seconds() / 3600 > NAV_FRESH_H:
         return position
     return dict(position, nav_status=best, nav_status_utc=iso(when))
+
+
+# ------------------------------------------------------------- telling him she has moved
+#
+# "Can we have a message when she leaves the anchorage and goes in?" - 22 October. The
+# honest answer that morning was no, and not because sending a message is hard: the job
+# would not have KNOWN for up to six hours. That part is fixed - the paid source watches
+# hourly on the days the plan has her moving, and the ship broadcasts her own status, so
+# "lying still" and "under way" are facts here rather than a guess from a radius.
+#
+# The event is deliberately the small one. Not "she has sailed for Sevilla": that is a
+# claim about intent, and she may only be shifting berth or laying out a second anchor.
+# Just - she was not moving at Funchal, and now she is. And its mirror: she was moving,
+# and now she has stopped. Those two cover an arrival and a departure at every port of
+# the voyage, and neither of them can be wrong about where she is.
+MOVES = DATA / "moves.json"
+MOVE_NM = 12.0          # near enough a port that the movement is ABOUT that port
+MOVE_KN = 1.0           # ...and this is under way
+MOVE_QUIET_KN = 0.5     # ...and this, with nothing else said, is stopped
+# A speed on its own is not movement. AIS speeds wobble, a ship at anchor sheers about on
+# the tide, and the fix off Funchal on 20 October read 0.4 knots on a ship that had not
+# shifted a cable's length in six days. So a departure has to SHOW as well as say: she
+# must have got this far from where she was last seen lying still before anyone's phone
+# goes off at six in the morning.
+MOVE_AWAY_NM = 0.3
+
+GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+GH_REPO = os.environ.get("GITHUB_REPOSITORY", "").strip()
+GH_API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+PAGE_URL = os.environ.get("PAGE_URL", "https://christergronvold-cmd.github.io/Sorlandet/")
+
+
+def _moving_now(position: dict) -> bool | None:
+    """Under way, stopped, or she is not saying. None is a real answer and must stay one."""
+    status = position.get("nav_status")
+    try:
+        sog = None if position.get("sog_kn") is None else float(position["sog_kn"])
+    except (TypeError, ValueError):
+        sog = None
+    if status in NAV_STOPPED and (sog is None or sog < MOVE_KN):
+        return False
+    if sog is None:
+        return None
+    if sog >= MOVE_KN:
+        return True
+    if sog < MOVE_QUIET_KN or status in NAV_STOPPED:
+        return False
+    return None             # between the two, with nothing said: not an answer
+
+
+def move_event(before: dict, position: dict, plan_ports: list,
+               track_points: list) -> tuple[dict, dict | None]:
+    """What she is doing, and whether it is news. Pure - the caller owns the file."""
+    state = dict(before or {})
+    lat, lon = position.get("lat"), position.get("lon")
+    if lat is None or lon is None:
+        return state, None
+    here = (float(lat), float(lon))
+    moving = _moving_now(position)
+    if moving is None:
+        return state, None
+
+    # Which port this is about: the nearest of the one she is lying at, the one she is
+    # bound for, and the one she has just left. Measured to the harbour, not to a camera -
+    # this is a message about a ship arriving somewhere, not about a lens.
+    port, off = None, None
+    for q in _ports_in_reach(plan_ports, track_points):
+        d = nm_between(here, (float(q["lat"]), float(q["lon"])))
+        if off is None or d < off:
+            port, off = q, d
+    if port is None or off > MOVE_NM:
+        # Out at sea. Keep the state current, so that coming in later reads as a change
+        # rather than a repeat, but there is nothing here worth anybody's attention.
+        state.update(state="sea", at=None, lat=here[0], lon=here[1],
+                     since=position.get("seen_utc"))
+        return state, None
+
+    was, at = state.get("state"), state.get("at")
+    now = "underway" if moving else "still"
+    if was == now and at == port["name"]:
+        return state, None
+
+    if now == "underway" and was == "still":
+        try:
+            shifted = nm_between(here, (float(state["lat"]), float(state["lon"])))
+        except (KeyError, TypeError, ValueError):
+            shifted = MOVE_AWAY_NM
+        if shifted < MOVE_AWAY_NM:
+            return state, None          # the needle moved; the ship did not
+
+    state.update(state=now, at=port["name"], lat=here[0], lon=here[1],
+                 since=position.get("seen_utc"))
+    if was is None:
+        return state, None              # the first time this ever runs, everything is new
+    if was == "sea" and now == "underway":
+        return state, None              # still approaching; the arrival is the news
+
+    return state, {"kind": now, "port": port["name"], "off_nm": round(off, 2),
+                   "sog_kn": position.get("sog_kn"),
+                   "nav_status": position.get("nav_status"),
+                   "seen_utc": position.get("seen_utc"),
+                   "lat": here[0], "lon": here[1]}
+
+
+def move_words(ev: dict) -> tuple[str, str]:
+    """The message itself. Short enough to read on a lock screen, sourced in the body."""
+    port, off, sog = ev["port"], ev["off_nm"], ev.get("sog_kn")
+    pace = f"{float(sog):.1f} knots" if sog is not None else "making way"
+    where = f"{off:.1f} nm from the harbour" if off >= 0.1 else "at the harbour"
+    if ev["kind"] == "underway":
+        title = f"{SHIP_NAME} is under way at {port}"
+        first = (f"She was lying still at {port} and is now moving - {pace}, {where}.")
+    else:
+        title = f"{SHIP_NAME} has arrived at {port}"
+        said = {1: f"at anchor off {port}", 5: f"moored in {port}"}.get(
+            ev.get("nav_status"), f"stopped at {port}")
+        first = f"She has stopped, {said}, {where}."
+    owner = GH_REPO.split("/")[0] if "/" in GH_REPO else ""
+    body = "\n".join(x for x in [
+        f"@{owner}" if owner else "",
+        "",
+        first,
+        "",
+        f"- Position {ev['lat']:.5f}, {ev['lon']:.5f}",
+        f"- Heard {ev.get('seen_utc') or 'at an unknown time'}",
+        f"- Navigational status {ev.get('nav_status')}"
+        f" - {NAV_WORDS.get(ev.get('nav_status'), 'not one of the four we read')}"
+        if ev.get("nav_status") is not None else
+        "- She did not state a navigational status; this is from her speed and her track",
+        "",
+        f"[Open the page]({PAGE_URL})",
+        "",
+        "_Opened by the tracking job. Close it; it is a notification, not a task._",
+    ])
+    return title, body
+
+
+def open_issue(title: str, body: str) -> bool:
+    """Tell him. A GitHub issue, because it needs no service nobody is already running."""
+    if not GH_TOKEN or "/" not in GH_REPO:
+        print("  -> no GitHub token or repository here - not opening an issue")
+        return False
+    owner = GH_REPO.split("/")[0]
+    payload = json.dumps({"title": title, "body": body,
+                          "assignees": [owner]}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{GH_API}/repos/{GH_REPO}/issues", data=payload,
+        headers={"Authorization": f"Bearer {GH_TOKEN}",
+                 "Accept": "application/vnd.github+json",
+                 "X-GitHub-Api-Version": "2022-11-28",
+                 "Content-Type": "application/json",
+                 "User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=30,
+                                    context=ssl.create_default_context()) as r:
+            made = json.loads(r.read().decode("utf-8"))
+        print(f"  -> told him: issue #{made.get('number')} - {title}")
+        return True
+    except Exception as exc:
+        print(f"  ! could not open the issue ({type(exc).__name__}: {exc}) - keeping it"
+              f" to try again next run", file=sys.stderr)
+        return False
+
+
+def tell_him_she_moved(position: dict, plan_ports: list, track_points: list) -> None:
+    """Work out whether anything happened, and if it did, send it.
+
+    A message that failed to send is kept and tried again. A newer event replaces an
+    older unsent one rather than queueing behind it: by the time GitHub comes back,
+    "she is under way at Funchal" about a ship that has since tied up in Sevilla is
+    worse than silence.
+    """
+    before = read_json(MOVES, {}) or {}
+    state, event = move_event(before, position, plan_ports, track_points)
+    pending = event or before.get("pending")
+    state["pending"] = pending
+    if pending:
+        title, body = move_words(pending)
+        if open_issue(title, body):
+            told = (before.get("told") or [])[-9:]
+            told.append({"t": iso(now_utc()), "kind": pending["kind"],
+                         "port": pending["port"], "title": title})
+            state["told"] = told
+            state["pending"] = None
+    write_json(MOVES, state)
 
 
 def demo_position() -> dict:
@@ -3791,6 +3977,7 @@ def main() -> int:
     sog_from = old.get("sog_provenance_from") or iso(now_utc())
     write_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME,
                        "sog_provenance_from": sog_from, "points": points}, compact=True)
+    shown = position_with_status(position, collected, points)
     write_json(
         LATEST,
         {
@@ -3800,7 +3987,7 @@ def main() -> int:
             "updated_utc": iso(now_utc()),
             "fresh_fix": fresh_fix,
             "demo": demo,
-            "position": position_with_status(position, collected, points),
+            "position": shown,
             "voyage": voyage or None,
             "weather": weather,
             "sun": sun or {},
@@ -3811,6 +3998,16 @@ def main() -> int:
             },
         },
     )
+    # ...and if that position is her arriving somewhere, or leaving, say so out loud.
+    # After the file is written, never before: the page is the thing the message links to.
+    if not demo:
+        try:
+            tell_him_she_moved(
+                shown, (read_json(DATA / "ports.json", {}) or {}).get("ports") or [], points)
+        except Exception as exc:
+            print(f"  ! move notice failed ({type(exc).__name__}: {exc}) - carrying on",
+                  file=sys.stderr)
+
     # Order matters here, and each step feeds the next:
     #   wake   - where she was hour by hour, and the weather that was there
     #   polar  - folds those hours into what she can actually do at each wind angle
