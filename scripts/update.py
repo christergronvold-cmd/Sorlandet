@@ -977,13 +977,21 @@ def move_words(ev: dict) -> tuple[str, str]:
 
 
 def open_issue(title: str, body: str) -> bool:
-    """Tell him. A GitHub issue, because it needs no service nobody is already running."""
+    """Tell him. A GitHub issue, because it needs no service nobody is already running.
+
+    One notification per event, not two. The first version both ASSIGNED the issue to him
+    and named him in the first line, and GitHub treats those as two separate reasons to
+    write to you: the test on 26 October arrived as two mails a second apart, one saying
+    "Assigned #1 to @christergronvold-cmd" and one carrying the actual message. Over
+    thirteen ports that is a hundred mails where fifty will do, and the half of them that
+    say nothing are the half that teach you to stop reading the other half.
+
+    The mention is the one kept, because it is the one with the message in it.
+    """
     if not GH_TOKEN or "/" not in GH_REPO:
         print("  -> no GitHub token or repository here - not opening an issue")
         return False
-    owner = GH_REPO.split("/")[0]
-    payload = json.dumps({"title": title, "body": body,
-                          "assignees": [owner]}).encode("utf-8")
+    payload = json.dumps({"title": title, "body": body}).encode("utf-8")
     req = urllib.request.Request(
         f"{GH_API}/repos/{GH_REPO}/issues", data=payload,
         headers={"Authorization": f"Bearer {GH_TOKEN}",
