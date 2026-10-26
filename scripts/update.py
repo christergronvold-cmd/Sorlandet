@@ -858,6 +858,8 @@ MOVE_QUIET_KN = 0.5     # ...and this, with nothing else said, is stopped
 # must have got this far from where she was last seen lying still before anyone's phone
 # goes off at six in the morning.
 MOVE_AWAY_NM = 0.3
+# A place she passes rather than calls at, when it does not say how far it can see.
+MOVE_PASS_NM = 5.0
 # Whether the message actually reaches his phone cannot be tested by opening an issue by
 # hand: GitHub does not notify you about your own doing, so one he creates himself proves
 # nothing at all. It has to be the bot that creates it, through this code, with this
@@ -889,10 +891,11 @@ def _moving_now(position: dict) -> bool | None:
     return None             # between the two, with nothing said: not an answer
 
 
-def move_event(before: dict, position: dict, plan_ports: list,
+def move_event(before: dict, position: dict, plan: dict,
                track_points: list) -> tuple[dict, dict | None]:
     """What she is doing, and whether it is news. Pure - the caller owns the file."""
     state = dict(before or {})
+    plan_ports = (plan or {}).get("ports") or []
     lat, lon = position.get("lat"), position.get("lon")
     if lat is None or lon is None:
         return state, None
@@ -900,6 +903,38 @@ def move_event(before: dict, position: dict, plan_ports: list,
     moving = _moving_now(position)
     if moving is None:
         return state, None
+
+    # First, the places she goes PAST rather than to.
+    #
+    # The club's camera at the mouth of the Guadalquivir is fifty miles below the quay in
+    # Sevilla. By the port test below, a ship turning in over the bar at Sanlúcar is
+    # simply at sea - and that is the one moment the only camera on the river has
+    # anything to show. Asked for by name on 26 October, and it would not have fired.
+    #
+    # The plan has had a word for such a place since the Sound of Mull, and each one says
+    # how far it can see, so there is no new number here to tune. One message per place
+    # per passing: the name is remembered until she is out of its reach again, so a ship
+    # standing up the river does not announce the same camera every half hour.
+    site, gap = None, None
+    for q in ((plan or {}).get("passages") or []):
+        if q.get("lat") is None:
+            continue
+        d = nm_between(here, (float(q["lat"]), float(q["lon"])))
+        if d <= float(q.get("see_nm") or MOVE_PASS_NM) and (gap is None or d < gap):
+            site, gap = q, d
+    if site is None:
+        state.pop("past", None)
+    else:
+        first = state.get("past") != site["name"]
+        state["past"] = site["name"]
+        if first and moving:
+            cams = [c.get("name") for c in (site.get("cameras") or []) if c.get("name")]
+            return state, {"kind": "passing", "port": site["name"],
+                           "place": site.get("place"), "cameras": cams,
+                           "off_nm": round(gap, 2), "sog_kn": position.get("sog_kn"),
+                           "nav_status": position.get("nav_status"),
+                           "seen_utc": position.get("seen_utc"),
+                           "lat": here[0], "lon": here[1]}
 
     # Which port this is about: the nearest of the one she is lying at, the one she is
     # bound for, and the one she has just left. Measured to the harbour, not to a camera -
@@ -948,7 +983,15 @@ def move_words(ev: dict) -> tuple[str, str]:
     port, off, sog = ev["port"], ev["off_nm"], ev.get("sog_kn")
     pace = f"{float(sog):.1f} knots" if sog is not None else "making way"
     where = f"{off:.1f} nm from the harbour" if off >= 0.1 else "at the harbour"
-    if ev["kind"] == "underway":
+    if ev["kind"] == "passing":
+        title = f"{SHIP_NAME} is passing {port}"
+        seen = ev.get("cameras") or []
+        lens = (f" The camera at {seen[0]} is looking at that water now."
+                if len(seen) == 1 else
+                f" The cameras there ({', '.join(seen)}) are looking at that water now."
+                if seen else "")
+        first = (f"She is {off:.1f} nm off {ev.get('place') or port}, {pace}.{lens}")
+    elif ev["kind"] == "underway":
         title = f"{SHIP_NAME} is under way at {port}"
         first = (f"She was lying still at {port} and is now moving - {pace}, {where}.")
     else:
@@ -1040,7 +1083,7 @@ def test_notice(position: dict | None = None) -> bool:
         ]))
 
 
-def tell_him_she_moved(position: dict, plan_ports: list, track_points: list) -> None:
+def tell_him_she_moved(position: dict, plan: dict, track_points: list) -> None:
     """Work out whether anything happened, and if it did, send it.
 
     A message that failed to send is kept and tried again. A newer event replaces an
@@ -1052,7 +1095,7 @@ def tell_him_she_moved(position: dict, plan_ports: list, track_points: list) -> 
         test_notice(position)
 
     before = read_json(MOVES, {}) or {}
-    state, event = move_event(before, position, plan_ports, track_points)
+    state, event = move_event(before, position, plan, track_points)
     pending = event or before.get("pending")
     state["pending"] = pending
     if pending:
@@ -4048,8 +4091,7 @@ def main() -> int:
     # After the file is written, never before: the page is the thing the message links to.
     if not demo:
         try:
-            tell_him_she_moved(
-                shown, (read_json(DATA / "ports.json", {}) or {}).get("ports") or [], points)
+            tell_him_she_moved(shown, read_json(DATA / "ports.json", {}) or {}, points)
         except Exception as exc:
             print(f"  ! move notice failed ({type(exc).__name__}: {exc}) - carrying on",
                   file=sys.stderr)

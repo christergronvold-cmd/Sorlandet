@@ -547,20 +547,6 @@
       "tz": "Europe/Madrid",
       "cameras": [
         {
-          "name": "Sanlúcar de Barrameda",
-          "short": "River mouth",
-          "url": "https://rcnauticosanlucar.com/webcam/",
-          "site": "https://rcnauticosanlucar.com",
-          "lat": 36.78897,
-          "lon": -6.35269,
-          "view": "the mouth of the Guadalquivir at Bajo de Guía, looking across to the Doñana shore — she turns in from the sea here for the fifty-mile run up the river to Sevilla",
-          "by": "Real Club Náutico de Sanlúcar de Barrameda",
-          "img": "https://rcnauticosanlucar.com/camara.php",
-          "img_by": "Real Club Náutico de Sanlúcar de Barrameda, with the club's permission",
-          "permission": "given by the club on 26 October 2026: to show the view, and to keep frames of it, for the days of her passage",
-          "best": "approach"
-        },
-        {
           "name": "Puente de Triana",
           "short": "Triana",
           "url": "https://www.skylinewebcams.com/en/webcam/espana/andalucia/sevilla/siviglia-puente-de-triana.html",
@@ -1006,6 +992,32 @@
     }
   ],
   "passages": [
+    {
+      "name": "The mouth of the Guadalquivir",
+      "place": "Sanlúcar de Barrameda, Spain",
+      "lat": 36.78897,
+      "lon": -6.35269,
+      "see_nm": 3,
+      "tz": "Europe/Madrid",
+      "note": "she turns in from the sea here and runs fifty miles up the river to Sevilla, with the Doñana marshes along the whole starboard side - the club at Bajo de Guía gave us their camera for the days of her passage, and it is the only one on the river",
+      "cameras": [
+        {
+          "name": "Bajo de Guía",
+          "short": "River mouth",
+          "url": "https://rcnauticosanlucar.com/webcam/",
+          "site": "https://rcnauticosanlucar.com",
+          "lat": 36.78897,
+          "lon": -6.35269,
+          "view": "across the beach at Bajo de Guía and over the water to the Doñana shore a mile and a half away — she crosses this frame turning in from the sea, and every picture carries the clock in its own corner",
+          "by": "Real Club Náutico de Sanlúcar de Barrameda",
+          "img": "https://rcnauticosanlucar.com/camara.php",
+          "img_by": "Real Club Náutico de Sanlúcar de Barrameda, with the club's permission",
+          "img_every_s": 60,
+          "permission": "given by the club on 26 October 2026: to show the view, and to keep frames of it, for the days of her passage",
+          "best": "approach"
+        }
+      ]
+    },
     {
       "name": "Sound of Mull",
       "place": "Scotland",

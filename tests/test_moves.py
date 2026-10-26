@@ -26,9 +26,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import update  # noqa: E402
 
 fails = []
-PLAN = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))["ports"]
-FUNCHAL = next(p for p in PLAN if p["name"] == "Funchal")
-SEVILLA = next(p for p in PLAN if p["name"] == "Sevilla")
+PLAN = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))
+PORTS = PLAN["ports"]
+FUNCHAL = next(p for p in PORTS if p["name"] == "Funchal")
+SEVILLA = next(p for p in PORTS if p["name"] == "Sevilla")
+RIVER = next(q for q in PLAN["passages"] if "Guadalquivir" in q["name"])
 
 ANCHORAGE = (32.64420, -16.89664)      # where she lay, 0.68 nm off
 QUAY = (32.64288, -16.91460)           # where she moored on 26 October
@@ -54,9 +56,9 @@ class Run:
         self.state, self.track = {}, track
         self.sent = []
 
-    def __call__(self, where, sog=None, ns=None, ports=None):
+    def __call__(self, where, sog=None, ns=None, plan=None):
         self.state, ev = update.move_event(self.state, fix(where, sog, ns),
-                                           ports or PLAN, self.track)
+                                           plan or PLAN, self.track)
         if ev:
             self.sent.append(update.move_words(ev)[0])
         return ev
@@ -135,8 +137,46 @@ if r5((ANCHORAGE[0] + 0.02, ANCHORAGE[1]), 0.7, None) is not None:
     fails.append("0.7 knots with nothing said is neither under way nor stopped, and must"
                  " not be reported as either")
 
+# ------------------------------------------------------- the one he asked for by name
+# "...naar baaten gaar inn ved Sanlucar." It would not have fired. The club's camera sits
+# at the mouth of the Guadalquivir, fifty miles below the quay in Sevilla, so by the port
+# test a ship turning in over the bar is at sea and nothing happens - on the one day, and
+# at the one place, where the only camera on the river can see her.
+BAR = (36.80, -6.37)                        # standing in over the bar, 1.3 nm off the club
+UPRIVER = (37.05, -6.17)                    # well up the river, out of its reach
+
+r6 = Run(track_at(ANCHORAGE))
+r6(ANCHORAGE, 0.2, 1)
+ev = r6(BAR, 5.0, 0)
+if not ev or ev["kind"] != "passing":
+    fails.append("no message when she turns in at Sanlúcar, which is the one he asked for"
+                 " by name - and the only camera on fifty miles of river")
+else:
+    title, body = update.move_words(ev)
+    if "passing" not in title or "Guadalquivir" not in title:
+        fails.append(f"the message does not say what she is passing: {title!r}")
+    if "Bajo de Guía" not in body:
+        fails.append(f"it does not say which camera is looking at her: {body!r}")
+
+before = len(r6.sent)
+r6((36.795, -6.365), 5.0, 0)
+r6((36.81, -6.36), 5.0, 0)
+if len(r6.sent) != before:
+    fails.append("announced the same camera again while she was still in front of it -"
+                 " a ship standing up a river must not buzz every half hour")
+
+r6(UPRIVER, 5.0, 0)
+if len(r6.sent) != before:
+    fails.append("something fired on the way up the river, out of reach of both cameras")
+
+# ...and a ship stopped at the bar, waiting for the tide, is not passing anything.
+r7 = Run(track_at(ANCHORAGE))
+r7(ANCHORAGE, 0.2, 1)
+if r7(BAR, 0.1, 1) is not None:
+    fails.append("announced a ship lying stopped at the bar as passing the camera")
+
 print(f"ran the morning she sails and six ways of staying quiet; {len(r.sent)} messages"
-      f" from the first sequence: {r.sent}")
+      f" from the first sequence: {r.sent}; and {r6.sent} at the river mouth")
 if fails:
     print("FAILURES")
     for f in fails:

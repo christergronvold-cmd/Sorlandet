@@ -29,7 +29,12 @@ import update  # noqa: E402
 fails = []
 PLAN = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))
 SEVILLA = next(p for p in PLAN["ports"] if p["name"] == "Sevilla")
-GRABBABLE = [c for c in SEVILLA["cameras"] if c.get("hls") or c.get("img")]
+# It is not a camera AT Sevilla. It is a camera at a different place on the route, which
+# she passes a day before she gets there - and the plan has had a word for that since the
+# Sound of Mull. Filing it under the port was the shape of the bug as much as the
+# arithmetic was.
+RIVER = next(q for q in PLAN["passages"] if "Guadalquivir" in q["name"])
+GRABBABLE = [c for c in RIVER["cameras"] if c.get("hls") or c.get("img")]
 
 # Standing in over the bar, bound up the river: the hour the club said yes to.
 BAR = (36.80, -6.40)
@@ -49,25 +54,25 @@ def got(where, sog, cog):
 
 # ------------------------------------------------- the camera is where the camera is
 if not GRABBABLE:
-    fails.append("no camera at Sevilla serves a still or a stream, so nothing on the"
-                 " Guadalquivir can be photographed at all")
+    fails.append("no camera at the river mouth serves a still or a stream, so nothing on"
+                 " the Guadalquivir can be photographed at all")
 else:
     quay = update.nm_between(BAR, (SEVILLA["lat"], SEVILLA["lon"]))
-    lens = update.cam_off(SEVILLA, BAR, GRABBABLE)
+    lens = update.cam_off(RIVER, BAR, GRABBABLE)
     if quay <= update.CAPTURE_NM:
         fails.append(f"this test has stopped testing anything: the bar is {quay:.0f} nm"
                      f" from the Sevilla quay and CAPTURE_NM is {update.CAPTURE_NM}, so"
                      f" measuring to the port would no longer refuse. Check why it moved.")
-    if lens > update.CAPTURE_NM:
-        fails.append(f"she is {lens:.1f} nm from the nearest grabbable lens and the reach"
-                     f" is {update.CAPTURE_NM} nm - the camera is not placed, or it is"
-                     f" placed in the wrong river")
+    if lens > float(RIVER.get("see_nm") or update.CAPTURE_NM):
+        fails.append(f"she is {lens:.1f} nm from the nearest grabbable lens and the site"
+                     f" says it can see {RIVER.get('see_nm')} nm - the camera is not"
+                     f" placed, or it is placed in the wrong river")
 
 # Standing in from the sea at five knots: this is the picture, and there is one chance.
-if got(BAR, 5.0, 60) != "Sevilla":
+if got(BAR, 5.0, 60) != RIVER["name"]:
     fails.append(f"no capture over the bar at Sanlúcar, where she is"
-                 f" {update.cam_off(SEVILLA, BAR, GRABBABLE):.1f} nm from the club's"
-                 f" camera - measured to the quay she is forty, which is the mistake")
+                 f" {update.cam_off(RIVER, BAR, GRABBABLE):.1f} nm from the club's camera"
+                 f" - measured to the quay in Sevilla she is forty, which is the mistake")
 
 # ...and a still with no stream behind it has to be enough to start the round.
 if not any(c.get("img") and not c.get("hls") for c in GRABBABLE):
@@ -83,7 +88,7 @@ if got(BAR, 0.2, 60) is not None:
                  " departure, not a ship sitting off the bar waiting for the tide")
 
 # Going out again, down the river, is as worth a picture as coming in.
-if got(BAR, 5.0, 240) != "Sevilla":
+if got(BAR, 5.0, 240) != RIVER["name"]:
     fails.append("no capture on the way OUT past Sanlúcar - leaving is as photogenic as"
                  " arriving, and the rule is meant to be the same rule")
 
@@ -102,14 +107,14 @@ for port in PLAN["ports"] + (PLAN.get("passages") or []):
         if not (c.get("site") or c.get("url")):
             fails.append(f"{port['name']}/{c['name']} has permission recorded but no link"
                          f" to send anyone to")
-if not any(c.get("permission") for c in SEVILLA["cameras"]
+if not any(c.get("permission") for c in RIVER["cameras"]
            if "Sanlúcar" in c.get("by", "")):
     fails.append("the club's permission for the Guadalquivir is no longer recorded against"
                  " their camera, so the page will stop crediting them for it")
 
-print(f"over the bar at Sanlúcar: {update.cam_off(SEVILLA, BAR, GRABBABLE):.1f} nm from the"
+print(f"over the bar at Sanlúcar: {update.cam_off(RIVER, BAR, GRABBABLE):.1f} nm from the"
       f" lens, {update.nm_between(BAR, (SEVILLA['lat'], SEVILLA['lon'])):.0f} nm from the"
-      f" quay, reach {update.CAPTURE_NM} nm")
+      f" quay in Sevilla, reach {RIVER.get('see_nm')} nm")
 if fails:
     print("FAILURES")
     for f in fails:
