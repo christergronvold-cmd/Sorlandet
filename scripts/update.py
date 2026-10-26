@@ -858,6 +858,12 @@ MOVE_QUIET_KN = 0.5     # ...and this, with nothing else said, is stopped
 # must have got this far from where she was last seen lying still before anyone's phone
 # goes off at six in the morning.
 MOVE_AWAY_NM = 0.3
+# Whether the message actually reaches his phone cannot be tested by opening an issue by
+# hand: GitHub does not notify you about your own doing, so one he creates himself proves
+# nothing at all. It has to be the bot that creates it, through this code, with this
+# token, assigning him - which is what "notice: yes" on a run started by hand does, and
+# the only thing it does. The chain never passes it on.
+MOVE_TEST = os.environ.get("MOVE_TEST", "").strip().lower() in ("yes", "true", "1")
 
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 GH_REPO = os.environ.get("GITHUB_REPOSITORY", "").strip()
@@ -1005,6 +1011,26 @@ def tell_him_she_moved(position: dict, plan_ports: list, track_points: list) -> 
     "she is under way at Funchal" about a ship that has since tied up in Sevilla is
     worse than silence.
     """
+    if MOVE_TEST:
+        open_issue(
+            f"{SHIP_NAME}: test of the move notice",
+            "\n".join([
+                f"@{GH_REPO.split('/')[0]}" if "/" in GH_REPO else "",
+                "",
+                "This is the test. Nothing has happened to the ship.",
+                "",
+                "It was sent by the job, from the same code and the same token as the"
+                " real thing, and assigned to you the same way - so if this reached your"
+                " phone, the real one will too.",
+                "",
+                f"She was last heard at {position.get('seen_utc') or 'an unknown time'},"
+                f" {position.get('lat')}, {position.get('lon')}.",
+                "",
+                f"[Open the page]({PAGE_URL})",
+                "",
+                "_Close it. The next one will mean something._",
+            ]))
+
     before = read_json(MOVES, {}) or {}
     state, event = move_event(before, position, plan_ports, track_points)
     pending = event or before.get("pending")

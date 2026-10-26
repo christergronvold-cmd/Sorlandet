@@ -34,6 +34,10 @@ on:
         description: "Start the next run when this one ends"
         required: false
         default: "yes"
+      notice:
+        description: "Send one test move notice (yes/no)"
+        required: false
+        default: "no"
 
 permissions:
   contents: write
@@ -103,6 +107,9 @@ jobs:
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
           VESSELFINDER_KEY: ${{ secrets.VESSELFINDER_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only ever "yes" on a run started by hand - the chain below dispatches its
+          # successor with hours and chain and nothing else, so a test cannot echo.
+          MOVE_TEST: ${{ inputs.notice || 'no' }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
           LISTEN_SECONDS: "1740"
