@@ -92,7 +92,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install websockets pillow
+          pip install websockets pillow pywebpush
           # One frame off a live HLS stream while she is coming in. ubuntu-latest ships
           # ffmpeg; the job checks for it and simply does not capture if it is missing,
           # so this line failing must never take the position updates down with it.
@@ -103,6 +103,8 @@ jobs:
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
           VESSELFINDER_KEY: ${{ secrets.VESSELFINDER_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
           LISTEN_SECONDS: "1740"

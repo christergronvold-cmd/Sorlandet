@@ -27,9 +27,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Install the push library
+        run: pip install pywebpush
       - name: Send one test notice
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
         run: |
           python3 - <<'PY'
           import sys
@@ -37,6 +41,6 @@ jobs:
           import update
           if not update.test_notice():
               raise SystemExit("the notice could not be sent - see the error above")
-          print("sent. If it did not reach your phone, the fault is in GitHub's"
-                " notification settings and not in the job.")
+          print("sent, on whichever channels are configured. If nothing reached your"
+                " phone, the fault is in the notification settings and not in the job.")
           PY

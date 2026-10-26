@@ -871,6 +871,56 @@ GH_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 GH_REPO = os.environ.get("GITHUB_REPOSITORY", "").strip()
 GH_API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
 PAGE_URL = os.environ.get("PAGE_URL", "https://christergronvold-cmd.github.io/Sorlandet/")
+# A push reaches a phone that has the page shut, which an e-mail does not reliably do:
+# the test on 26 October arrived as mail, and mail is exactly the thing that may not
+# wake you at twenty to seven on a Saturday - which is the sort of hour a ship sails.
+#
+# There is no server behind this page, so the two halves of web push are split. The
+# signing and sending is here, in the job that already knows when she has moved. The
+# keeping of subscriptions is, for now, a repository secret with one phone in it. That
+# is honest for one person and no use at all for seventy-two, and the second half is the
+# next piece of work - but the sending will already have been proved by then.
+PUSH_SUBS = os.environ.get("PUSH_SUBSCRIPTIONS", "").strip()
+VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
+# The push services want to know who is sending. The page is a better answer than a
+# personal address, and it is the thing anyone receiving one would want to open anyway.
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", PAGE_URL)
+
+
+def send_push(title: str, line: str) -> int:
+    """Push to every device that has asked for it. Returns how many were reached."""
+    if not PUSH_SUBS or not VAPID_PRIVATE:
+        return 0
+    try:
+        subs = json.loads(PUSH_SUBS)
+    except ValueError:
+        print("  ! PUSH_SUBSCRIPTIONS is not JSON - no push sent", file=sys.stderr)
+        return 0
+    if isinstance(subs, dict):
+        subs = [subs]
+    try:
+        from pywebpush import webpush
+    except ImportError:
+        print("  ! pywebpush is not installed - no push sent", file=sys.stderr)
+        return 0
+    payload = json.dumps({"title": title, "body": line, "url": PAGE_URL})
+    sent = 0
+    for sub in subs:
+        try:
+            webpush(subscription_info=sub, data=payload,
+                    vapid_private_key=VAPID_PRIVATE,
+                    vapid_claims={"sub": VAPID_SUBJECT})
+            sent += 1
+        except Exception as exc:
+            # Never the endpoint itself in a log: it is the capability to push to that
+            # phone, and the logs of this repository are public.
+            code = getattr(getattr(exc, "response", None), "status_code", None)
+            print(f"  ! push to one device failed ({code or type(exc).__name__})"
+                  + (" - that subscription is dead and should be taken out"
+                     if code in (404, 410) else ""), file=sys.stderr)
+    if sent:
+        print(f"  -> pushed to {sent} device(s)")
+    return sent
 
 
 def _moving_now(position: dict) -> bool | None:
@@ -978,8 +1028,8 @@ def move_event(before: dict, position: dict, plan: dict,
                    "lat": here[0], "lon": here[1]}
 
 
-def move_words(ev: dict) -> tuple[str, str]:
-    """The message itself. Short enough to read on a lock screen, sourced in the body."""
+def move_words(ev: dict) -> tuple[str, str, str]:
+    """The message: a title, the long form for an issue, and one line for a lock screen."""
     port, off, sog = ev["port"], ev["off_nm"], ev.get("sog_kn")
     pace = f"{float(sog):.1f} knots" if sog is not None else "making way"
     where = f"{off:.1f} nm from the harbour" if off >= 0.1 else "at the harbour"
@@ -1016,7 +1066,7 @@ def move_words(ev: dict) -> tuple[str, str]:
         "",
         "_Opened by the tracking job. Close it; it is a notification, not a task._",
     ])
-    return title, body
+    return title, body, first
 
 
 def open_issue(title: str, body: str) -> bool:
@@ -1080,7 +1130,10 @@ def test_notice(position: dict | None = None) -> bool:
             f"[Open the page]({PAGE_URL})",
             "",
             "_Close it. The next one will mean something._",
-        ]))
+        ])) | bool(send_push(
+            f"{SHIP_NAME}: test",
+            "This is the test. Nothing has happened to the ship - if this reached your"
+            " phone, the real notice will too."))
 
 
 def tell_him_she_moved(position: dict, plan: dict, track_points: list) -> None:
@@ -1099,8 +1152,12 @@ def tell_him_she_moved(position: dict, plan: dict, track_points: list) -> None:
     pending = event or before.get("pending")
     state["pending"] = pending
     if pending:
-        title, body = move_words(pending)
-        if open_issue(title, body):
+        title, body, line = move_words(pending)
+        # Both channels, and the notice counts as delivered if either got through. A
+        # second copy of a message is a nuisance; a lost one is the whole point missed.
+        reached = open_issue(title, body)
+        reached = send_push(title, line) > 0 or reached
+        if reached:
             told = (before.get("told") or [])[-9:]
             told.append({"t": iso(now_utc()), "kind": pending["kind"],
                          "port": pending["port"], "title": title})

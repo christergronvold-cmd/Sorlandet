@@ -101,12 +101,16 @@ ev = r(QUAY, 0.0, 5)
 if not ev or ev["kind"] != "still":
     fails.append("no message when she stopped at the quay - the arrival is half the story")
 else:
-    title, body = update.move_words(ev)
+    title, body, line = update.move_words(ev)
     if "has arrived at Funchal" not in title:
         fails.append(f"arrival message reads {title!r}")
     if "moored in Funchal" not in body:
         fails.append("she broadcast NAVSTAT 5, moored, and the message does not pass that"
                      f" on: {body!r}")
+    # The one line a lock screen shows is the only part most people will ever read, so it
+    # has to carry the news on its own - no @mention, no bullet list, no link.
+    if len(line) > 160 or "Funchal" not in line:
+        fails.append(f"the lock-screen line does not stand alone or is too long: {line!r}")
 
 # At anchor is said as at anchor, not as moored.
 r2 = Run(track_at(ANCHORAGE))
@@ -152,7 +156,7 @@ if not ev or ev["kind"] != "passing":
     fails.append("no message when she turns in at Sanlúcar, which is the one he asked for"
                  " by name - and the only camera on fifty miles of river")
 else:
-    title, body = update.move_words(ev)
+    title, body, line = update.move_words(ev)
     if "passing" not in title or "Guadalquivir" not in title:
         fails.append(f"the message does not say what she is passing: {title!r}")
     if "Bajo de Guía" not in body:

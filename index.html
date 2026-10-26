@@ -480,6 +480,15 @@
     the ship or the school.
     <span id="stamp"></span>
   </footer>
+  <div id="push" hidden style="margin:14px 0;padding:12px 14px;border:1px solid var(--line);
+       border-radius:10px;font-size:13.5px;line-height:1.5">
+    <b>Tell me when she moves</b>
+    <div id="pushwhy" style="color:var(--muted);margin:4px 0 9px"></div>
+    <button id="pushgo" style="font:inherit;padding:7px 12px;border-radius:8px;
+            border:1px solid var(--line);background:var(--card);cursor:pointer">
+      Turn on notifications</button>
+    <div id="pushnote" style="margin-top:9px;color:var(--muted);word-break:break-all"></div>
+  </div>
   <p id="hits" hidden></p>
 </div>
 
@@ -4521,6 +4530,89 @@ function wireSharing() {
   document.getElementById("hintclose").addEventListener("click", () => {
     hint.style.display = "none";
     document.body.classList.remove("hinting");
+  });
+})();
+
+// ---- being told she has moved, without having the page open
+//
+// There is no server behind this page - it is a folder on GitHub Pages - and a web push
+// needs somewhere to keep the subscriptions and something to sign the messages. The
+// signing half is the job, which already runs every half hour and already knows when she
+// has moved. The keeping half does not exist yet, so for now the panel hands the
+// subscription back as text and a person puts it where the job can read it. That is fine
+// for one phone and obviously not fine for seventy-two, which is the next piece of work.
+//
+// Shown when the page is running as an installed app, or when ?push is in the address.
+//
+// That is not a hack to keep it hidden: on an iPhone a push can ONLY be delivered to a
+// page that has been added to the home screen and opened from there, so the installed
+// app is exactly and only where the button can do anything. A visitor reading this in a
+// tab would be offered something that cannot work for them.
+//
+// It matters for the setup too. iOS launches an installed app at the manifest's
+// start_url, which drops any query string - so "open ?push and then add to home screen"
+// would not have carried the switch inside, and the one place the button is needed is
+// the one place it would not have appeared.
+const VAPID_PUBLIC = "BGFvxMkjAnmb-UdXNr2L_f3c87c-HZe_0epsGrucuoGldXEALqLSd-2s4qDLrSM3RbKepYtE5UIwbdPKPRQXPUk";
+
+(function pushPanel() {
+  const asked = new URLSearchParams(location.search).has("push");
+  const installed = window.matchMedia("(display-mode: standalone)").matches
+    || navigator.standalone;
+  if (!asked && !installed) return;
+  const box = document.getElementById("push");
+  const why = document.getElementById("pushwhy");
+  const go = document.getElementById("pushgo");
+  const note = document.getElementById("pushnote");
+  box.hidden = false;
+
+  const standalone = installed;
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    go.disabled = true;
+    why.textContent = iOS && !standalone
+      ? "On an iPhone this only works once the page is on your home screen: share icon, "
+        + "“Add to Home Screen”, then open it from there and come back to this panel. "
+        + "Safari in a tab cannot receive notifications at all."
+      : "This browser cannot receive push notifications.";
+    return;
+  }
+  why.textContent = "A notice when she weighs anchor, when she passes somewhere with a "
+    + "camera on her, and when she ties up again. Nothing else.";
+
+  const keyBytes = k => {
+    const pad = "=".repeat((4 - k.length % 4) % 4);
+    const raw = atob((k + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  };
+
+  go.addEventListener("click", async () => {
+    go.disabled = true;
+    note.textContent = "Asking…";
+    try {
+      const reg = await navigator.serviceWorker.register("sw.js");
+      await navigator.serviceWorker.ready;
+      const ok = await Notification.requestPermission();
+      if (ok !== "granted") {
+        note.textContent = "Not granted. Nothing will be sent.";
+        go.disabled = false;
+        return;
+      }
+      const sub = await reg.pushManager.subscribe(
+        { userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC) });
+      note.innerHTML = "<b>Subscribed on this device.</b>" + (asked
+        ? " Until the page has somewhere to keep these, paste the line below into the "
+          + "repository secret <code>PUSH_SUBSCRIPTIONS</code>, as a one-item list: "
+          + "<code>[ … ]</code><textarea readonly rows=\"5\" style=\"width:100%;"
+          + "margin-top:7px;font:12px ui-monospace,monospace\"></textarea>"
+        : " You will be told when she moves.");
+      if (asked) note.querySelector("textarea").value = JSON.stringify(sub.toJSON());
+    } catch (err) {
+      note.textContent = "Could not subscribe: " + err;
+      go.disabled = false;
+    }
   });
 })();
 
