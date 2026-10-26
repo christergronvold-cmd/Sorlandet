@@ -2832,6 +2832,25 @@ def closing_made_good(points: list, target: tuple) -> float | None:
     return (off_a - off_b) / hours
 
 
+def cam_off(site: dict, here: tuple, cams: list) -> float:
+    """How far she is from the nearest lens that can be grabbed - not from the harbour it
+    is filed under.
+
+    Sanlúcar's camera watches the mouth of the Guadalquivir. The quay in Sevilla is fifty
+    miles up the river from it, and this used to measure the fifty against a nine-mile
+    reach, so the only camera on the whole river could never have taken a frame - on the
+    one passage where a club has given us written permission to keep the pictures.
+
+    It is the Porto Moniz mistake of 19 October, in the capture path this time: a distance
+    to the port standing in for a distance to the lens. Where no camera says where it is,
+    the port still answers, which is every camera but Funchal's and these two.
+    """
+    placed = [c for c in cams if c.get("lat") is not None and c.get("lon") is not None]
+    if placed:
+        return min(nm_between(here, (float(c["lat"]), float(c["lon"]))) for c in placed)
+    return nm_between(here, (float(site["lat"]), float(site["lon"])))
+
+
 def capture_port(position: dict, plan: dict, track: list | None = None) -> dict | None:
     """The port she is closing on and can be photographed at, or None.
 
@@ -2880,20 +2899,25 @@ def capture_port(position: dict, plan: dict, track: list | None = None) -> dict 
         cams = [c for c in (site.get("cameras") or []) if c.get("hls") or c.get("img")]
         if not cams or site.get("lat") is None:
             continue
-        off = nm_between((lat, lon), (float(site["lat"]), float(site["lon"])))
+        off = cam_off(site, (lat, lon), cams)
         speed = sog if have_reported else abs(
             closing_made_good(track, (float(site["lat"]), float(site["lon"]))) or 0)
         if off > float(site.get("see_nm") or CAPTURE_NM) or speed < CAPTURE_LEAVING_KN:
             continue
-        print(f"* she is passing {site['name']}, {off:.1f} nm off at {speed:.1f} kn "
+        print(f"* she is passing {site['name']}, {off:.1f} nm off its nearest camera "
+              f"at {speed:.1f} kn "
               f"- capturing from {len(cams)} camera(s)")
         return site
 
     for port in (plan.get("ports") or []):
-        cams = [c for c in (port.get("cameras") or []) if c.get("hls")]
+        # "or img". The passages branch above has always taken both, and capture_frames
+        # itself takes both - only this line asked for a live stream, so a camera that
+        # serves a still and nothing else could be photographed but could never START a
+        # round. Sanlúcar is exactly that camera: a Foscam posting one JPEG, no stream.
+        cams = [c for c in (port.get("cameras") or []) if c.get("hls") or c.get("img")]
         if not cams:
             continue
-        off = nm_between((lat, lon), (port["lat"], port["lon"]))
+        off = cam_off(port, (lat, lon), cams)
         if off > CAPTURE_NM:
             continue
         # Her speed projected onto the bearing to the port: positive coming in, negative
@@ -2926,7 +2950,8 @@ def capture_port(position: dict, plan: dict, track: list | None = None) -> dict 
         if not (closing >= CAPTURE_CLOSING_KN or closing <= -CAPTURE_LEAVING_KN):
             continue
         way = "closing at" if closing > 0 else "standing out at"
-        print(f"* she is {off:.1f} nm from {port['name']}, {way} {abs(closing):.1f} kn"
+        print(f"* she is {off:.1f} nm from the nearest camera at {port['name']},"
+              f" {way} {abs(closing):.1f} kn"
               f"{'' if have_reported else ' (worked out from her track)'}"
               f" - capturing from {len(cams)} camera(s)")
         return port

@@ -3945,9 +3945,25 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
             c.by ? ` <span style="color:var(--muted)">· ${c.by}</span>` : ""}</span>
         </li>`).join("")}</ul>
       <div style="font-size:12.5px;color:var(--muted);margin-top:9px">
-        ${camPort.cameras.some(c => c.by === "Shetland Webcams")
-          ? `Cameras by <a href="https://www.shetlandwebcams.com" target="_blank"
-             rel="noopener">shetlandwebcams.com</a>, used with their permission. ` : ""}
+        ${(() => {
+          // Who lent us a camera, read from the data rather than named in the code.
+          //
+          // This used to test for the string "Shetland Webcams", because Andy was the
+          // only one who had given permission. On 26 October the Real Club Náutico de
+          // Sanlúcar gave theirs for the run up the Guadalquivir - the one river on the
+          // whole voyage with a single camera on it - and a credit that only works for
+          // one name is a credit that will be missing the next time somebody is kind.
+          const owed = new Map();
+          for (const c of camPort.cameras) {
+            if (c.permission && c.by && !owed.has(c.by)) owed.set(c.by, c.site || c.url);
+          }
+          if (!owed.size) return "";
+          const names = [...owed].map(([who, href]) => href
+            ? `<a href="${href}" target="_blank" rel="noopener">${who}</a>` : who);
+          const list = names.length < 2 ? names[0]
+            : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+          return `Cameras by ${list}, used with their permission. `;
+        })()}
         ${camPort.cameras.some(c => c.rewind_h)
           ? "These rewind, so an arrival can still be watched hours later."
           : "These are live views only, with no archive — they cannot be wound back."}
