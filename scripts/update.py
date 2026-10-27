@@ -235,7 +235,8 @@ def fetch_from_foundation() -> list[dict]:
 # -------------------------------------------------------------- AIS position
 
 
-def fetch_position_from_aisstream(api_key: str) -> tuple[dict | None, list[dict]]:
+def fetch_position_from_aisstream(api_key: str,
+                                  on_position=None) -> tuple[dict | None, list[dict]]:
     """Listens on aisstream and collects EVERY position for our MMSI in the window.
 
     The ship transmits every few minutes in coastal waters. Sampling for a couple of
@@ -327,6 +328,17 @@ def fetch_position_from_aisstream(api_key: str) -> tuple[dict | None, list[dict]
                     "seen_utc": seen,
                     "source": "aisstream.io",
                 }
+                # Offered to the notice while the round is still running. This listener
+                # holds the connection open for twenty-nine minutes and the rest of the
+                # job only thinks afterwards, so a fix that arrived two minutes in used
+                # to sit for twenty-seven before anybody looked at it. Nothing here may
+                # be allowed to break the listening, which is the job's real work.
+                if on_position is not None:
+                    try:
+                        on_position(collected[seen])
+                    except Exception as exc:
+                        print(f"  ! live notice check: {type(exc).__name__}: {exc}",
+                              file=sys.stderr)
     except Exception as exc:                  # network, TLS, dropped connection ...
         print(f"! error talking to aisstream: {exc}", file=sys.stderr)
 
@@ -861,6 +873,23 @@ MOVE_QUIET_KN = 0.5     # ...and this, with nothing else said, is stopped
 MOVE_AWAY_NM = 0.3
 # A place she passes rather than calls at, when it does not say how far it can see.
 MOVE_PASS_NM = 5.0
+# How much warning is worth having, in minutes.
+#
+# The first version told him she WAS passing somewhere. That is a report, and a report is
+# the wrong shape for a camera: she crosses the mouth of the Guadalquivir in about a
+# quarter of an hour, so a message sent as she enters the frame - however fast - arrives
+# while he is still unlocking the phone. Shaving the pipeline from thirty minutes to five
+# does not fix that. Only lead time does.
+#
+# An hour at five knots is five miles of warning. It is enough to put the kettle on, and
+# it makes the job's own slowness stop mattering: twenty minutes of lag inside an hour of
+# notice is still forty minutes of notice.
+MOVE_LEAD_MIN = 60.0
+# ...and how far out to bother doing the arithmetic. Twenty miles is an hour at twenty
+# knots, which she has never done and never will.
+MOVE_LEAD_NM = 20.0
+# Below this there is no honest arrival time to give.
+MOVE_LEAD_KN = 0.5
 # Whether the message actually reaches his phone cannot be tested by opening an issue by
 # hand: GitHub does not notify you about your own doing, so one he creates himself proves
 # nothing at all. It has to be the bot that creates it, through this code, with this
@@ -982,6 +1011,43 @@ def _moving_now(position: dict) -> bool | None:
     return None             # between the two, with nothing said: not an answer
 
 
+def _closing_on(position: dict, track_points: list, here: tuple, there: tuple):
+    """How fast the distance to a point is shrinking, in knots. Negative is opening.
+
+    Her reported speed and course when she gives them; her own track when she does not,
+    which is most of the time out here - the foundation's feed sends bare positions.
+    """
+    sog, cog = position.get("sog_kn"), position.get("cog_deg")
+    if sog is not None and cog is not None:
+        try:
+            brg = bearing(here, there)
+            return float(sog) * math.cos(math.radians((brg - float(cog) + 540) % 360 - 180))
+        except (TypeError, ValueError):
+            pass
+    return closing_made_good(track_points, there)
+
+
+def _site_name(site: dict) -> str:
+    """What to call a place in one line on a lock screen."""
+    place = (site.get("place") or "").split(",")[0].strip()
+    return site.get("short") or place or site.get("name") or "somewhere"
+
+
+def _watched_sites(plan: dict) -> list:
+    """Everywhere with a camera that she can be approaching: the passages and the ports.
+
+    A port's arrival and departure have their own messages below, and they are about the
+    ship. This is about the lens: the hour before she is in front of one is the hour that
+    is worth telling anybody about, and it is the same hour whether the lens is on a quay
+    in Sevilla or on a clubhouse at the mouth of the river fifty miles below it.
+    """
+    out = []
+    for q in ((plan or {}).get("passages") or []) + ((plan or {}).get("ports") or []):
+        if q.get("lat") is not None and (q.get("cameras") or []):
+            out.append(q)
+    return out
+
+
 def move_event(before: dict, position: dict, plan: dict,
                track_points: list) -> tuple[dict, dict | None]:
     """What she is doing, and whether it is news. Pure - the caller owns the file."""
@@ -995,37 +1061,50 @@ def move_event(before: dict, position: dict, plan: dict,
     if moving is None:
         return state, None
 
-    # First, the places she goes PAST rather than to.
+    # First, the hour BEFORE she is in front of a camera.
     #
     # The club's camera at the mouth of the Guadalquivir is fifty miles below the quay in
-    # Sevilla. By the port test below, a ship turning in over the bar at Sanlúcar is
-    # simply at sea - and that is the one moment the only camera on the river has
-    # anything to show. Asked for by name on 26 October, and it would not have fired.
+    # Sevilla, so by the port test further down a ship turning in over the bar at Sanlúcar
+    # is simply at sea. That was the first bug here. The second was subtler: the message
+    # said she WAS passing, and she is in that frame for a quarter of an hour.
     #
-    # The plan has had a word for such a place since the Sound of Mull, and each one says
-    # how far it can see, so there is no new number here to tune. One message per place
-    # per passing: the name is remembered until she is out of its reach again, so a ship
-    # standing up the river does not announce the same camera every half hour.
-    site, gap = None, None
-    for q in ((plan or {}).get("passages") or []):
-        if q.get("lat") is None:
+    # So this is a forecast, not a report. The nearest camera she is closing on, and how
+    # long until she is there. One message per place per approach - the name is kept until
+    # she is out of the band entirely, so a ship standing fifty miles up a river does not
+    # announce the same camera every half hour.
+    site, gap, eta = None, None, None
+    for q in _watched_sites(plan):
+        there = (float(q["lat"]), float(q["lon"]))
+        d = nm_between(here, there)
+        if d > float(q.get("see_nm") or MOVE_PASS_NM) + MOVE_LEAD_NM:
             continue
-        d = nm_between(here, (float(q["lat"]), float(q["lon"])))
-        if d <= float(q.get("see_nm") or MOVE_PASS_NM) and (gap is None or d < gap):
+        if gap is None or d < gap:
+            closing = _closing_on(position, track_points, here, there)
             site, gap = q, d
+            eta = (d / closing) * 60 if closing and closing >= MOVE_LEAD_KN else None
     if site is None:
         state.pop("past", None)
-    else:
-        first = state.get("past") != site["name"]
+    elif state.get("past") != site["name"] and moving and eta is not None \
+            and eta <= MOVE_LEAD_MIN:
         state["past"] = site["name"]
-        if first and moving:
-            cams = [c.get("name") for c in (site.get("cameras") or []) if c.get("name")]
-            return state, {"kind": "passing", "port": site["name"],
-                           "place": site.get("place"), "cameras": cams,
-                           "off_nm": round(gap, 2), "sog_kn": position.get("sog_kn"),
-                           "nav_status": position.get("nav_status"),
-                           "seen_utc": position.get("seen_utc"),
-                           "lat": here[0], "lon": here[1]}
+        # The nearest lenses to the place, not the first two in the file. Funchal's list
+        # is ordered from the far side of the island inwards, so naming the head of it
+        # offered her "Porto Moniz, Paul do Mar, Calheta" for a ship a mile off the
+        # waterfront - three cameras eighteen miles away on the other coast.
+        at = (float(site["lat"]), float(site["lon"]))
+        named = [c for c in (site.get("cameras") or []) if c.get("name")]
+        placed = [c for c in named if c.get("lat") is not None]
+        order = sorted(placed, key=lambda c: nm_between(at, (float(c["lat"]),
+                                                             float(c["lon"])))) or named
+        cams = [c["name"] for c in order[:2]]
+        return state, {"kind": "coming", "port": site["name"], "place": site.get("place"),
+                       "short": _site_name(site), "cameras": cams,
+                       "more": max(0, len(named) - len(cams)),
+                       "mins_out": int(round(eta / 5.0) * 5) or 5,
+                       "off_nm": round(gap, 2), "sog_kn": position.get("sog_kn"),
+                       "nav_status": position.get("nav_status"),
+                       "seen_utc": position.get("seen_utc"),
+                       "lat": here[0], "lon": here[1]}
 
     # Which port this is about: the nearest of the one she is lying at, the one she is
     # bound for, and the one she has just left. Measured to the harbour, not to a camera -
@@ -1074,14 +1153,17 @@ def move_words(ev: dict) -> tuple[str, str, str]:
     port, off, sog = ev["port"], ev["off_nm"], ev.get("sog_kn")
     pace = f"{float(sog):.1f} knots" if sog is not None else "making way"
     where = f"{off:.1f} nm from the harbour" if off >= 0.1 else "at the harbour"
-    if ev["kind"] == "passing":
-        title = f"{SHIP_NAME} is passing {port}"
+    if ev["kind"] == "coming":
+        mins = ev.get("mins_out")
+        title = f"{SHIP_NAME} is about {mins} minutes from {ev.get('short') or port}"
         seen = ev.get("cameras") or []
-        lens = (f" The camera at {seen[0]} is looking at that water now."
-                if len(seen) == 1 else
-                f" The cameras there ({', '.join(seen)}) are looking at that water now."
-                if seen else "")
-        first = (f"She is {off:.1f} nm off {ev.get('place') or port}, {pace}.{lens}")
+        more = ev.get("more") or 0
+        lens = (f" The camera there is {seen[0]}" if len(seen) == 1
+                else f" Nearest cameras: {' and '.join(seen)}" if seen else "")
+        if lens:
+            lens += (f", and {more} more." if more else ".")
+        first = (f"She is {off:.1f} nm out and {pace} — about {mins} minutes from"
+                 f" {ev.get('place') or port}.{lens}")
     elif ev["kind"] == "underway":
         title = f"{SHIP_NAME} is under way at {port}"
         first = (f"She was lying still at {port} and is now moving - {pace}, {where}.")
@@ -1143,6 +1225,24 @@ def open_issue(title: str, body: str) -> bool:
         print(f"  ! could not open the issue ({type(exc).__name__}: {exc}) - keeping it"
               f" to try again next run", file=sys.stderr)
         return False
+
+
+def live_watch(plan: dict, track_points: list):
+    """A watcher to hand the listener, so a notice goes out the minute she is heard.
+
+    Throttled to once a minute: she transmits every few seconds under way, and there is
+    no sense reading and writing the state file at that rate to be told the same thing.
+    A minute is far below the hour of warning the notice is built to give.
+    """
+    last = [0.0]
+
+    def watch(fix: dict) -> None:
+        if time.monotonic() - last[0] < 60:
+            return
+        last[0] = time.monotonic()
+        tell_him_she_moved(fix, plan, track_points)
+
+    return watch
 
 
 def test_notice(position: dict | None = None) -> bool:
@@ -3942,7 +4042,9 @@ def main() -> int:
                                       daemon=True)
         cap_thread.start()
 
-        position, ais_points = fetch_position_from_aisstream(api_key)
+        plan_now = read_json(DATA / "ports.json", {}) or {}
+        position, ais_points = fetch_position_from_aisstream(
+            api_key, on_position=live_watch(plan_now, points))
         bw_thread.join(timeout=30)
 
         with lock:
@@ -4190,6 +4292,9 @@ def main() -> int:
     if not demo:
         try:
             tell_him_she_moved(shown, read_json(DATA / "ports.json", {}) or {}, points)
+            # ...and the live watcher above may already have sent it twenty minutes ago.
+            # That is the point of it; this one is the backstop for everything aisstream
+            # cannot hear, which at Madeira was nine days running.
         except Exception as exc:
             print(f"  ! move notice failed ({type(exc).__name__}: {exc}) - carrying on",
                   file=sys.stderr)

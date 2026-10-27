@@ -37,8 +37,9 @@ QUAY = (32.64288, -16.91460)           # where she moored on 26 October
 SEA = (34.50, -14.00)                  # a day and a half out
 
 
-def fix(where, sog=None, ns=None, mins_old=5):
+def fix(where, sog=None, ns=None, mins_old=5, cog=None):
     return {"lat": where[0], "lon": where[1], "sog_kn": sog, "nav_status": ns,
+            "cog_deg": cog,
             "seen_utc": update.iso(update.now_utc() - timedelta(minutes=mins_old))}
 
 
@@ -56,8 +57,8 @@ class Run:
         self.state, self.track = {}, track
         self.sent = []
 
-    def __call__(self, where, sog=None, ns=None, plan=None):
-        self.state, ev = update.move_event(self.state, fix(where, sog, ns),
+    def __call__(self, where, sog=None, ns=None, plan=None, cog=None):
+        self.state, ev = update.move_event(self.state, fix(where, sog, ns, cog=cog),
                                            plan or PLAN, self.track)
         if ev:
             self.sent.append(update.move_words(ev)[0])
@@ -141,46 +142,78 @@ if r5((ANCHORAGE[0] + 0.02, ANCHORAGE[1]), 0.7, None) is not None:
     fails.append("0.7 knots with nothing said is neither under way nor stopped, and must"
                  " not be reported as either")
 
-# ------------------------------------------------------- the one he asked for by name
-# "...naar baaten gaar inn ved Sanlucar." It would not have fired. The club's camera sits
-# at the mouth of the Guadalquivir, fifty miles below the quay in Sevilla, so by the port
-# test a ship turning in over the bar is at sea and nothing happens - on the one day, and
-# at the one place, where the only camera on the river can see her.
-BAR = (36.80, -6.37)                        # standing in over the bar, 1.3 nm off the club
-UPRIVER = (37.05, -6.17)                    # well up the river, out of its reach
+# ----------------------------------------------- the hour before, not the minute after
+# "...naar baaten gaar inn ved Sanlucar." The first version of this fired as she entered
+# the frame. She crosses the mouth of the Guadalquivir in about a quarter of an hour, so
+# that message arrives while the phone is still being unlocked - and making the job
+# faster does not fix it, because the problem is not lag, it is that the event is the
+# wrong one. The hour BEFORE is the thing worth sending.
+RIVER_AT = (RIVER["lat"], RIVER["lon"])
+
+
+def out_at(nm_off, brg_from_site):
+    """A position nm_off miles from the river mouth, on the given bearing from it."""
+    import math
+    d = nm_off / 60.0
+    lat = RIVER_AT[0] + d * math.cos(math.radians(brg_from_site))
+    lon = RIVER_AT[1] + d * math.sin(math.radians(brg_from_site)) / math.cos(
+        math.radians(RIVER_AT[0]))
+    return (lat, lon)
+
+
+APPROACH = out_at(4.5, 215)                 # four and a half miles south-west, at sea
+COURSE_IN = 35                              # ...heading for the bar
 
 r6 = Run(track_at(ANCHORAGE))
 r6(ANCHORAGE, 0.2, 1)
-ev = r6(BAR, 5.0, 0)
-if not ev or ev["kind"] != "passing":
-    fails.append("no message when she turns in at Sanlúcar, which is the one he asked for"
-                 " by name - and the only camera on fifty miles of river")
+ev = r6(APPROACH, 5.0, 0, cog=COURSE_IN)
+if not ev or ev["kind"] != "coming":
+    fails.append("no warning on the run in to Sanlúcar - four and a half miles out at"
+                 " five knots is the better part of an hour, which is the whole point")
 else:
     title, body, line = update.move_words(ev)
-    if "passing" not in title or "Guadalquivir" not in title:
-        fails.append(f"the message does not say what she is passing: {title!r}")
+    if not 30 <= ev["mins_out"] <= 75:
+        fails.append(f"the warning says {ev['mins_out']} minutes for 4.5 nm at 5 knots")
+    if "minutes from" not in title or "Sanlúcar" not in title:
+        fails.append(f"the title does not say how long or where: {title!r}")
     if "Bajo de Guía" not in body:
-        fails.append(f"it does not say which camera is looking at her: {body!r}")
+        fails.append(f"it does not name the camera that will see her: {body!r}")
+    if len(line) > 160:
+        fails.append(f"the lock-screen line is too long to read: {len(line)} characters")
 
+# Closer in, and then right on top of it: already told, so nothing more.
 before = len(r6.sent)
-r6((36.795, -6.365), 5.0, 0)
-r6((36.81, -6.36), 5.0, 0)
+r6(out_at(3.0, 215), 5.0, 0, cog=COURSE_IN)
+r6(out_at(0.6, 215), 5.0, 0, cog=COURSE_IN)
 if len(r6.sent) != before:
-    fails.append("announced the same camera again while she was still in front of it -"
-                 " a ship standing up a river must not buzz every half hour")
+    fails.append("announced the same camera again as she closed on it - one message per"
+                 " approach, or the hour of warning becomes four messages")
 
-r6(UPRIVER, 5.0, 0)
+# Well up the river, out of the band: the name is forgotten so a return trip counts again.
+r6((37.05, -6.17), 5.0, 0, cog=45)
 if len(r6.sent) != before:
-    fails.append("something fired on the way up the river, out of reach of both cameras")
+    fails.append("something fired halfway up the river, out of reach of both cameras")
 
-# ...and a ship stopped at the bar, waiting for the tide, is not passing anything.
+# A ship stopped off the bar waiting for the tide is not approaching anything.
 r7 = Run(track_at(ANCHORAGE))
 r7(ANCHORAGE, 0.2, 1)
-if r7(BAR, 0.1, 1) is not None:
-    fails.append("announced a ship lying stopped at the bar as passing the camera")
+if r7(APPROACH, 0.1, 1, cog=COURSE_IN) is not None:
+    fails.append("announced a ship lying stopped off the bar as an hour from the camera")
+
+# ...and neither is one crossing the bay on her way somewhere else entirely.
+r8 = Run(track_at(ANCHORAGE))
+r8(ANCHORAGE, 0.2, 1)
+if r8(APPROACH, 5.0, 0, cog=215) is not None:
+    fails.append("announced a ship steering away from the river as approaching it")
+
+# Too far out to promise anything: no arrival time, no message.
+r9 = Run(track_at(ANCHORAGE))
+r9(ANCHORAGE, 0.2, 1)
+if r9(out_at(15.0, 215), 5.0, 0, cog=COURSE_IN) is not None:
+    fails.append("announced her three hours out - an hour is warning, three is noise")
 
 print(f"ran the morning she sails and six ways of staying quiet; {len(r.sent)} messages"
-      f" from the first sequence: {r.sent}; and {r6.sent} at the river mouth")
+      f" from the first sequence: {r.sent}; and {r6.sent} coming in")
 if fails:
     print("FAILURES")
     for f in fails:
