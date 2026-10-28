@@ -542,8 +542,23 @@ VF_QUIET_H = float(os.environ.get("VF_QUIET_H", "6"))
 # the whole point is to catch the hour it happens. On 22 October the free feeds went
 # from 23:20 to 05:42 without a word, and she was due alongside at ten.
 VF_WATCH_MIN = float(os.environ.get("VF_WATCH_MIN", "60"))
-# How near a port she must be for the answer to change anything on the page.
+# How near a port she must be for a fresh fix to change which CAMERA is open. Inside
+# this, the cadence is set by what she is doing; outside it, by VF_SEA_H below.
 VF_NEAR_NM = float(os.environ.get("VF_NEAR_NM", "50"))
+# ...and out at sea.
+#
+# This used to be a hard stop: more than fifty miles from a port and the source was not
+# asked at all, because "no camera is looking at her out there". Which is true, and was
+# the wrong rule, because it let the camera question decide a position question. The dot
+# on the map was built to be fresh. The cameras were built for the harbours. They are two
+# purposes and they had been given one rule between them, and the dot was the one that
+# lost: on 28 October she sailed from Funchal, crossed fifty miles by evening, and the
+# page would then have shown the same position for a week.
+#
+# So out there she is still asked for, just slowly. And it costs only when it has to:
+# the gate below never asks while anything fresher already exists, so a leg where the
+# free sources keep arriving is a leg that pays nothing.
+VF_SEA_H = float(os.environ.get("VF_SEA_H", "4"))
 # What counts as lying still, on the days the ship herself does not say: every fix we
 # have from the last VF_STILL_BACK_H hours inside a VF_STILL_NM circle, and those fixes
 # spanning at least VF_STILL_H of real time. The look-back is deliberately wider than
@@ -768,12 +783,10 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         d = nm_between(here, (float(q["lat"]), float(q["lon"])))
         if off is None or d < off:
             port, off = q, d
-    if off is not None and off > VF_NEAR_NM:
-        print(f"  -> VesselFinder: not spending a credit, the nearest port that could be"
-              f" looking at her is {port['name']}, {off:.0f} nm off")
-        return []
-
-    if _going_somewhere(track_points):
+    at_sea = off is None or off > VF_NEAR_NM
+    if at_sea:
+        wait_min, state = VF_SEA_H * 60, "at sea"
+    elif _going_somewhere(track_points):
         wait_min, state = VF_MOVING_MIN, "under way"
     elif _move_expected_today(reach):
         wait_min, state = VF_WATCH_MIN, "lying still on a day she is due to move"
@@ -783,6 +796,10 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         print(f"  -> VesselFinder: not needed, she is {state} and we last had her"
               f" {quiet_min:.0f} min ago (asking every {wait_min:.0f} min while {state})")
         return []
+    if at_sea and port:
+        print(f"  * the nearest port is {port['name']}, {off:.0f} nm off - no camera can"
+              f" see her, but the map still needs a dot that is less than"
+              f" {VF_SEA_H:.0f} hours old")
 
     # Written BEFORE the request, not after. If this program dies mid-call the credit is
     # spent all the same, and the next run must know that.

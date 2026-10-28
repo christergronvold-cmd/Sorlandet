@@ -104,14 +104,33 @@ if update.fetch_from_vesselfinder([dict(NEAR, seen_utc=ago(12))], [FUNCHAL], [])
     fails.append("asked for a position with no API key set")
 update.VF_KEY = "test-key"
 
+# Out at sea she is asked for too, just slowly. This was a hard stop once - more than
+# fifty miles from a port and the source was not asked at all, because no camera could
+# see her out there. True, and the wrong rule: it let the camera question decide a
+# position question, and the two were built for different things. The dot was built to be
+# fresh. On 28 October she sailed from Funchal, crossed fifty miles by evening, and the
+# page would have shown the same position for a week.
+import tempfile as _tf3
+update.VF_STATE = Path(_tf3.mkdtemp()) / "vf.json"
 cases = [
     ("free sources are current", [dict(NEAR, seen_utc=ago(0.2))], [FUNCHAL]),
-    ("she is mid-ocean", [dict(FAR, seen_utc=ago(12))], [FUNCHAL]),
+    ("mid-ocean and heard an hour ago", [dict(FAR, seen_utc=ago(1))], [FUNCHAL]),
     ("nothing to judge by", [], []),
 ]
 for label, have, ports in cases:
+    update.VF_STATE = Path(_tf3.mkdtemp()) / "vf.json"
     if update.fetch_from_vesselfinder(have, ports, []) != []:
         fails.append(f"spent a credit when {label}")
+
+# ...and the case that used to be silence and must not be any more.
+update.VF_STATE = Path(_tf3.mkdtemp()) / "vf.json"
+update.get_json = lambda url, timeout=30: SAMPLE
+_hush3 = io.StringIO()
+with contextlib.redirect_stdout(_hush3), contextlib.redirect_stderr(_hush3):
+    at_sea = update.fetch_from_vesselfinder([dict(FAR, seen_utc=ago(12))], [FUNCHAL], [])
+if not at_sea:
+    fails.append("mid-ocean with nothing heard for twelve hours and still no request -"
+                 " that is the dot going a week old on an Atlantic crossing")
 
 update.VF_KEY = saved
 
