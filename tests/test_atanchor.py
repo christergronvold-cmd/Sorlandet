@@ -175,6 +175,11 @@ if "she has arrived" in stale:
                  " old - that is a claim about now, made from this morning")
 # And the section itself is gone, not folded. A folded panel headed "Cameras" is still
 # the page offering something to watch, on a quay she left this morning.
+if "in port now" in stale:
+    fails.append("the voyage plan still says \"In port now\" from a fix half a day old -"
+                 " same claim, same tense, a different card")
+if "last seen in" not in stale:
+    fails.append("the voyage plan says neither where she is nor where she was last seen")
 for lens in ("Pontinha", "Funchal marina", "Funchal waterfront"):
     if lens.lower() in stale:
         fails.append(f"the camera section is still offering {lens} from a fix half a day"

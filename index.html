@@ -670,6 +670,26 @@ function dailyDistance(points) {
 // alongside averages a tenth of a knot; a ship passing averages her passage speed.
 const PORT_NM = 5, PORT_DWELL_H = 2.5, PORT_CALM_KN = 2.0, PORT_REJOIN_H = 6;
 
+// How long a fix may be used to say where she is NOW.
+//
+// "In port now" and "she has arrived" are claims about the present tense, and on
+// 28 October they both outlived the fact by a day: she sailed from Funchal at 09:24,
+// nobody heard her again all day, and the newest fix the page had was from the morning
+// and three cables off the harbour. By that fix she was in port, so the page told
+// seventy-two families she was in port - all evening, while she made eight knots for
+// Spain, with the quay cameras open underneath.
+//
+// A ship alongside does go quiet for hours, and this must not trip every time the feed
+// naps: she lay in Funchal six days on fixes six hours apart, and every one of those
+// claims was true. Eight hours is comfortably past that rhythm. Past it, the page says
+// the thing it actually knows - where she was last seen, and when - which is true
+// whether she is still there or not.
+//
+// It lives up here because three different parts of the page make present-tense claims,
+// and they must expire together or not at all.
+const SURE_FOR_H = 8;
+const sureNow = seen => !seen || (Date.now() - new Date(seen)) / 36e5 <= SURE_FOR_H;
+
 // ...and being AT a port is not the same as being alongside in it. Sørlandet is due to
 // anchor off Lerwick for a week before she berths on 6 September, and five miles of radius
 // cannot tell the two apart: the log would have announced "Arrived Lerwick" the day she
@@ -1218,7 +1238,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "cb51ff0df2";
+const BUILD = "86433db5a5";
 
 async function checkForNewBuild() {
   try {
@@ -3097,7 +3117,9 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
     if (inPort) {
       // Alongside and lying at anchor off the place are not the same fact, and she is due
       // to spend the better part of a week doing the second before she does the first.
-      rows += leg.berthed
+      rows += !sureNow(p.seen_utc)
+        ? row("Last seen in", `<b>${inPort.name}</b>, ${inPort.country}`)
+        : leg.berthed
         ? row("In port now", `<b>${inPort.name}</b>, ${inPort.country}`)
         : row("At anchor off", `<b>${inPort.name}</b>, ${inPort.country}`);
       if (!leg.berthed && inPort.arrive) {
@@ -3722,8 +3744,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // That wording is true either way. If she really is alongside somewhere nobody can
   // hear, "last heard here nine hours ago" is still a fact; "she has arrived" is only a
   // fact until she leaves.
-  const SURE_FOR_H = 8;
-  const staleClaim = fixAgeMin > SURE_FOR_H * 60;
+  const staleClaim = !sureNow(p.seen_utc);
 
   // Something the ship's own transponder tells the world and our sources do not pass on.
   //
