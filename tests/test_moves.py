@@ -128,19 +128,64 @@ r3(SEA, 7.0, 8)
 if r3.sent:
     fails.append(f"messages from the open ocean, where nothing happened: {r3.sent}")
 
-# A feed that goes quiet and comes back is not an event either: no speed, nothing said.
+# A feed that goes quiet and comes back IN THE SAME PLACE is not an event: no speed,
+# nothing said, and nothing moved.
 r4 = Run(track_at(ANCHORAGE))
 r4(ANCHORAGE, 0.2, 1)
 if r4(ANCHORAGE, None, None) is not None:
-    fails.append("treated a bare position with no speed and no status as a change of"
-                 " state - it is not an answer, and the page says so everywhere else")
+    fails.append("treated a bare position in the same spot as a change of state")
 
-# ...and the dead zone between the two thresholds is silence, not a guess.
+# ------------------------------------------------- 28 October, and why the phone was quiet
+# She sailed from Funchal. Nothing happened.
+#
+# The track for the sixteen hours either side of it, in full:
+#
+#   27 Oct 16:45  32.64291,-16.91461  sog 0     ns 5   moored at the quay
+#   28 Oct 09:26  32.64223,-16.90425  sog null  ns -   half a mile away, saying nothing
+#
+# One position in sixteen hours and forty minutes, from the foundation's feed, which
+# sends bare positions. aisstream heard nothing all night; VesselFinder was asked
+# thirty-five times and handed back the same fix from the previous afternoon each time.
+#
+# So the only evidence that existed was that she was no longer where she had been welded
+# for six days - and the rule said a message with no speed and no status is not an answer
+# and must be ignored. It was right about the message. A ship is not a message.
+BERTH = (32.64291, -16.91461)
+GONE = (32.64223, -16.90425)
+
+r10 = Run([{"t": update.iso(update.now_utc() - timedelta(hours=h)), "lat": BERTH[0],
+            "lon": BERTH[1], "sog": 0.1, "cog": 180, "ns": 5} for h in range(40, 16, -6)])
+r10(BERTH, 0.0, 5)
+ev = r10(GONE, None, None)
+if not ev or ev["kind"] != "underway":
+    fails.append(f"she is {update.nm_between(GONE, BERTH):.2f} nm from a berth she had not"
+                 f" left in six days, and the only fix anyone has carries no speed - and"
+                 f" still nothing is sent. This is the morning of 28 October exactly")
+
+# ...but a bare fix that has drifted a boat's length is a ship swinging, not a ship going.
+r11 = Run([{"t": update.iso(update.now_utc() - timedelta(hours=h)), "lat": BERTH[0],
+            "lon": BERTH[1], "sog": 0.1, "cog": 180, "ns": 5} for h in range(40, 16, -6)])
+r11(BERTH, 0.0, 5)
+if r11((BERTH[0] + 0.001, BERTH[1] + 0.001), None, None) is not None:
+    fails.append("a bare fix a hundred metres off the berth set off a departure notice;"
+                 " the foundation's feed rounds positions and does that all day")
+
+# ...and the dead zone between the two thresholds is silence - WHERE SHE IS, that is.
+#
+# This case used to put her a mile from the anchorage at 0.7 knots and demand silence,
+# and it was wrong in the same way the rule it was guarding was wrong. Seven tenths of a
+# knot says nothing either way. A mile of water says she went. The speed at the instant
+# of one fix is not the question; where she is, is.
 r5 = Run(track_at(ANCHORAGE))
 r5(ANCHORAGE, 0.2, 1)
-if r5((ANCHORAGE[0] + 0.02, ANCHORAGE[1]), 0.7, None) is not None:
-    fails.append("0.7 knots with nothing said is neither under way nor stopped, and must"
+if r5(ANCHORAGE, 0.7, None) is not None:
+    fails.append("0.7 knots on the same spot is neither under way nor stopped, and must"
                  " not be reported as either")
+r5b = Run(track_at(ANCHORAGE))
+r5b(ANCHORAGE, 0.2, 1)
+if r5b((ANCHORAGE[0] + 0.02, ANCHORAGE[1]), 0.7, None) is None:
+    fails.append("a mile from where she lay, and silence because the one fix happened to"
+                 " read 0.7 knots - the distance is the evidence, not the needle")
 
 # ----------------------------------------------- the hour before, not the minute after
 # "...naar baaten gaar inn ved Sanlucar." The first version of this fired as she entered

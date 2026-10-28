@@ -1011,6 +1011,28 @@ def _moving_now(position: dict) -> bool | None:
     return None             # between the two, with nothing said: not an answer
 
 
+def _has_shifted(state: dict, here: tuple) -> bool | None:
+    """Has she left the spot we were holding her at? None when there is no spot.
+
+    The fix that caught her leaving Funchal on 28 October carried no speed and no status
+    - the foundation's feed sends bare positions, and it was the only thing anybody had
+    heard in sixteen hours. _moving_now looked at it, found nothing stated, and said so.
+    Which was right about the MESSAGE and wrong about the ship: she was half a mile from
+    a berth she had not moved off in six days.
+
+    A position is evidence. "She has not said" is not the same as "nothing is known", and
+    treating them as the same is what kept the phone quiet on the one morning it was
+    built for.
+    """
+    if state.get("state") != "still":
+        return None
+    try:
+        was = (float(state["lat"]), float(state["lon"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+    return nm_between(here, was) >= MOVE_AWAY_NM
+
+
 def _closing_on(position: dict, track_points: list, here: tuple, there: tuple):
     """How fast the distance to a point is shrinking, in knots. Negative is opening.
 
@@ -1058,6 +1080,10 @@ def move_event(before: dict, position: dict, plan: dict,
         return state, None
     here = (float(lat), float(lon))
     moving = _moving_now(position)
+    if moving is None:
+        # She has not said. The position can still answer, if we were holding her
+        # somewhere to compare it against.
+        moving = _has_shifted(state, here)
     if moving is None:
         return state, None
 
