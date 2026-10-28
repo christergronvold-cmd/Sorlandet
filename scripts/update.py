@@ -512,6 +512,24 @@ def bw_latest_position() -> dict | None:
 # credits spent learning that a ship at anchor is still at anchor.
 VF_KEY = os.environ.get("VESSELFINDER_KEY", "").strip()
 VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
+# sat=1, and the reasoning is the opposite of what it looks like.
+#
+# 28 October, 13:40. VesselFinder's own page had her a minute old, thirty miles north-east
+# of Madeira, 68 degrees, 8.4 knots, under way, and knew she had left Funchal at 09:24.
+# Their API - asked forty-one times that day - handed back a fix from 16:45 the previous
+# afternoon with her moored at the quay. Same company, same ship, twenty-one hours apart.
+#
+# Their documentation says: "Set sat=1 to request satellite positions (returned only if
+# newer than the last terrestrial one)". So it is not a switch that buys satellite. It is
+# a switch that stops them withholding it. Terrestrial still comes back when terrestrial
+# is freshest, and still costs one credit; ten is charged only when a satellite position
+# is actually the newest thing they have - which is the exact case this source exists for.
+#
+# The first version left it off to be thrifty, reasoning that satellite would be spent on
+# the ocean where no camera is looking. That had the test the wrong way round. It is not
+# about where she is. It is about whether anybody has heard her lately, and the gate above
+# has already established that nobody has.
+VF_SAT = os.environ.get("VF_SAT", "1").strip()
 # Running in, half an hour is four miles and quite possibly a different camera, so that
 # is how often this is worth a credit while she is moving...
 VF_MOVING_MIN = float(os.environ.get("VF_MOVING_MIN", "30"))
@@ -771,8 +789,9 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     write_json(VF_STATE, dict(receipt, asked_utc=iso(now_utc()),
                               requests=int(receipt.get("requests") or 0) + 1))
 
-    url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}&imo={IMO}"
-    shown = f"{VF_URL}?userkey=***&imo={IMO}"
+    tail = f"&imo={IMO}" + (f"&sat={VF_SAT}" if VF_SAT not in ("", "0") else "")
+    url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}{tail}"
+    shown = f"{VF_URL}?userkey=***{tail}"
     print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is {state}"
           f" near {port['name'] if port else 'a port'} - asking {shown}")
     try:
@@ -800,8 +819,11 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
           f" ({pt.get('ais_src') or 'source not stated'}, navstat"
           f" {pt.get('nav_status')}, {pt.get('sog_kn')} kn)")
     if pt.get("ais_src") == "SAT":
-        print("  ! VesselFinder returned a SATELLITE record - that is ten credits, not one,"
-              " and this code never asks for one. Check the request.", file=sys.stderr)
+        # Ten credits rather than one, and worth it: it is only ever returned when it is
+        # newer than anything the shore stations have, and we only ask at all once the
+        # free sources have gone quiet near a port. Still printed, so the bill can be
+        # read back from the log rather than guessed at.
+        print("  -> that one was a satellite position: ten credits, not one")
     return [pt]
 
 

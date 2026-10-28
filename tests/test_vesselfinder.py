@@ -274,6 +274,40 @@ if second != [] or "asked_utc" not in (update.read_json(update.VF_STATE, {}) or 
                  " request costs a credit whether or not the answer is usable")
 update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY = _was
 
+# ------------------------------------------------------------- what the request asks for
+# 28 October. Their own page had her a minute old, thirty miles out, under way at 8.4
+# knots, and knew she had sailed from Funchal at 09:24. Their API, asked forty-one times
+# that day, handed back a fix from 16:45 the afternoon before with her moored at the quay.
+#
+# The difference was one parameter. Their documentation: "Set sat=1 to request satellite
+# positions (returned only if newer than the last terrestrial one)." It does not buy
+# satellite; it stops them withholding it. Terrestrial still answers when terrestrial is
+# freshest, at one credit. Leaving it off to save money bought nothing and cost a day.
+_asked = []
+_was = (update.get_json, update.VF_KEY, update.VF_STATE)
+import tempfile as _tf2
+update.VF_STATE = Path(_tf2.mkdtemp()) / "vf.json"
+update.VF_KEY = "test-key"
+update.get_json = lambda url, timeout=30: (_asked.append(url) or SAMPLE)
+_hush2 = io.StringIO()
+with contextlib.redirect_stdout(_hush2), contextlib.redirect_stderr(_hush2):
+    update.fetch_from_vesselfinder(
+        [dict(NEAR, seen_utc=ago(12))], PLAN,
+        [{"t": ago(13), "lat": NEAR["lat"], "lon": NEAR["lon"], "sog": 5.0, "cog": 180}])
+update.get_json, update.VF_KEY, update.VF_STATE = _was
+
+if not _asked:
+    fails.append("no request was made at all in the case that is meant to make one")
+else:
+    url = _asked[0]
+    if "sat=1" not in url:
+        fails.append(f"the request does not ask for the newest position they have:"
+                     f" {url.split('userkey=')[0]}... - without sat=1 they answer with the"
+                     f" last TERRESTRIAL fix, which on 28 October was twenty-one hours old"
+                     f" while their own website had her a minute old")
+    if f"imo={update.IMO}" not in url:
+        fails.append(f"the request does not name the ship: {url!r}")
+
 print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in "
       f"{len(cases) + 1} cases where it would have bought nothing")
 print(f"six days at anchor cost {at_anchor} credits, not 288; an eight-hour run in cost"
