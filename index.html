@@ -1218,7 +1218,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "dd9c4aabd3";
+const BUILD = "05272035ac";
 
 async function checkForNewBuild() {
   try {
@@ -3705,6 +3705,24 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   let closing = 0, minsOut = null;
   const timedFix = () => minsOut != null && fixAgeMin <= UNTIMED_MIN;
 
+  // "She has arrived" is a claim about NOW, and on 28 October it outlived the fact by a
+  // day. She sailed from Funchal at 09:24; nobody heard her again until the evening, so
+  // the newest fix the page had was eleven hours old and three cables off the harbour.
+  // By that fix she was in port - and the page told seventy-two families she had arrived
+  // all afternoon, while she made eight knots towards Spain.
+  //
+  // A ship alongside does go quiet for hours and this must not close every time the feed
+  // naps: she lay in Funchal six days on fixes six hours apart, and the section was right
+  // to stay open through all of it. But a present-tense claim has to expire. Eight hours
+  // is comfortably past the six-hourly rhythm of the paid source, and when it does expire
+  // the page says the thing it actually knows - when she was last heard, and where.
+  //
+  // That wording is true either way. If she really is alongside somewhere nobody can
+  // hear, "last heard here nine hours ago" is still a fact; "she has arrived" is only a
+  // fact until she leaves.
+  const SURE_FOR_H = 8;
+  const staleClaim = fixAgeMin > SURE_FOR_H * 60;
+
   // Something the ship's own transponder tells the world and our sources do not pass on.
   //
   // On 31 August at 15:16 she arrived at Lerwick Roads and her AIS navigational status went
@@ -3970,11 +3988,14 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       </div>`, {
         // Folded while she swings at anchor: it is worth having, but not worth a screen
         // every day for a week. Open the moment she is actually doing something.
-        key: "cameras", open: !lyingOff,
+        // ...and folded as well once the claim has expired: there is nothing to watch
+        // on a quay camera trained on a ship that left this morning.
+        key: "cameras", open: !lyingOff && !(alongside && staleClaim),
         note: preview ? "preview"
             : passing ? "passing now"
             : lyingOff ? `lying off ${camPort.name}`
-            : alongside ? "she has arrived"
+            : alongside ? (staleClaim ? `last heard here ${ago(p.seen_utc)}`
+                                      : "she has arrived")
             : !timedFix() || minsOut > APPROACH_MIN ? "in sight"
             : minsOut < 12 ? "coming in now"
             : `~${Math.round(minsOut / 5) * 5} min out` });
@@ -4004,7 +4025,8 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         : passing ? "passing now"
         : (lyingOff && !feedAsked) ? "at anchor \u2014 tap to watch"
         : lyingOff ? "at anchor off " + camPort.name
-        : alongside ? "she has arrived"
+        : alongside ? (staleClaim ? `last heard here ${ago(p.seen_utc)}`
+                                  : "she has arrived")
         : !timedFix() || minsOut > APPROACH_MIN ? "close enough to be in shot"
         : minsOut < 12 ? "coming in now"
         : `about ${Math.round(minsOut / 5) * 5} min out`,

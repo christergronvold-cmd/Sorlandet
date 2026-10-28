@@ -58,7 +58,7 @@ BERTH_NM = float(next(line.split("=")[1].strip().rstrip(";")
                       if line.startswith("const BERTH_NM")))
 
 
-def drive(where, sog, navstat):
+def drive(where, sog, navstat, age_min=20):
     """Serve a copy of the real site with her put where we say, and read what it says back."""
     tmp = Path(tempfile.mkdtemp()) / "site"
     shutil.copytree(ROOT, tmp,
@@ -79,7 +79,7 @@ def drive(where, sog, navstat):
     latest = json.loads((tmp / "data" / "latest.json").read_text(encoding="utf-8"))
     latest["position"] = {"lat": where[0], "lon": where[1], "sog_kn": sog, "cog_deg": 88,
                           "heading_deg": None, "nav_status": navstat,
-                          "seen_utc": (now - timedelta(minutes=20)).strftime(stamp),
+                          "seen_utc": (now - timedelta(minutes=age_min)).strftime(stamp),
                           "source": "test"}
     latest["updated_utc"] = now.strftime(stamp)
     latest["fresh_fix"] = True
@@ -89,7 +89,7 @@ def drive(where, sog, navstat):
     # passing through. She states her status every few hours, as the paid source gives it.
     pts = []
     for k in range(96):
-        t = now - timedelta(minutes=30 * (95 - k))
+        t = now - timedelta(minutes=age_min + 30 * (95 - k))
         pt = {"t": t.strftime(stamp),
               "lat": where[0] + (k % 5 - 2) * 0.0002, "lon": where[1] + (k % 3 - 1) * 0.0002,
               "sog": sog, "cog": (k * 37) % 360}
@@ -160,8 +160,25 @@ if "alongside now" in berthed:
     fails.append("\"alongside now\" is back - the word the page no longer claims, because"
                  " it cannot always see a rope on a bollard")
 
-print(f"driven twice: at anchor {OFF:.2f} nm off against a {BERTH_NM} nm berth circle, and"
-      f" moored at the quay")
+# ------------------------------------------- and the claim that outlived the fact
+# 28 October. She sailed from Funchal at 09:24 and nobody heard her again all day, so the
+# newest fix was eleven hours old and three cables off the harbour. By that fix she was in
+# port - and the page told seventy-two families she had arrived, all afternoon, while she
+# made eight knots towards Spain.
+#
+# The position was not wrong. The tense was.
+stale = drive((QUAY["lat"], QUAY["lon"]), 0.0, 5, age_min=11 * 60 + 30)
+# "Arrived Funchal, Madeira" also sits in the log of calls, and belongs there - that one
+# is history and dated. The claim being tested is the present-tense one on the cameras.
+if "she has arrived" in stale:
+    fails.append("the page still says she has arrived from a fix eleven and a half hours"
+                 " old - that is a claim about now, made from this morning")
+if "last heard" not in stale:
+    fails.append("the claim expired and the page says nothing in its place; it should say"
+                 " when she was last heard, which is the thing it actually knows")
+
+print(f"driven three times: at anchor {OFF:.2f} nm off against a {BERTH_NM} nm berth"
+      f" circle, moored at the quay, and moored on a fix half a day old")
 if fails:
     print("FAILURES")
     for f in fails:
