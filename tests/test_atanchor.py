@@ -173,9 +173,14 @@ stale = drive((QUAY["lat"], QUAY["lon"]), 0.0, 5, age_min=11 * 60 + 30)
 if "she has arrived" in stale:
     fails.append("the page still says she has arrived from a fix eleven and a half hours"
                  " old - that is a claim about now, made from this morning")
-if "last heard" not in stale:
-    fails.append("the claim expired and the page says nothing in its place; it should say"
-                 " when she was last heard, which is the thing it actually knows")
+# And the section itself is gone, not folded. A folded panel headed "Cameras" is still
+# the page offering something to watch, on a quay she left this morning.
+for lens in ("Pontinha", "Funchal marina", "Funchal waterfront"):
+    if lens.lower() in stale:
+        fails.append(f"the camera section is still offering {lens} from a fix half a day"
+                     f" old - if we cannot say where she has been for eight hours, we"
+                     f" cannot say a camera is looking at her")
+        break
 
 print(f"driven three times: at anchor {OFF:.2f} nm off against a {BERTH_NM} nm berth"
       f" circle, moored at the quay, and moored on a fix half a day old")

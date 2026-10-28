@@ -1218,7 +1218,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "05272035ac";
+const BUILD = "cb51ff0df2";
 
 async function checkForNewBuild() {
   try {
@@ -3706,7 +3706,9 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   const timedFix = () => minsOut != null && fixAgeMin <= UNTIMED_MIN;
 
   // "She has arrived" is a claim about NOW, and on 28 October it outlived the fact by a
-  // day. She sailed from Funchal at 09:24; nobody heard her again until the evening, so
+  // day. It is enforced at camPort below, by not having a camera section at all once the
+  // fix is this old - one expiry date, in one place, rather than a softer wording here
+  // and a harder rule there. She sailed from Funchal at 09:24; nobody heard her again until the evening, so
   // the newest fix the page had was eleven hours old and three cables off the harbour.
   // By that fix she was in port - and the page told seventy-two families she had arrived
   // all afternoon, while she made eight knots towards Spain.
@@ -3869,7 +3871,21 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         .filter(x => x.off <= (x.q.see_nm || PASS_SEE_NM))
         .sort((a, b) => a.off - b.off)[0] || null)
     : null;
-  const camPort = camAtPort || (passing && passing.q) || null;
+  // ...and nothing at all once the fix is too old to put her in front of a lens.
+  //
+  // Folding the section was the first answer and it was a compromise, which is to say it
+  // was wrong: a folded panel headed "Cameras" is still the page offering something to
+  // watch. On the evening of 28 October she was fifty miles out and climbing, and the
+  // only reason this page believed otherwise was a position from the morning. A camera
+  // section exists to let somebody watch her. If we cannot say where she has been in the
+  // last eight hours, we cannot say a camera is looking at her, and the honest page is
+  // the one that does not raise the subject.
+  //
+  // It is the same rule and the same eight hours as the wording above, deliberately: one
+  // expiry date, not two. While she really is alongside the paid source fills the gaps
+  // every few hours, so this does not flicker - it triggers when something has genuinely
+  // gone quiet, which is exactly when there is nothing to see.
+  const camPort = staleClaim ? null : (camAtPort || (passing && passing.q) || null);
   // Hoisted: the live view above the map is built further down and needs the same three
   // answers. Block-scoped inside the card, they were simply missing there - and a
   // ReferenceError inside the render leaves the whole page half-drawn without a word.
@@ -3988,14 +4004,11 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       </div>`, {
         // Folded while she swings at anchor: it is worth having, but not worth a screen
         // every day for a week. Open the moment she is actually doing something.
-        // ...and folded as well once the claim has expired: there is nothing to watch
-        // on a quay camera trained on a ship that left this morning.
-        key: "cameras", open: !lyingOff && !(alongside && staleClaim),
+        key: "cameras", open: !lyingOff,
         note: preview ? "preview"
             : passing ? "passing now"
             : lyingOff ? `lying off ${camPort.name}`
-            : alongside ? (staleClaim ? `last heard here ${ago(p.seen_utc)}`
-                                      : "she has arrived")
+            : alongside ? "she has arrived"
             : !timedFix() || minsOut > APPROACH_MIN ? "in sight"
             : minsOut < 12 ? "coming in now"
             : `~${Math.round(minsOut / 5) * 5} min out` });
@@ -4025,8 +4038,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
         : passing ? "passing now"
         : (lyingOff && !feedAsked) ? "at anchor \u2014 tap to watch"
         : lyingOff ? "at anchor off " + camPort.name
-        : alongside ? (staleClaim ? `last heard here ${ago(p.seen_utc)}`
-                                  : "she has arrived")
+        : alongside ? "she has arrived"
         : !timedFix() || minsOut > APPROACH_MIN ? "close enough to be in shot"
         : minsOut < 12 ? "coming in now"
         : `about ${Math.round(minsOut / 5) * 5} min out`,
