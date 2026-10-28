@@ -1253,6 +1253,76 @@ def open_issue(title: str, body: str) -> bool:
         return False
 
 
+def tell_him_she_declared(voyage: dict, plan: dict, track_points: list) -> None:
+    """The one departure signal that arrives BEFORE she goes.
+
+    AIS message 5 is the voyage record a mate types on the bridge, and changing it is the
+    first thing anyone does once the next passage is settled. On 27 October at 16:45 hers
+    went from PT FNC to ES SVQ. She sailed the following morning.
+
+    That was seventeen hours of warning, and it was sitting in latest.json the whole
+    time, unread. It was also - and this is the part that matters - the LAST thing anyone
+    heard from her. Between that message and a bare position at 09:26 the next day there
+    was nothing at all: aisstream heard nothing, and the paid source was asked
+    thirty-five times and handed back the same stale fix every time. At a port with the
+    coverage Funchal has, the ship saying where she is going next may be the only thing
+    that gets through.
+
+    It is not the hour she slips her lines and it must never pretend to be. It says a
+    passage has been decided, which is a different and earlier thing.
+    """
+    said = " ".join(str((voyage or {}).get("destination") or "").split()).upper()
+    if len(said.replace(" ", "")) < 3:
+        return                                  # blank, or someone leaning on a key
+    state = read_json(MOVES, {}) or {}
+    before = state.get("declared")
+    if before and "".join(before.split()) == "".join(said.split()):
+        return                                  # the same thing, spelled differently
+    if before == said:
+        return
+
+    if before is None:
+        # The first look. Learn it and say nothing, the same as every other first look
+        # here - otherwise the first run after a deploy announces a week-old decision.
+        state["declared"] = said
+        state["declared_utc"] = (voyage or {}).get("heard_utc")
+        write_json(MOVES, state)
+        return
+
+    port = next_port((plan or {}).get("ports") or [], track_points)
+    heard = (voyage or {}).get("heard_utc")
+    title = f"{SHIP_NAME} has declared for {said}"
+    line = (f"The bridge has changed her destination from {before} to {said}."
+            f" That is done before sailing, not after.")
+    owner = GH_REPO.split("/")[0] if "/" in GH_REPO else ""
+    body = "\n".join(x for x in [
+        f"@{owner}" if owner else "",
+        "",
+        line,
+        "",
+        f"- Was {before}, now {said}",
+        f"- Heard {heard or 'at an unknown time'}",
+        f"- Next port in the plan: {port['name']}" if port else "",
+        "",
+        "This is not a departure. It is the bridge writing down where she is going next,"
+        " which usually happens the evening before - and at a port where nobody can hear"
+        " her AIS it may be the only warning there is.",
+        "",
+        f"[Open the page]({PAGE_URL})",
+        "",
+        "_Opened by the tracking job. Close it; it is a notification, not a task._",
+    ])
+    reached = open_issue(title, body)
+    reached = send_push(title, line) > 0 or reached
+    if reached:
+        state["declared"] = said
+        state["declared_utc"] = heard
+        write_json(MOVES, state)
+    else:
+        print("  ! the declaration could not be sent - leaving it to try again",
+              file=sys.stderr)
+
+
 def live_watch(plan: dict, track_points: list):
     """A watcher to hand the listener, so a notice goes out the minute she is heard.
 
@@ -4317,7 +4387,9 @@ def main() -> int:
     # After the file is written, never before: the page is the thing the message links to.
     if not demo:
         try:
-            tell_him_she_moved(shown, read_json(DATA / "ports.json", {}) or {}, points)
+            plan_all = read_json(DATA / "ports.json", {}) or {}
+            tell_him_she_moved(shown, plan_all, points)
+            tell_him_she_declared(voyage, plan_all, points)
             # ...and the live watcher above may already have sent it twenty minutes ago.
             # That is the point of it; this one is the backstop for everything aisstream
             # cannot hear, which at Madeira was nine days running.
