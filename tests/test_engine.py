@@ -11,6 +11,7 @@ say so. When she says sail, or says nothing, nothing changes.
 import json
 import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -18,6 +19,17 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AISSTREAM_API_KEY", "fake")
 import update as U                                                   # noqa: E402
+
+# This test writes a sailing course and a forecast, and they go in a scratch directory.
+#
+# They used to go straight into data/. On 29 October a run of this suite left September's
+# St. Malo course and forecast sitting in the repo's own data folder - a ship bound for
+# Brittany, three weeks stale - one `git add -A` away from being published to seventy-two
+# families as where she is now. The fixtures are the point of the test; the repo is not
+# the place to keep them.
+_BOX = Path(tempfile.mkdtemp())
+U.COURSE = _BOX / "course.json"
+U.AHEAD = _BOX / "ahead.json"
 
 NOW = datetime(2026, 9, 21, 12, 0, tzinfo=timezone.utc)
 U.now_utc = lambda: NOW
@@ -163,7 +175,7 @@ def run(label, ns, from_index, want_basis, want_flag, want_tacks):
             p["ns"] = ns
         track.append(p)
     U.build_ahead(at[0], at[1], 5.5, track)
-    a = json.loads((U.DATA / "ahead.json").read_text())
+    a = json.loads(U.AHEAD.read_text())
     check(f"{label}: route_basis", a.get("route_basis"), want_basis)
     check(f"{label}: under_engine flag", a.get("under_engine"), want_flag)
     check(f"{label}: tacks drawn", bool(a.get("tacks")), want_tacks)
