@@ -565,16 +565,25 @@ const dayName = iso => new Date(iso + "T12:00:00Z")
 // all, the keyboard and screen readers get it for free, and find-in-page opens a closed
 // card to show the match instead of hiding it. `fold` is {key, open, note}; the key is what
 // the reader's choice is remembered under.
-const wideCard = (title, html, fold) => fold
-  ? `<details class="card wide fold" data-fold="${fold.key}"${fold.open ? " open" : ""}>
+// ...and on 29 October that became every card, at Christer's asking: "alle disse
+// seksjonene skal kunne lukkes. man kan apne de man er interessert i." The page answers a
+// lot of different questions now - where she is, what time it is on board, what the sea is
+// doing, how far she has come - and no two readers want the same four of them. A card that
+// cannot be shut is a card everybody has to scroll past.
+//
+// Nothing is closed to begin with: the page opens exactly as it did before, and shutting a
+// card is the reader's own choice, kept in their own browser. Seventy-two families did not
+// ask for a page that hides things from them by default.
+const shell = (cls, title, html, fold) => fold
+  ? `<details class="${cls} fold" data-fold="${fold.key}"${fold.open ? " open" : ""}>
        <summary><h2>${title}</h2>${
          fold.note ? `<span class="count">${fold.note}</span>` : ""}</summary>
        <div class="foldbody">${html}</div></details>`
-  : `<div class="card wide"><h2>${title}</h2>${html}</div>`;
-const card = (title, html) => `<div class="card"><h2>${title}</h2>${html}</div>`;
+  : `<div class="${cls}"><h2>${title}</h2>${html}</div>`;
+const wideCard = (title, html, fold) => shell("card wide", title, html, fold);
+const card = (title, html, fold) => shell("card", title, html, fold);
 // The clock sits beside the Voyage plan and needs the same width for the same reason.
-const boardcard = (title, html) =>
-  card(title, html).replace('class="card"', 'class="card board"');
+const boardcard = (title, html, fold) => shell("card board", title, html, fold);
 
 // Shown on the weather cards only while the slider is away from now - see .nowchip.
 const NOWCHIP = '<span class="nowchip" title="What is measured where she is, at this ' +
@@ -1238,7 +1247,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "642332712b";
+const BUILD = "1d1447ea34";
 
 async function checkForNewBuild() {
   try {
@@ -3238,7 +3247,12 @@ function render(d, track, plan = { ports: [] }, history = { days: [] }, ahead = 
       ? ` <span style="color:var(--muted)" title="The page rebuilds itself every few minutes\
  whether or not there is anything new. She has not been heard since the time above.">\
 · nothing new heard</span>` : ""}`);
-    planCard = card("Voyage plan", rows).replace('class="card"', 'class="card plan"');
+    planCard = shell("card plan", "Voyage plan", rows, {
+      key: "plan", open: true,
+      // Shut, the title line still has to earn its place, so it keeps the one fact the
+      // card is opened for.
+      note: leg.inPort ? `in ${leg.inPort.name}`
+          : nextPort ? `bound for ${nextPort.name}` : "" });
   }
 
   // ---- full route strip
@@ -3404,7 +3418,10 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
        for where she will be, not where she is — including the days she is alongside${
          (ahead.points || []).some(x => x.hours > 120)
            ? " · beyond five days it is an outlook, not a forecast" : ""}
-     </div><div class="fc">${aheadStrip}</div>`) : "";
+     </div><div class="fc">${aheadStrip}</div>`,
+    { key: "ahead", open: true,
+      note: Number.isFinite(ahead.distance_nm) ? `${Math.round(ahead.distance_nm)} nm to run`
+          : "" }) : "";
 
   // ---- the clock on board, sun and moon
   // Ship's time, worked out the way ships do it: nautical zones, fifteen degrees of
@@ -3509,7 +3526,11 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       ${row("Sunrise", shoreFromUTC(sun.sunrise_utc))}
       ${row("Sunset", shoreFromUTC(sun.sunset_utc))}
       ${row("Daylight", sun.daylight_hours ? `${sun.daylight_hours} h` : "–")}
-      ${row("Moon", moon.phase ? `${moon.phase} · ${Math.round(moon.illumination * 100)}% lit` : "–")}`);
+      ${row("Moon", moon.phase ? `${moon.phase} · ${Math.round(moon.illumination * 100)}% lit` : "–")}`,
+      // No note: the one thing worth putting here is the time, and the time on this card
+      // is written by a script every second. A stamp from page build would be wrong by the
+      // time anybody read it.
+      { key: "clock", open: true });
 
     clearInterval(window.__clock);
     const tick = () => {
@@ -3548,7 +3569,9 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       ${row("Along the route", `${Math.round(done).toLocaleString("en-GB")} of ${Math.round(total).toLocaleString("en-GB")} nm · ${pct < 1 ? pct.toFixed(2) : pct.toFixed(0)}%`)}
       ${legNote ? row(`Towards ${nextPort.name}`, legNote) : ""}
       ${row("Day of the voyage", `${dayNo} of ${daysTotal}`)}
-      ${row("Logged in the track", `${N(stats.distance_nm, 0)} nm`)}`);
+      ${row("Logged in the track", `${N(stats.distance_nm, 0)} nm`)}`,
+      { key: "progress", open: true,
+        note: `${pct < 1 ? pct.toFixed(2) : pct.toFixed(0)}% of the voyage` });
   }
 
   // ---- ship's log
@@ -4457,7 +4480,9 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
           ${row("Feels like", `${N(air.feels_c)} °C`)}
           ${row("Cloud cover", `${N(air.cloud_pct, 0)} %`)}
           ${row("Precipitation", `${N(air.precip_mm)} mm`)}`)}
-      </div>`);
+      </div>`,
+    { key: "weather", open: true,
+      note: waiting ? "" : beaufort(air.wind_ms) });
 
   // ---- the five figures, above the map
   //
