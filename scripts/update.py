@@ -2794,25 +2794,41 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
 
     A two-day-old forecast presented as a forecast is worse than no forecast, and the page
     cannot tell the difference unless the file says so. So: if a round produces no new
-    route, the old one is taken out and the file restamped. The weather ladder is kept -
-    that is the part that still matters while she is in port.
+    route, the old one is taken out and the file restamped.
+
+    That used to stop at the route, and on 29 October the rest of the file rotted in its
+    place. She sailed from Funchal on the 28th; her last two fixes were fourteen hours
+    apart, so there was no measured pace to walk at and the work below wrote nothing at
+    all. The guard then read "no route in the old file, so nothing stale to take out" and
+    returned - and the page spent the next fourteen hours headed ON THE WAY TO FUNCHAL,
+    with a weather ladder from the quay and NaN nm to run, about a ship a hundred and
+    fifteen miles past the island.
+
+    The route was never the only perishable thing in here. "to", the ladder and the
+    holding note are all forecasts about where she will be. If this round could not say
+    where she will be, none of them may stay.
     """
     before = read_json(AHEAD, {}) or {}
-    # "Did this round write the file" is a question about the file, not about the timestamp
-    # inside it. The first version compared generated_utc, which is truncated to the second
-    # - so two rounds in the same second looked identical and a perfectly good new route
-    # was thrown away as stale. The test suite runs that fast; a busy job could too.
-    stamp = AHEAD.stat().st_mtime_ns if AHEAD.exists() else 0
+    # "Did this round write the file" is a question about the file, and the honest way to
+    # ask it is to look at what is in it.
+    #
+    # The first version compared generated_utc, which is truncated to the second, so two
+    # rounds in the same second looked identical and a good route was thrown away. The
+    # second compared the modification time in nanoseconds, which is better until the
+    # filesystem underneath has coarser resolution than that - and then two writes a
+    # millisecond apart carry the same stamp and a good route is thrown away again. The
+    # test suite runs that fast and caught it.
+    #
+    # The bytes cannot lie about this.
+    was = AHEAD.read_bytes() if AHEAD.exists() else b""
     _build_ahead(lat, lon, speed_kn, track_points)
-    if not AHEAD.exists() or AHEAD.stat().st_mtime_ns != stamp:
+    if (AHEAD.read_bytes() if AHEAD.exists() else b"") != was:
         return                                    # a fresh round wrote a fresh file
-    if not before.get("route"):
-        return                                    # nothing stale to take out
-    write_json(AHEAD, {k: v for k, v in before.items()
-                       if k not in ("route", "tacks", "route_basis", "distance_nm",
-                                    "direct_nm", "winding")}
-               | {"generated_utc": iso(now_utc()), "route_cleared": True})
-    print("* no new route this round - cleared the old one rather than leave it on the map")
+    if not before:
+        return                                    # there was never anything here
+    write_json(AHEAD, {"generated_utc": iso(now_utc()), "route_cleared": True})
+    print("* nothing to draw ahead this round - cleared the file rather than leave"
+          " yesterday's forecast on the page")
 
 
 def _build_ahead(lat: float, lon: float, speed_kn: float | None,

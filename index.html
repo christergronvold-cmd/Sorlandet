@@ -1238,7 +1238,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "86433db5a5";
+const BUILD = "642332712b";
 
 async function checkForNewBuild() {
   try {
@@ -3399,8 +3399,9 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   const aheadCard = aheadStrip ? wideCard(
     `On the way to ${ahead.to}`,
     `<div style="font-size:13px;color:var(--muted);margin:-4px 0 9px">
-       ${Math.round(ahead.distance_nm)} nm to run${paceNote(ahead)} · forecast for where she
-       will be, not where she is — including the days she is alongside${
+       ${Number.isFinite(ahead.distance_nm)
+           ? `${Math.round(ahead.distance_nm)} nm to run${paceNote(ahead)} · ` : ""}forecast
+       for where she will be, not where she is — including the days she is alongside${
          (ahead.points || []).some(x => x.hours > 120)
            ? " · beyond five days it is an outlook, not a forecast" : ""}
      </div><div class="fc">${aheadStrip}</div>`) : "";
