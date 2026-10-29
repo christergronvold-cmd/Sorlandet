@@ -155,11 +155,29 @@ jobs:
             return 0
           }
 
+          # Pick up whatever has been published since this round began.
+          #
+          # A run checks out the code once and then works for five and a half hours, so a
+          # fix pushed at ten past two did not reach the page until the worker that had it
+          # finally started - which on 29 October would have been six hours later. Worse,
+          # the only `git pull` in this job lives inside save(), and save() pulls only when
+          # there is something to commit. The round that found her silent therefore never
+          # looked, and the fix waited behind a ship that had not been heard from.
+          #
+          # Twenty seconds at the top of every round, whether or not she has been heard.
+          # Publishing then costs half an hour at worst instead of a working day.
+          fresh() {
+            timeout "$GIT_TIMEOUT" git pull --rebase --autostash origin main \
+              || { echo "::warning::could not pull before this round - running on the code already here"
+                   git rebase --abort 2>/dev/null || true; }
+          }
+
           # A quick pass first. update.py spends its whole listening window before it
           # writes anything, so without this a restart shows no change for 29 minutes -
           # weather, route and forecast included, however fresh the code is. Twenty
           # seconds is enough to refresh everything that does not depend on hearing her.
           echo "::group::Quick first pass"
+          fresh
           LISTEN_SECONDS=20 timeout --kill-after=30 600 python3 scripts/update.py \
             || echo "quick pass failed or timed out, carrying on"
           save "Refresh"
@@ -172,6 +190,7 @@ jobs:
           stalls=0
           for round in $(seq 1 "$ROUNDS"); do
             echo "::group::Round $round of $ROUNDS"
+            fresh
             set +e
             timeout --kill-after=60 "$ROUND_TIMEOUT" python3 scripts/update.py
             rc=$?
