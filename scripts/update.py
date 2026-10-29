@@ -2797,12 +2797,18 @@ def build_ahead(lat: float, lon: float, speed_kn: float | None,
     route, the old one is taken out and the file restamped.
 
     That used to stop at the route, and on 29 October the rest of the file rotted in its
-    place. She sailed from Funchal on the 28th; her last two fixes were fourteen hours
-    apart, so there was no measured pace to walk at and the work below wrote nothing at
-    all. The guard then read "no route in the old file, so nothing stale to take out" and
-    returned - and the page spent the next fourteen hours headed ON THE WAY TO FUNCHAL,
-    with a weather ladder from the quay and NaN nm to run, about a ship a hundred and
-    fifteen miles past the island.
+    place. She sailed from Funchal on the 28th, and from midnight the work below wrote
+    nothing at all - every round, for fourteen hours, because nothing could route to
+    Sevilla (see approach_waypoints: the port is forty-two miles up a river and its
+    pilotage had been ruled out of bounds). The guard then read "no route in the old
+    file, so nothing stale to take out" and returned - and the page spent those fourteen
+    hours headed ON THE WAY TO FUNCHAL, with a weather ladder from the quay and NaN nm to
+    run, about a ship a hundred and fifteen miles past the island.
+
+    Two faults, and worth keeping apart: the routing one is why there was nothing to
+    write, and this one is why what was already there kept being shown as though it were
+    this morning's. Fixing the router alone would have left the trap set for the next
+    port that cannot be reached.
 
     The route was never the only perishable thing in here. "to", the ladder and the
     holding note are all forecasts about where she will be. If this round could not say
@@ -2913,6 +2919,10 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         # forward projections disagreeing with each other. build_course runs first and
         # writes the isochrone route; this walks along it. sea_route stays as the fallback
         # for when the router has no wind field or cannot find a way through.
+        # Worked out before either branch, because both of them want it: the sailing
+        # course to hand its last leg to, and the A* search to aim at.
+        approach = approach_waypoints(port, (lat, lon))
+        goal_pt = (float(port["lat"]), float(port["lon"]))
         course = read_json(COURSE, {}) or {}
         cpts = course.get("points") or []
         route, route_basis = None, "direct"
@@ -2949,7 +2959,21 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                 over = line_over_land(course_route,
                                       free=((lat, lon),
                                             (float(port["lat"]), float(port["lon"]))))
-                if over is not None:
+                if over is not None and over == len(course_route) - 1 and approach:
+                    # ...with one exception, and it is the common case for a river port.
+                    #
+                    # When the ONLY bad leg is the last one, the course is not lying: it
+                    # simply stopped where the forecast stopped, and the goal was pinned
+                    # on after. Discarding fifty-seven honest legs of tacking because of
+                    # that one appended hop meant drawing a ruled line in place of the
+                    # course she is actually sailing. So hand the last leg to the
+                    # pilotage, which is the thing that knows the way in.
+                    short_nm = nm_between(course_route[-2], goal_pt)
+                    course_route = course_route[:-1] + approach + [goal_pt]
+                    print(f"  -> the sailing course stops {short_nm:.0f} nm short of"
+                          f" {port['name']} - walking the rest in along"
+                          f" {len(approach)} approach waypoint(s)")
+                elif over is not None:
                     print(f"  ! the sailing course to {port['name']} runs over land on leg"
                           f" {over} of {len(course_route) - 1} - falling back to the sea"
                           " route", file=sys.stderr)
@@ -2969,8 +2993,6 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
             #
             # So: aim the search at the first approach waypoint and walk the rest of the
             # way in along the waypoints somebody already chose, in the plan's own order.
-            approach = approach_waypoints(port, (lat, lon))
-            goal_pt = (float(port["lat"]), float(port["lon"]))
             head = sea_route((lat, lon), approach[0] if approach else goal_pt)
 
             # Check the SEARCHED part, and only that part. sea_route appends its goal to
@@ -3016,8 +3038,19 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         # Last gate, whichever branch drew it. A dashed line over a county is worse than
         # no line: everybody can see it is wrong, and it makes them doubt the parts that
         # are right.
-        over = line_over_land(route, free=((lat, lon),
-                                           (float(port["lat"]), float(port["lon"]))))
+        # ...as far as the pilotage, and no further. The waypoints somebody chose by hand
+        # are deliberately not judged by a six-kilometre mask - the reasoning is in the A*
+        # branch above - and the forty-two miles of the Guadalquivir below Sevilla is water
+        # a mask that size cannot see at all. Judging it would condemn the only line that
+        # is right, which is exactly what it did until this was written.
+        judged = route
+        if approach:
+            try:
+                judged = route[:route.index(approach[0]) + 1]
+            except ValueError:
+                pass
+        over = line_over_land(judged, free=((lat, lon),
+                                            (float(port["lat"]), float(port["lon"]))))
         if over is not None:
             print(f"  ! the {route_basis} route to {port['name']} still runs over land on"
                   f" leg {over} - drawing no route at all", file=sys.stderr)
@@ -3205,10 +3238,21 @@ def approach_waypoints(port: dict, frm: tuple) -> list:
     router, which checks the land mask leg by leg, finds its own way in.
     """
     goal = (float(port["lat"]), float(port["lon"]))
+    # The third test is a number, and the number belongs to the PORT.
+    #
+    # Thirty miles is the right reach for a harbour on the coast. Sevilla is forty-two
+    # miles up the Guadalquivir, and the one approach mark anybody wrote for this passage
+    # sits at the river mouth - so the constant ruled that mark out as "ocean crossing,
+    # none of the router's business", and left the search aiming at a quay fifty miles
+    # inland. It snapped the goal to the nearest sea cell, which was the mouth, appended
+    # the quay unchecked, and every land test from here to Spain threw the whole line
+    # away. Both branches failed on the same leg for the same reason, and the forecast
+    # card froze on its way to a port nothing could route to.
+    reach = float(port.get("approach_nm") or APPROACH_NM)
     near = []
     for w in reversed(port.get("waypoints") or []):
         p = (float(w[0]), float(w[1]))
-        if nm_between(p, goal) > APPROACH_NM:
+        if nm_between(p, goal) > reach:
             break
         near.append(p)
     near.reverse()
