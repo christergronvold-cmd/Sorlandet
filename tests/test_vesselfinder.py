@@ -293,45 +293,83 @@ if second != [] or "asked_utc" not in (update.read_json(update.VF_STATE, {}) or 
                  " request costs a credit whether or not the answer is usable")
 update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY = _was
 
-# ------------------------------------------------------------- what the request asks for
-# 28 October. Their own page had her a minute old, thirty miles out, under way at 8.4
-# knots, and knew she had sailed from Funchal at 09:24. Their API, asked forty-one times
-# that day, handed back a fix from 16:45 the afternoon before with her moored at the quay.
+# ----------------------------------------------- the shore first, the satellites after
+# Alex at VesselFinder, 29 October: "I would suggest using sat=1 only when no usable data
+# is provided with sat=0. This way you can minimise the 10 credit charges."
 #
-# The difference was one parameter. Their documentation: "Set sat=1 to request satellite
-# positions (returned only if newer than the last terrestrial one)." It does not buy
-# satellite; it stops them withholding it. Terrestrial still answers when terrestrial is
-# freshest, at one credit. Leaving it off to save money bought nothing and cost a day.
+# sat=1 never over-charges outright - terrestrial still comes back at one credit when it
+# is freshest. But it hands over a satellite position whenever satellite is merely NEWER,
+# and a three-hour-old shore fix is usually all this page needs. So: shore first, and the
+# satellites only when the shore has nothing worth having.
 _asked = []
 _was = (update.get_json, update.VF_KEY, update.VF_STATE)
 import tempfile as _tf2
-update.VF_STATE = Path(_tf2.mkdtemp()) / "vf.json"
 update.VF_KEY = "test-key"
-update.get_json = lambda url, timeout=30: (_asked.append(url) or SAMPLE)
-_hush2 = io.StringIO()
-with contextlib.redirect_stdout(_hush2), contextlib.redirect_stderr(_hush2):
-    update.fetch_from_vesselfinder(
-        [dict(NEAR, seen_utc=ago(12))], PLAN,
-        [{"t": ago(13), "lat": NEAR["lat"], "lon": NEAR["lon"], "sog": 5.0, "cog": 180}])
-update.get_json, update.VF_KEY, update.VF_STATE = _was
+# The recorded reply is nine days old by now, which is exactly the "not worth having"
+# case. A freshly stamped copy of it is the "shore has her" case.
+def _stamped(mins_ago):
+    when = datetime.now(timezone.utc) - timedelta(minutes=mins_ago)
+    return [{"AIS": dict(SAMPLE[0]["AIS"],
+                         TIMESTAMP=when.strftime("%Y-%m-%d %H:%M:%S UTC"))}]
 
-if not _asked:
+_fresh_sample = _stamped(4)
+_old_sample = _stamped(60 * 24 * 9)
+
+def _runs(replies):
+    """Drive one fetch and hand back the URLs it asked, key stripped."""
+    _asked.clear()
+    update.VF_STATE = Path(_tf2.mkdtemp()) / "vf.json"
+    seq = list(replies)
+
+    def fake(url, timeout=30):
+        _asked.append(url.split("userkey=")[1].split("&", 1)[-1])
+        return seq.pop(0) if seq else None
+
+    update.get_json = fake
+    hush = io.StringIO()
+    with contextlib.redirect_stdout(hush), contextlib.redirect_stderr(hush):
+        out = update.fetch_from_vesselfinder(
+            [dict(NEAR, seen_utc=ago(12))], PLAN,
+            [{"t": ago(13), "lat": NEAR["lat"], "lon": NEAR["lon"], "sog": 5.0, "cog": 180}])
+    return out, list(_asked)
+
+# A fresh shore fix: one request, no sat, one credit.
+got, urls = _runs([_fresh_sample])
+if not urls:
     fails.append("no request was made at all in the case that is meant to make one")
-else:
-    url = _asked[0]
-    if "sat=1" not in url:
-        fails.append(f"the request does not ask for the newest position they have:"
-                     f" {url.split('userkey=')[0]}... - without sat=1 they answer with the"
-                     f" last TERRESTRIAL fix, which on 28 October was twenty-one hours old"
-                     f" while their own website had her a minute old")
-    # By MMSI, not IMO. AIS is broadcast with an MMSI and never with an IMO, so the
-    # position store is keyed on the first and the second is a lookup into it - and on
-    # 28 October that lookup handed back the same thirty-hour-old fix fifty-one times
-    # while their own website had her a minute old.
-    if f"mmsi={update.MMSI}" not in url and f"imo={update.IMO}" not in url:
-        fails.append(f"the request does not name the ship at all: {url!r}")
-    if update.VF_BY == "mmsi" and f"mmsi={update.MMSI}" not in url:
-        fails.append(f"VF_BY says mmsi and the request still asks by IMO: {url!r}")
+elif "sat=1" in urls[0]:
+    fails.append(f"the FIRST request already asks for satellite: {urls[0]!r} - that is the"
+                 f" ten-credit charge taken before the shore stations have been asked")
+elif len(urls) > 1:
+    fails.append(f"asked the satellites anyway after a good shore fix: {urls}")
+
+# Nothing usable from the shore - an expired key, a spent balance - then the satellites.
+got, urls = _runs([{"error": "expired credits"}, _fresh_sample])
+if len(urls) < 2 or "sat=1" not in urls[-1]:
+    fails.append(f"the shore gave nothing and the satellites were never asked: {urls}")
+if not got:
+    fails.append("the satellite answer was thrown away")
+
+# A shore fix so old it was not worth the asking: try the satellites too.
+got, urls = _runs([_old_sample, _fresh_sample])
+if len(urls) < 2:
+    fails.append(f"a nine-day-old shore fix was accepted without asking the satellites:"
+                 f" {urls}")
+
+# Both dead: no crash, nothing returned, and the receipt SAYS so - which is the whole
+# lesson of 28 October, when fifty-four errors in a row left a file that looked like a
+# source quietly returning old data.
+got, urls = _runs([{"error": "expired credits"}, {"error": "expired credits"}])
+if got:
+    fails.append("invented a position out of two error replies")
+receipt = update.read_json(update.VF_STATE, {}) or {}
+if not receipt.get("failing"):
+    fails.append("the receipt does not record that the source is failing; for forty-one"
+                 " hours that silence read as stale data instead of a dead account")
+if not receipt.get("last_error"):
+    fails.append("the receipt does not keep what the error actually said")
+
+update.get_json, update.VF_KEY, update.VF_STATE = _was
 
 print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in "
       f"{len(cases) + 1} cases where it would have bought nothing")

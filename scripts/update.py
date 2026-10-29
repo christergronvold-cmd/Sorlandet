@@ -529,27 +529,35 @@ VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
 # the ocean where no camera is looking. That had the test the wrong way round. It is not
 # about where she is. It is about whether anybody has heard her lately, and the gate above
 # has already established that nobody has.
+# Satellite is the SECOND question, never the first - Alex's own advice, 29 October:
+# "I would suggest using sat=1 only when no usable data is provided with sat=0. This way
+# you can minimise the 10 credit charges."
+#
+# sat=1 does return terrestrial at one credit when terrestrial is freshest, so it never
+# over-charges outright. But it hands back a satellite position whenever satellite is
+# merely NEWER - and a three-hour-old terrestrial fix is usually all this page needs.
+# Paying ten credits to improve on it is paying for precision nobody asked for. So the
+# shore stations are asked first, and the satellites only when the shore has nothing
+# recent enough to be worth having.
 VF_SAT = os.environ.get("VF_SAT", "1").strip()
-# Ask by MMSI, not IMO. The last thing left that is ours to change.
+# Either identifier works. This is kept only because it was a guess once, and the guess
+# was wrong, and the comment is worth more than the switch.
 #
-# 28 October, 22:47, with sat=1 already going out: their own page had her one minute old,
-# 65 degrees, 6.8 knots, under way. The reply to our request was the same fix from 16:45
-# the previous afternoon, SRC TER - thirty hours old, of a ship moored at a quay she had
-# left that morning. sat=1 changed nothing, so the reasoning behind it was wrong.
+# On 28 October the paid source froze: the same fix from 27 October 16:45, returned
+# fifty-four times over forty-one hours, while VesselFinder's own website had her a
+# minute old. I guessed coverage. Then I guessed sat. Then I guessed this - that AIS is
+# broadcast with an MMSI and never an IMO, so their store must be keyed on MMSI and the
+# IMO lookup had gone stale.
 #
-# What is certain: the key works and the request has the right shape. It returned fixes
-# two minutes old, over and over, for as long as she lay alongside. It froze at 27
-# October 16:45 and has not moved in fifty-one requests since.
+# All three were wrong, and Alex answered it in two lines: the credits expired at
+# 2026-10-27 16:45:27 - seven seconds after the last fix we ever got - and every request
+# after that returned an error. The timestamp did not freeze. The ACCOUNT stopped, and
+# the thing I was reading was our own receipt file, which only ever held the last good
+# answer and had no way to say that nothing had answered since.
 #
-# Their documentation allows either identifier: "Vessels can be specified using a list of
-# IMO numbers, MMSI numbers, or a combination of both." AIS is broadcast with an MMSI and
-# never with an IMO, so a position store is keyed by MMSI and an IMO is a lookup into it.
-# If that lookup is what has gone stale, asking the other way round is the whole fix.
-#
-# Said plainly: this is a guess, and it is the third about this API. The first two - that
-# it was coverage, and that it was sat - were both wrong. The question has gone to
-# VesselFinder as well, which is where the answer is actually going to come from.
-VF_BY = os.environ.get("VF_BY", "mmsi").strip().lower()
+# The job printed "nothing usable in the reply" to the log on every one of those
+# fifty-four requests. I wrote that line. I never read it.
+VF_BY = os.environ.get("VF_BY", "imo").strip().lower()
 # Running in, half an hour is four miles and quite possibly a different camera, so that
 # is how often this is worth a credit while she is moving...
 VF_MOVING_MIN = float(os.environ.get("VF_MOVING_MIN", "30"))
@@ -827,28 +835,53 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
                               requests=int(receipt.get("requests") or 0) + 1))
 
     who = f"&mmsi={MMSI}" if VF_BY == "mmsi" else f"&imo={IMO}"
-    tail = who + (f"&sat={VF_SAT}" if VF_SAT not in ("", "0") else "")
-    url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}{tail}"
-    shown = f"{VF_URL}?userkey=***{tail}"
     print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is {state}"
-          f" near {port['name'] if port else 'a port'} - asking {shown}")
-    try:
-        body = get_json(url, timeout=30)
-    except Exception as exc:
-        print(f"  ! VesselFinder: {type(exc).__name__}: {exc} - carrying on without it",
-              file=sys.stderr)
-        return []
-    if body is None:
-        print("  ! VesselFinder: no reply body - carrying on without it", file=sys.stderr)
-        return []
-    pt = _vf_point(body)
+          f" near {port['name'] if port else 'a port'} - asking")
+
+    def _try(sat: bool):
+        tail = who + ("&sat=1" if sat else "")
+        try:
+            body = get_json(f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}{tail}",
+                            timeout=30)
+        except Exception as exc:
+            return None, f"{type(exc).__name__}: {exc}"
+        if body is None:
+            return None, "no reply body"
+        got = _vf_point(body)
+        return (got, None) if got else (None, str(body)[:200])
+
+    # The shore stations first, at one credit.
+    pt, why = _try(False)
+    # ...and the satellites only if that brought back nothing, or nothing recent enough
+    # to have been worth asking for in the first place.
+    if VF_SAT not in ("", "0"):
+        too_old = pt is not None and _age_min(pt.get("seen_utc")) >= wait_min
+        if pt is None or too_old:
+            print("  * terrestrial gave " + ("nothing usable" if pt is None
+                  else f"a fix {_age_min(pt['seen_utc']):.0f} min old") + " - asking the"
+                  " satellites, which is ten credits if they have something newer")
+            sat_pt, sat_why = _try(True)
+            if sat_pt is not None:
+                pt, why = sat_pt, None
+            elif pt is None:
+                why = sat_why or why
+
     if not pt:
-        # An expired key, a spent balance or a changed shape all land here, and all of them
-        # mean the same thing to this program: carry on with what the free sources gave.
-        print(f"  ! VesselFinder: nothing usable in the reply ({str(body)[:160]})",
+        # An expired key, a spent balance, a changed shape: all land here. They used to
+        # land here QUIETLY - the receipt kept the last good fix, nothing recorded that
+        # the last fifty-four answers had been errors, and for forty-one hours the file
+        # looked like a source returning stale data rather than an account that had
+        # stopped. The receipt carries the failure now, so it cannot look like that again.
+        hurt = read_json(VF_STATE, {}) or {}
+        runs = int(hurt.get("failing") or 0) + 1
+        write_json(VF_STATE, dict(hurt, failing=runs, last_error=why,
+                                  last_error_utc=iso(now_utc())))
+        shout = (" - THE PAID SOURCE HAS BEEN DEAD FOR %d REQUESTS" % runs) if runs >= 3 else ""
+        print(f"  ! VesselFinder: nothing usable in the reply ({why}){shout}",
               file=sys.stderr)
         return []
     write_json(VF_STATE, dict(read_json(VF_STATE, {}) or {},
+                              failing=0, last_error=None,
                               fix_utc=pt["seen_utc"], lat=pt["lat"], lon=pt["lon"],
                               sog_kn=pt.get("sog_kn"), nav_status=pt.get("nav_status"),
                               ais_src=pt.get("ais_src"),
@@ -1069,6 +1102,14 @@ def _moving_now(position: dict) -> bool | None:
     if sog < MOVE_QUIET_KN or status in NAV_STOPPED:
         return False
     return None             # between the two, with nothing said: not an answer
+
+
+def _age_min(seen: str | None) -> float:
+    """How many minutes old a timestamp is. Enormous when it cannot be read at all."""
+    try:
+        return (now_utc() - parse_iso(seen)).total_seconds() / 60
+    except Exception:
+        return 99999.0
 
 
 def _has_shifted(state: dict, here: tuple) -> bool | None:
