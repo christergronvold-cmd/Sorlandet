@@ -324,8 +324,14 @@ else:
                      f" {url.split('userkey=')[0]}... - without sat=1 they answer with the"
                      f" last TERRESTRIAL fix, which on 28 October was twenty-one hours old"
                      f" while their own website had her a minute old")
-    if f"imo={update.IMO}" not in url:
-        fails.append(f"the request does not name the ship: {url!r}")
+    # By MMSI, not IMO. AIS is broadcast with an MMSI and never with an IMO, so the
+    # position store is keyed on the first and the second is a lookup into it - and on
+    # 28 October that lookup handed back the same thirty-hour-old fix fifty-one times
+    # while their own website had her a minute old.
+    if f"mmsi={update.MMSI}" not in url and f"imo={update.IMO}" not in url:
+        fails.append(f"the request does not name the ship at all: {url!r}")
+    if update.VF_BY == "mmsi" and f"mmsi={update.MMSI}" not in url:
+        fails.append(f"VF_BY says mmsi and the request still asks by IMO: {url!r}")
 
 print(f"parsed a real recorded reply, refused 6 bad ones, and held the credit in "
       f"{len(cases) + 1} cases where it would have bought nothing")

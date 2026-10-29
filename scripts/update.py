@@ -530,6 +530,26 @@ VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
 # about where she is. It is about whether anybody has heard her lately, and the gate above
 # has already established that nobody has.
 VF_SAT = os.environ.get("VF_SAT", "1").strip()
+# Ask by MMSI, not IMO. The last thing left that is ours to change.
+#
+# 28 October, 22:47, with sat=1 already going out: their own page had her one minute old,
+# 65 degrees, 6.8 knots, under way. The reply to our request was the same fix from 16:45
+# the previous afternoon, SRC TER - thirty hours old, of a ship moored at a quay she had
+# left that morning. sat=1 changed nothing, so the reasoning behind it was wrong.
+#
+# What is certain: the key works and the request has the right shape. It returned fixes
+# two minutes old, over and over, for as long as she lay alongside. It froze at 27
+# October 16:45 and has not moved in fifty-one requests since.
+#
+# Their documentation allows either identifier: "Vessels can be specified using a list of
+# IMO numbers, MMSI numbers, or a combination of both." AIS is broadcast with an MMSI and
+# never with an IMO, so a position store is keyed by MMSI and an IMO is a lookup into it.
+# If that lookup is what has gone stale, asking the other way round is the whole fix.
+#
+# Said plainly: this is a guess, and it is the third about this API. The first two - that
+# it was coverage, and that it was sat - were both wrong. The question has gone to
+# VesselFinder as well, which is where the answer is actually going to come from.
+VF_BY = os.environ.get("VF_BY", "mmsi").strip().lower()
 # Running in, half an hour is four miles and quite possibly a different camera, so that
 # is how often this is worth a credit while she is moving...
 VF_MOVING_MIN = float(os.environ.get("VF_MOVING_MIN", "30"))
@@ -806,7 +826,8 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     write_json(VF_STATE, dict(receipt, asked_utc=iso(now_utc()),
                               requests=int(receipt.get("requests") or 0) + 1))
 
-    tail = f"&imo={IMO}" + (f"&sat={VF_SAT}" if VF_SAT not in ("", "0") else "")
+    who = f"&mmsi={MMSI}" if VF_BY == "mmsi" else f"&imo={IMO}"
+    tail = who + (f"&sat={VF_SAT}" if VF_SAT not in ("", "0") else "")
     url = f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}{tail}"
     shown = f"{VF_URL}?userkey=***{tail}"
     print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is {state}"
