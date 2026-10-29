@@ -2780,6 +2780,15 @@ def next_port(ports: list, points: list | None = None) -> dict | None:
     return voyage_state(ports, points)["to"]
 
 
+def _stay_left_h(here: dict) -> float:
+    """Hours until the end of her departure day, or none left if it cannot be read."""
+    try:
+        return max(0.0, (parse_iso(here["depart"] + "T23:59:59Z")
+                         - now_utc()).total_seconds() / 3600)
+    except Exception:
+        return 0.0
+
+
 def build_ahead(lat: float, lon: float, speed_kn: float | None,
                 track_points: list | None = None) -> None:
     """Write the route ahead - or, if that fails, make sure the old one stops being drawn.
@@ -2867,6 +2876,23 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
         state = voyage_state(plan.get("ports") or [], track_points)
         here = state.get("in_port")
         holding = bool(here and here.get("depart") and today_iso() <= here["depart"])
+
+        # ...but not through the last hours of the stay. By then the passage IS the
+        # forecast, and the quay is not.
+        #
+        # The ladder in port deliberately stands still at the berth and runs only to the
+        # end of her departure day. Written at 23:47 on the night before she sailed from
+        # Funchal, that left twelve minutes of span - so the rungs came out as [0, 6] and
+        # the whole card was one tile of wind over a quay she was about to leave.
+        # "Værmelding for de neste dagene på turen." Quite.
+        #
+        # This branch exists to stop 542 miles of dashed line being drawn from a ship tied
+        # up for another three weeks. Six hours before she sails it is not that line any
+        # more - it is where she is going tonight.
+        if holding and _stay_left_h(here) < AHEAD_LADDER[1]:
+            print(f"  -> {here['name']}: {_stay_left_h(here):.1f} h of the stay left"
+                  f" - forecasting the passage rather than the berth")
+            holding = False
         near_nm = nm_between((lat, lon), (float(port["lat"]), float(port["lon"])))
         if holding or near_nm <= AHEAD_CLEAR_NM:
             # No route - and no forecast ladder strung out along one either.
@@ -2883,11 +2909,8 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
             stay = here or port
             span = AHEAD_MAX_HOURS
             if here and here.get("depart"):
-                try:
-                    left = (parse_iso(here["depart"] + "T23:59:59Z") - now_utc())
-                    span = max(6, min(AHEAD_MAX_HOURS, left.total_seconds() / 3600))
-                except Exception:
-                    pass
+                span = max(float(AHEAD_LADDER[1]),
+                           min(float(AHEAD_MAX_HOURS), _stay_left_h(here)))
             hrs = [h for h in AHEAD_LADDER if h <= span] or [AHEAD_LADDER[0]]
             still = [{"t": iso(now_utc() + timedelta(hours=h)), "hours": h,
                       "lat": round(lat, 4), "lon": round(lon, 4),
