@@ -1,255 +1,24 @@
 {
- "generated_utc": "2026-10-29T19:01:21Z",
+ "generated_utc": "2026-10-29T19:30:51Z",
  "to": "Sevilla",
  "country": "Spain",
- "distance_nm": 546.1,
- "direct_nm": 444.3,
- "route_basis": "course",
- "under_engine": false,
- "winding": 1.23,
- "tacks": [
-  5,
-  6,
-  8,
-  10,
-  32,
-  54
- ],
- "speed_kn": 4.6,
- "vmg_kn": 3.74,
+ "distance_nm": 444.0,
+ "direct_nm": 436.5,
+ "route_basis": "direct",
+ "under_engine": true,
+ "winding": 1.02,
+ "tacks": null,
+ "speed_kn": 3.1,
+ "vmg_kn": 3.06,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good easing to the plan",
  "due_utc": "2026-11-05T12:00:00Z",
- "eta_utc": "2026-11-05T12:01:21Z",
+ "eta_utc": "2026-11-05T12:30:51Z",
  "route": [
   [
-   33.9733,
-   -14.09
-  ],
-  [
-   34.0123,
-   -14.0983
-  ],
-  [
-   34.0608,
-   -14.1196
-  ],
-  [
-   34.1117,
-   -14.1304
-  ],
-  [
-   34.1481,
-   -14.1382
-  ],
-  [
-   34.1242,
-   -14.0882
-  ],
-  [
-   34.1802,
-   -14.0882
-  ],
-  [
-   34.2316,
-   -14.0992
-  ],
-  [
-   34.2012,
-   -14.0554
-  ],
-  [
-   34.1847,
-   -14.021
-  ],
-  [
-   34.2238,
-   -14.0293
-  ],
-  [
-   34.2788,
-   -14.0411
-  ],
-  [
-   34.3315,
-   -14.0298
-  ],
-  [
-   34.4196,
-   -14.0298
-  ],
-  [
-   34.5014,
-   -13.9725
-  ],
-  [
-   34.5909,
-   -13.8812
-  ],
-  [
-   34.6608,
-   -13.81
-  ],
-  [
-   34.7413,
-   -13.7533
-  ],
-  [
-   34.8865,
-   -13.6511
-  ],
-  [
-   35.0764,
-   -13.5171
-  ],
-  [
-   35.2587,
-   -13.3882
-  ],
-  [
-   35.4162,
-   -13.2765
-  ],
-  [
-   35.5911,
-   -13.1523
-  ],
-  [
-   35.7528,
-   -13.0372
-  ],
-  [
-   35.8978,
-   -12.9339
-  ],
-  [
-   36.0303,
-   -12.8393
-  ],
-  [
-   36.1249,
-   -12.7717
-  ],
-  [
-   36.2232,
-   -12.7273
-  ],
-  [
-   36.3158,
-   -12.6855
-  ],
-  [
-   36.4069,
-   -12.6443
-  ],
-  [
-   36.4877,
-   -12.6077
-  ],
-  [
-   36.5304,
-   -12.5883
-  ],
-  [
-   36.4869,
-   -12.5429
-  ],
-  [
-   36.4469,
-   -12.4569
-  ],
-  [
-   36.3705,
-   -12.3438
-  ],
-  [
-   36.3068,
-   -12.2071
-  ],
-  [
-   36.2487,
-   -12.0824
-  ],
-  [
-   36.1733,
-   -11.9209
-  ],
-  [
-   36.1173,
-   -11.7308
-  ],
-  [
-   36.0589,
-   -11.5331
-  ],
-  [
-   36.0274,
-   -11.3137
-  ],
-  [
-   35.9844,
-   -11.0145
-  ],
-  [
-   35.9379,
-   -10.692
-  ],
-  [
-   35.894,
-   -10.3873
-  ],
-  [
-   35.8936,
-   -10.0908
-  ],
-  [
-   35.9336,
-   -9.8089
-  ],
-  [
-   35.9739,
-   -9.5236
-  ],
-  [
-   36.0208,
-   -9.1916
-  ],
-  [
-   36.0691,
-   -8.8491
-  ],
-  [
-   36.1189,
-   -8.4965
-  ],
-  [
-   36.1992,
-   -8.222
-  ],
-  [
-   36.2596,
-   -8.0153
-  ],
-  [
-   36.2595,
-   -7.8484
-  ],
-  [
-   36.2157,
-   -7.7545
-  ],
-  [
-   36.2784,
-   -7.7408
-  ],
-  [
-   36.3392,
-   -7.6972
-  ],
-  [
-   36.3661,
-   -7.6053
+   34.3277,
+   -14.142
   ],
   [
    36.8,
@@ -264,142 +33,142 @@
   {
    "hours": 0,
    "time_utc": "2026-10-29T19:00:00Z",
-   "lat": 33.9733,
-   "lon": -14.09,
-   "wind_ms": 1.35,
-   "wind_dir": 48,
-   "gust_ms": 2.0,
-   "temp_c": 21.7,
+   "lat": 34.3277,
+   "lon": -14.142,
+   "wind_ms": 1.22,
+   "wind_dir": 55,
+   "gust_ms": 1.8,
+   "temp_c": 21.4,
    "weather_code": 1,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 1.64,
+   "wave_dir": 339,
+   "wave_period_s": 10.2
   },
   {
    "hours": 6,
    "time_utc": "2026-10-30T01:00:00Z",
-   "lat": 34.2273,
-   "lon": -14.0301,
-   "wind_ms": 1.91,
-   "wind_dir": 47,
-   "gust_ms": 3.2,
-   "temp_c": 21.3,
-   "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "lat": 34.4427,
+   "lon": -13.7865,
+   "wind_ms": 2.48,
+   "wind_dir": 40,
+   "gust_ms": 4.1,
+   "temp_c": 20.8,
+   "weather_code": 2,
+   "wave_m": 1.42,
+   "wave_dir": 339,
+   "wave_period_s": 10.05
   },
   {
    "hours": 12,
    "time_utc": "2026-10-30T07:00:00Z",
-   "lat": 34.6323,
-   "lon": -13.8391,
-   "wind_ms": 2.4,
-   "wind_dir": 45,
-   "gust_ms": 3.3,
-   "temp_c": 20.7,
+   "lat": 34.5577,
+   "lon": -13.431,
+   "wind_ms": 2.52,
+   "wind_dir": 34,
+   "gust_ms": 3.5,
+   "temp_c": 20.8,
    "weather_code": 2,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 1.26,
+   "wave_dir": 336,
+   "wave_period_s": 10.15
   },
   {
    "hours": 24,
    "time_utc": "2026-10-30T19:00:00Z",
-   "lat": 35.4237,
-   "lon": -13.2712,
-   "wind_ms": 2.2,
-   "wind_dir": 30,
-   "gust_ms": 3.1,
-   "temp_c": 20.9,
-   "weather_code": 2,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "lat": 34.7878,
+   "lon": -12.7199,
+   "wind_ms": 2.51,
+   "wind_dir": 23,
+   "gust_ms": 3.5,
+   "temp_c": 21.0,
+   "weather_code": 1,
+   "wave_m": 1.32,
+   "wave_dir": 322,
+   "wave_period_s": 10.95
   },
   {
    "hours": 36,
    "time_utc": "2026-10-31T07:00:00Z",
-   "lat": 36.1444,
-   "lon": -12.7629,
-   "wind_ms": 3.81,
-   "wind_dir": 76,
-   "gust_ms": 5.6,
-   "temp_c": 20.3,
-   "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "lat": 35.0085,
+   "lon": -12.0378,
+   "wind_ms": 2.25,
+   "wind_dir": 69,
+   "gust_ms": 3.2,
+   "temp_c": 20.7,
+   "weather_code": 2,
+   "wave_m": 1.68,
+   "wave_dir": 308,
+   "wave_period_s": 11.65
   },
   {
    "hours": 48,
    "time_utc": "2026-10-31T19:00:00Z",
-   "lat": 36.3461,
-   "lon": -12.2914,
-   "wind_ms": 3.77,
-   "wind_dir": 58,
-   "gust_ms": 5.1,
-   "temp_c": 20.7,
-   "weather_code": 1,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "lat": 35.2168,
+   "lon": -11.3937,
+   "wind_ms": 1.7,
+   "wind_dir": 40,
+   "gust_ms": 3.1,
+   "temp_c": 21.2,
+   "weather_code": 2,
+   "wave_m": 1.94,
+   "wave_dir": 306,
+   "wave_period_s": 12.05
   },
   {
    "hours": 72,
    "time_utc": "2026-11-01T19:00:00Z",
-   "lat": 35.9535,
-   "lon": -10.7999,
-   "wind_ms": 2.25,
-   "wind_dir": 58,
-   "gust_ms": 2.4,
-   "temp_c": 21.0,
-   "weather_code": 1,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "lat": 35.6176,
+   "lon": -10.1548,
+   "wind_ms": 2.66,
+   "wind_dir": 56,
+   "gust_ms": 4.1,
+   "temp_c": 21.7,
+   "weather_code": 0,
+   "wave_m": 1.66,
+   "wave_dir": 319,
+   "wave_period_s": 10.9
   },
   {
    "hours": 96,
    "time_utc": "2026-11-02T19:00:00Z",
-   "lat": 36.0024,
-   "lon": -9.3221,
-   "wind_ms": 3.31,
-   "wind_dir": 355,
-   "gust_ms": 5.1,
-   "temp_c": 20.9,
+   "lat": 36.011,
+   "lon": -8.9388,
+   "wind_ms": 2.94,
+   "wind_dir": 342,
+   "gust_ms": 4.9,
+   "temp_c": 21.3,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 1.4,
+   "wave_dir": 321,
+   "wave_period_s": 10.8
   },
   {
    "hours": 120,
    "time_utc": "2026-11-03T19:00:00Z",
-   "lat": 36.2595,
-   "lon": -7.8884,
-   "wind_ms": 4.98,
-   "wind_dir": 308,
-   "gust_ms": 6.3,
-   "temp_c": 19.5,
+   "lat": 36.4024,
+   "lon": -7.7289,
+   "wind_ms": 3.77,
+   "wind_dir": 302,
+   "gust_ms": 5.1,
+   "temp_c": 20.0,
    "weather_code": 3,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.7,
+   "wave_dir": 294,
+   "wave_period_s": 6.4
   },
   {
    "hours": 144,
    "time_utc": "2026-11-04T19:00:00Z",
-   "lat": 36.7419,
-   "lon": -6.6479,
-   "wind_ms": 4.81,
-   "wind_dir": 258,
-   "gust_ms": 6.8,
-   "temp_c": 19.7,
+   "lat": 36.7933,
+   "lon": -6.5207,
+   "wind_ms": 2.82,
+   "wind_dir": 247,
+   "gust_ms": 4.2,
+   "temp_c": 18.4,
    "weather_code": 0,
-   "wave_m": null,
-   "wave_dir": null,
-   "wave_period_s": null
+   "wave_m": 0.32,
+   "wave_dir": 239,
+   "wave_period_s": 5.05
   },
   {
    "hours": 168,
