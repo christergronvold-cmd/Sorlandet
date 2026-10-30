@@ -2,21 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-30T17:31:29Z",
+ "updated_utc": "2026-10-30T18:01:48Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "ais_src": "TER",
   "lat": 33.85553,
   "lon": -13.94474,
   "sog_kn": 2.0,
-  "cog_deg": 143.0,
-  "heading_deg": 140,
-  "nav_status": 0,
-  "destination": "ES SVQ",
-  "draught_m": 4.1,
+  "cog_deg": 143,
+  "heading_deg": null,
   "seen_utc": "2026-10-30T16:10:37Z",
-  "source": "vesselfinder",
+  "source": "foundation",
+  "nav_status": 0,
   "nav_status_utc": "2026-10-30T16:10:37Z"
  },
  "voyage": {
@@ -26,40 +23,40 @@
   "heard_utc": "2026-10-30T16:10:37Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-30T17:31:28Z",
+  "fetched_utc": "2026-10-30T18:01:46Z",
   "sea": {
-   "wave_height_m": 1.2,
-   "wave_direction_deg": 328,
-   "wave_period_s": 10.5,
-   "swell_height_m": 0.92,
-   "swell_period_s": 10.0,
+   "wave_height_m": 1.24,
+   "wave_direction_deg": 322,
+   "wave_period_s": 10.75,
+   "swell_height_m": 0.78,
+   "swell_period_s": 9.05,
    "wind_wave_height_m": 0.0,
-   "sea_temp_c": 22.9,
-   "time_utc": "2026-10-30T17:30"
+   "sea_temp_c": 22.8,
+   "time_utc": "2026-10-30T18:00"
   },
   "air": {
-   "temp_c": 20.4,
-   "feels_c": 21.8,
-   "wind_ms": 1.94,
-   "gust_ms": 3.2,
-   "wind_direction_deg": 78,
+   "temp_c": 20.5,
+   "feels_c": 21.9,
+   "wind_ms": 2.2,
+   "gust_ms": 3.6,
+   "wind_direction_deg": 60,
    "pressure_hpa": 1016.8,
-   "cloud_pct": 66,
+   "cloud_pct": 67,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-10-30T17:30"
+   "time_utc": "2026-10-30T18:00"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 19.3,
+   "age_days": 19.4,
    "illumination": 0.78,
    "phase": "waning gibbous"
   },
   "civil_timezone": "Europe/Madrid",
   "civil_place": "Sevilla",
   "civil_country": "Spain",
-  "sunrise_utc": "2026-10-30T07:13",
+  "sunrise_utc": "2026-10-30T07:14",
   "sunset_utc": "2026-10-30T18:05",
   "daylight_hours": 10.9
  },
