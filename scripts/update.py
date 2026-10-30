@@ -2414,7 +2414,7 @@ def fetch_ahead(points: list) -> list:
         ai = a.get("time", []).index(stamp) if stamp in (a.get("time") or []) else None
         si = s.get("time", []).index(stamp) if stamp in (s.get("time") or []) else None
         pick = lambda d, key, i: (d.get(key) or [None])[i] if i is not None and d.get(key) else None
-        out.append({
+        row = {
             "hours": p["hours"], "time_utc": iso(when), "lat": p["lat"], "lon": p["lon"],
             "wind_ms": pick(a, "wind_speed_10m", ai),
             "wind_dir": pick(a, "wind_direction_10m", ai),
@@ -2424,7 +2424,24 @@ def fetch_ahead(points: list) -> list:
             "wave_m": pick(s, "wave_height", si),
             "wave_dir": pick(s, "wave_direction", si),
             "wave_period_s": pick(s, "wave_period", si),
-        })
+        }
+        # Whatever the caller knew about the place comes through with it.
+        #
+        # This builds a fresh row out of the forecast, and in doing so it used to throw
+        # away "where" and "port" - the two fields that say whether that hour finds her at
+        # sea, alongside, or on her way to the port after this one. positions_ahead and
+        # positions_after_arrival both set them with some care, and the page reads them to
+        # write "in Sevilla" under a tile. Neither survived the trip.
+        #
+        # The holding branch had noticed and put "where" back on afterwards, which fixed
+        # the card in port and hid the fault everywhere else: all the way across the
+        # Atlantic every tile came out unlabelled, and the day she arrives looked like any
+        # other day at sea. A field a caller has to remember to restore is a field the next
+        # caller will forget.
+        for key in ("where", "port"):
+            if p.get(key) is not None:
+                row[key] = p[key]
+        out.append(row)
     return out
 
 
@@ -2922,12 +2939,11 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                 "country": (stay or port).get("country"),
                 "holding_until": here.get("depart") if here else None,
                 "near_nm": round(near_nm, 2),
-                # fetch_ahead composes its own rows, so `where` is put back on afterwards:
+                # `where` is set on the points above and carried through by fetch_ahead:
                 # the page labels each forecast tile with it ("in Lerwick" rather than a
                 # bare hour), and without it the tiles lose the one word that says she is
                 # not at sea.
-                "points": [dict(q, where="port" if holding else "sea")
-                           for q in fetch_ahead(still)],
+                "points": fetch_ahead(still),
             })
             print("* " + (f"alongside in {here['name']} until {here['depart']}"
                            if holding else

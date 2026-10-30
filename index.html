@@ -1247,7 +1247,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "1d1447ea34";
+const BUILD = "08fbc49ef8";
 
 async function checkForNewBuild() {
   try {
@@ -3406,6 +3406,17 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       <div class="ic">${WMO[pt.weather_code] || "🧭"}</div>
       <b class="plain" style="font-size:13px;color:var(--ink)">${N(pt.wind_ms, 0)}<span style="font-weight:400"> m/s</span></b>
       ${compass(pt.wind_dir)}<br>
+      <!-- Air temperature, a whole degree at a time.
+           The page has always carried the temperature where she is NOW - in the strip over
+           the map and in the weather card - and never the temperature where she will be.
+           "Har ikke vi hatt med temperatur i denne seksjonen for?" No: ninety-three
+           versions of this file and it was never here. The job has been fetching it all
+           along; nothing ever drew it. A week of it, for a boy in the Atlantic, is a
+           reasonable thing to want.
+           No decimal: a figure six days out that claims a tenth of a degree is claiming
+           more than the model knows. -->
+      <span style="color:var(--muted)">${
+        pt.temp_c != null ? `${N(pt.temp_c, 0)} °C` : "–"}</span><br>
       <span style="color:var(--muted)">${pt.wave_m != null ? `${N(pt.wave_m)} m` : "–"}</span>${
         whereNote(pt) ? `<br><span style="color:var(--muted);font-size:11px">${
           whereNote(pt)}</span>` : ""}</div>`).join("");
