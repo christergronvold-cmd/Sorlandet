@@ -2,47 +2,52 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-10-31T19:26:50Z",
+ "updated_utc": "2026-10-31T19:56:25Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 33.77845,
-  "lon": -13.84967,
-  "sog_kn": 1.1,
-  "cog_deg": 315,
-  "heading_deg": null,
-  "seen_utc": "2026-10-31T04:37:08Z",
-  "source": "foundation"
+  "ais_src": "TER",
+  "lat": 34.62706,
+  "lon": -12.35507,
+  "sog_kn": 8.8,
+  "cog_deg": 63.0,
+  "heading_deg": 64,
+  "nav_status": 0,
+  "destination": "ES SVQ",
+  "draught_m": 4.1,
+  "seen_utc": "2026-10-31T19:52:11Z",
+  "source": "vesselfinder",
+  "nav_status_utc": "2026-10-31T19:52:11Z"
  },
  "voyage": {
   "destination": "ES SVQ",
   "eta_text": "22.10 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-10-31T04:37:08Z"
+  "heard_utc": "2026-10-31T19:52:11Z"
  },
  "weather": {
-  "fetched_utc": "2026-10-31T19:26:48Z",
+  "fetched_utc": "2026-10-31T19:56:22Z",
   "sea": {
    "wave_height_m": 2.04,
-   "wave_direction_deg": 311,
-   "wave_period_s": 12.65,
-   "swell_height_m": 2.02,
-   "swell_period_s": 10.85,
+   "wave_direction_deg": 310,
+   "wave_period_s": 12.7,
+   "swell_height_m": 2.0,
+   "swell_period_s": 10.8,
    "wind_wave_height_m": 0.02,
-   "sea_temp_c": 23.0,
-   "time_utc": "2026-10-31T19:15"
+   "sea_temp_c": 22.8,
+   "time_utc": "2026-10-31T19:45"
   },
   "air": {
-   "temp_c": 21.6,
-   "feels_c": 22.2,
-   "wind_ms": 3.3,
-   "gust_ms": 4.6,
-   "wind_direction_deg": 90,
-   "pressure_hpa": 1018.2,
-   "cloud_pct": 43,
+   "temp_c": 20.8,
+   "feels_c": 21.5,
+   "wind_ms": 3.44,
+   "gust_ms": 5.1,
+   "wind_direction_deg": 36,
+   "pressure_hpa": 1018.4,
+   "cloud_pct": 58,
    "precip_mm": 0.0,
-   "weather_code": 1,
-   "time_utc": "2026-10-31T19:15"
+   "weather_code": 2,
+   "time_utc": "2026-10-31T19:45"
   }
  },
  "sun": {
@@ -54,13 +59,13 @@
   "civil_timezone": "Europe/Madrid",
   "civil_place": "Sevilla",
   "civil_country": "Spain",
-  "sunrise_utc": "2026-10-31T07:13",
-  "sunset_utc": "2026-10-31T18:04",
+  "sunrise_utc": "2026-10-31T07:08",
+  "sunset_utc": "2026-10-31T17:56",
   "daylight_hours": 10.8
  },
  "stats": {
   "points": 777,
-  "distance_nm": 3120.3,
+  "distance_nm": 3210.3,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
