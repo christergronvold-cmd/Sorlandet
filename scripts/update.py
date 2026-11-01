@@ -4309,6 +4309,37 @@ def build_shore() -> None:
         print(f"  ! {w}")
 
 
+def _where_she_is(position: dict, points: list) -> tuple[dict, float, float]:
+    """The position the page publishes, and the lat/lon every other fetch must use.
+
+    These were two facts kept in two places, and on 1 November they disagreed by a hundred
+    and sixty-six miles. The marker sat where she was at half past five that morning; the
+    weather grid was built around where she had been at ten past two the morning before,
+    and Christer saw it at once - his dot was outside its own square of weather.
+
+    The cause was four lines apart. A backfill can leave the track newer than the fix this
+    round happened to hear - a source replaying an old position will do it every time -
+    so `position` was corrected to the newest track point. `lat` and `lon` had been taken
+    from `position` before that correction, and nothing took them again. Everything
+    downstream - the weather where she is, the sun and moon, both forecast grids - was
+    fetched at a place she had left a day and a half earlier.
+
+    So they are not two facts any more. The correction and the coordinates come back
+    together, and a caller cannot take one without the other.
+    """
+    if points:
+        try:
+            newest_t = parse_iso(points[-1]["t"])
+            if not position.get("seen_utc") or newest_t > parse_iso(position["seen_utc"]):
+                position = dict(position, lat=points[-1]["lat"], lon=points[-1]["lon"],
+                                sog_kn=points[-1].get("sog"), cog_deg=points[-1].get("cog"),
+                                heading_deg=None, seen_utc=points[-1]["t"])
+                print("  -> position taken from the newest track point")
+        except Exception:
+            pass
+    return position, float(position["lat"]), float(position["lon"])
+
+
 def main() -> int:
     api_key = os.environ.get("AISSTREAM_API_KEY", "").strip()
     demo = not api_key
@@ -4398,16 +4429,11 @@ def main() -> int:
             print("! no position to show yet - exiting without writing files")
             return 0
 
+    # Where she is, for the record. The weather at that place is fetched further down,
+    # AFTER the track has been merged - see _where_she_is. Reading it here was half the
+    # fault: the reading came from wherever this round's newest HEARD fix was, which is
+    # not always where the page then drew her.
     lat, lon = float(position["lat"]), float(position["lon"])
-    weather = fetch_weather(lat, lon)
-
-    # If the weather service is down, keep the previous weather instead of blanking
-    # the cards on the page.
-    if not weather.get("sea") and not weather.get("air"):
-        earlier = (previous.get("weather") or {}) if previous else {}
-        if earlier:
-            weather = {**earlier, "stale": True}
-            print("  -> no weather data, keeping the previous reading")
 
     if fresh_fix and collected:
         # The foundation's feed reaches days back, so a fix can belong anywhere in the
@@ -4479,17 +4505,18 @@ def main() -> int:
         points = thin_track(points)
 
     # A backfill can leave the track newer than the position we just derived; keep the
-    # two in step so the marker never sits behind the end of its own line.
-    if points:
-        try:
-            newest_t = parse_iso(points[-1]["t"])
-            if not position.get("seen_utc") or newest_t > parse_iso(position["seen_utc"]):
-                position = dict(position, lat=points[-1]["lat"], lon=points[-1]["lon"],
-                                sog_kn=points[-1].get("sog"), cog_deg=points[-1].get("cog"),
-                                heading_deg=None, seen_utc=points[-1]["t"])
-                print("  -> position taken from the newest track point")
-        except Exception:
-            pass
+    # two in step so the marker never sits behind the end of its own line - and take the
+    # coordinates from the same answer, so nothing is fetched at yesterday's place.
+    position, lat, lon = _where_she_is(position, points)
+
+    weather = fetch_weather(lat, lon)
+    # If the weather service is down, keep the previous weather instead of blanking
+    # the cards on the page.
+    if not weather.get("sea") and not weather.get("air"):
+        earlier = (previous.get("weather") or {}) if previous else {}
+        if earlier:
+            weather = {**earlier, "stale": True}
+            print("  -> no weather data, keeping the previous reading")
 
     # ---- what the crew typed in: destination, ETA, draught
     #
