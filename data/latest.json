@@ -2,67 +2,70 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-01T19:53:44Z",
+ "updated_utc": "2026-11-01T20:23:18Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 35.52172,
-  "lon": -10.12237,
-  "sog_kn": 6.9,
-  "cog_deg": 58,
-  "heading_deg": null,
-  "seen_utc": "2026-11-01T11:38:44Z",
-  "source": "foundation",
+  "ais_src": "TER",
+  "lat": 35.88301,
+  "lon": -8.98123,
+  "sog_kn": 7.4,
+  "cog_deg": 87.0,
+  "heading_deg": 88,
   "nav_status": 0,
-  "nav_status_utc": "2026-11-01T11:38:44Z"
+  "destination": "ES SVQ",
+  "draught_m": 4.1,
+  "seen_utc": "2026-11-01T20:18:20Z",
+  "source": "vesselfinder",
+  "nav_status_utc": "2026-11-01T20:18:20Z"
  },
  "voyage": {
   "destination": "ES SVQ",
   "eta_text": "22.10 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-01T11:38:44Z"
+  "heard_utc": "2026-11-01T20:18:20Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-01T19:53:42Z",
+  "fetched_utc": "2026-11-01T20:23:14Z",
   "sea": {
-   "wave_height_m": 1.84,
-   "wave_direction_deg": 320,
-   "wave_period_s": 12.1,
-   "swell_height_m": 1.7,
-   "swell_period_s": 9.75,
-   "wind_wave_height_m": 0.1,
-   "sea_temp_c": 22.8,
-   "time_utc": "2026-11-01T19:45"
+   "wave_height_m": 2.0,
+   "wave_direction_deg": 324,
+   "wave_period_s": 10.95,
+   "swell_height_m": 1.72,
+   "swell_period_s": 9.7,
+   "wind_wave_height_m": 0.44,
+   "sea_temp_c": 21.6,
+   "time_utc": "2026-11-01T20:15"
   },
   "air": {
-   "temp_c": 22.5,
-   "feels_c": 22.8,
-   "wind_ms": 4.56,
-   "gust_ms": 6.1,
-   "wind_direction_deg": 105,
-   "pressure_hpa": 1018.0,
-   "cloud_pct": 92,
+   "temp_c": 21.5,
+   "feels_c": 21.4,
+   "wind_ms": 5.91,
+   "gust_ms": 7.8,
+   "wind_direction_deg": 66,
+   "pressure_hpa": 1018.6,
+   "cloud_pct": 46,
    "precip_mm": 0.0,
-   "weather_code": 3,
-   "time_utc": "2026-11-01T19:45"
+   "weather_code": 1,
+   "time_utc": "2026-11-01T20:15"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 21.4,
+   "age_days": 21.5,
    "illumination": 0.57,
    "phase": "last quarter"
   },
   "civil_timezone": "Europe/Madrid",
   "civil_place": "Sevilla",
   "civil_country": "Spain",
-  "sunrise_utc": "2026-11-01T07:14",
-  "sunset_utc": "2026-11-01T18:03",
-  "daylight_hours": 10.8
+  "sunrise_utc": "2026-11-01T06:58",
+  "sunset_utc": "2026-11-01T17:40",
+  "daylight_hours": 10.7
  },
  "stats": {
-  "points": 757,
-  "distance_nm": 3332.5,
+  "points": 758,
+  "distance_nm": 3392.2,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
