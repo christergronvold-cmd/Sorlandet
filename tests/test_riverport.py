@@ -91,12 +91,18 @@ if MOUTH not in [(round(a, 4), round(b, 4)) for a, b in kept]:
 
 # 2. ...and the default is untouched. Raising the constant for everybody would have passed
 #    check 1 and quietly turned ocean waypoints into approaches at every other port.
+#
+#    Sevilla's list is now the whole river, so a port without a declared reach still keeps
+#    the marks near the quay - as it should. What it must NOT keep is anything beyond the
+#    default thirty miles, and the mark at the bar is forty-three out.
 coastal = dict(SEVILLA)
 coastal.pop("approach_nm", None)
-if update.approach_waypoints(coastal, AT_SEA):
-    fails.append("a port that does NOT declare a reach still kept a 42 nm waypoint as"
-                 " pilotage - the fix was made by moving the constant, not by asking"
-                 " the port")
+too_far = [p for p in update.approach_waypoints(coastal, AT_SEA)
+           if update.nm_between(p, QUAY) > update.APPROACH_NM]
+if too_far:
+    fails.append(f"a port that does NOT declare a reach kept {too_far} as pilotage, each"
+                 f" more than {update.APPROACH_NM:.0f} nm from the quay - the fix was made"
+                 f" by moving the constant, not by asking the port")
 
 # 3. The router gets her to Sevilla, along her own course rather than a ruled line.
 doc = build(SEVILLA, SEA_COURSE)
@@ -126,6 +132,20 @@ doc_bad = build(SEVILLA, OVER_SPAIN)
 if doc_bad and doc_bad.get("route_basis") == "course":
     fails.append("a course running across Andalusia was spliced and drawn - the exception"
                  " has become a blanket, and the land gate no longer means anything")
+
+# 5. The pilotage must be the river, not a ruler laid over it. One straight leg from the
+#    bar to the quay is 43 nm across the Doñana marshes; the river is about 54, and no
+#    single reach of it runs much over ten miles. A chain that collapses back towards the
+#    straight line has stopped describing the Guadalquivir.
+run_in = [p for p in kept] + [QUAY]
+legs = [update.nm_between(run_in[i - 1], run_in[i]) for i in range(1, len(run_in))]
+winding = sum(legs) / update.nm_between(MOUTH, QUAY)
+if winding < 1.15:
+    fails.append(f"the run in is {sum(legs):.0f} nm against {update.nm_between(MOUTH, QUAY):.0f}"
+                 f" nm straight ({winding:.2f}x) - that is a ruler, not a river")
+if max(legs) > 12:
+    fails.append(f"one leg of the river is {max(legs):.0f} nm long - at that length it is"
+                 f" cutting across a bend rather than following it")
 
 print(f"Sevilla: pilotage {[(round(a,3), round(b,3)) for a, b in kept]},"
       f" {update.nm_between(MOUTH, QUAY):.0f} nm of river;"
