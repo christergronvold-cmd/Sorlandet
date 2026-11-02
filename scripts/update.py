@@ -540,6 +540,21 @@ VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
 # shore stations are asked first, and the satellites only when the shore has nothing
 # recent enough to be worth having.
 VF_SAT = os.environ.get("VF_SAT", "1").strip()
+# What is left in the account, and until when.
+#
+# Nothing asked this before, and on 27 October it cost forty-one hours. The credits ran
+# out at 16:45:27, seven seconds after the last good fix, and the only sign was a line in
+# the log that nothing read. The receipt carries the failures now - but a failure is news
+# that has already happened. The balance is news before it happens, and she is due in
+# Sevilla on the same week Alex re-activated the key for.
+#
+# Asked once a day, not once a round. The status endpoint is not the vessels endpoint and
+# is not believed to be charged, but it is asked sparingly on the assumption that it might
+# be: one a day is a rounding error either way, and an unread balance is not.
+VF_STATUS_URL = os.environ.get("VF_STATUS_URL", "https://api.vesselfinder.com/status")
+VF_STATUS_EVERY_H = float(os.environ.get("VF_STATUS_EVERY_H", "20"))
+VF_LOW_CREDITS = float(os.environ.get("VF_LOW_CREDITS", "150"))
+VF_SOON_DAYS = float(os.environ.get("VF_SOON_DAYS", "4"))
 # Either identifier works. This is kept only because it was a guess once, and the guess
 # was wrong, and the comment is worth more than the switch.
 #
@@ -770,6 +785,69 @@ def _going_somewhere(track_points: list) -> bool:
     return not _lying_still(track_points)
 
 
+def _vf_balance(receipt: dict) -> dict:
+    """Ask what is left in the account, at most once a day, and say so when it is little.
+
+    Returns the fields to merge into the receipt. Everything here is best-effort: the
+    shape of the reply is not something this program should be confident about, and a
+    status call that fails must never stop the job asking for a position.
+    """
+    try:
+        age_h = (now_utc() - parse_iso(receipt["status_utc"])).total_seconds() / 3600
+    except Exception:
+        age_h = 99999.0
+    if age_h < VF_STATUS_EVERY_H:
+        return {}
+    try:
+        body = get_json(f"{VF_STATUS_URL}?userkey={urllib.parse.quote(VF_KEY)}", timeout=20)
+    except Exception as exc:
+        print(f"  ! VesselFinder status: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return {"status_utc": iso(now_utc()), "status_error": str(exc)[:120]}
+    row = body[0] if isinstance(body, list) and body else body
+    if not isinstance(row, dict):
+        print(f"  ! VesselFinder status: cannot read the reply ({str(body)[:120]})",
+              file=sys.stderr)
+        return {"status_utc": iso(now_utc()), "status_error": str(body)[:120]}
+    got = {str(k).upper(): v for k, v in row.items()}
+    out = {"status_utc": iso(now_utc()), "status_error": None,
+           "credits": got.get("CREDITS"), "expires": got.get("EXPIRATION_DATE")}
+
+    left = None
+    try:
+        left = float(out["credits"])
+    except (TypeError, ValueError):
+        pass
+    days = None
+    try:
+        days = (parse_iso(str(out["expires"]).replace(" ", "T") + "Z"
+                          if "T" not in str(out["expires"]) else str(out["expires"]))
+                - now_utc()).total_seconds() / 86400
+    except Exception:
+        pass
+    print(f"  -> VesselFinder account: {out['credits']} credits, expires"
+          f" {out['expires']}" + (f" ({days:.1f} days)" if days is not None else ""))
+
+    worry = []
+    if left is not None and left < VF_LOW_CREDITS:
+        worry.append(f"{left:.0f} credits left")
+    if days is not None and days < VF_SOON_DAYS:
+        worry.append(f"the key expires in {days:.1f} days ({out['expires']})")
+    if worry:
+        say = " and ".join(worry)
+        print(f"  ! VesselFinder: {say}", file=sys.stderr)
+        # Told once a day at most, and only while it is true. A balance nobody reads is
+        # how the page went quiet for forty-one hours in October.
+        if receipt.get("warned_on") != today_iso():
+            out["warned_on"] = today_iso()
+            open_issue("The paid position source is running out",
+                       (f"@{GH_REPO.split('/')[0]} " if "/" in GH_REPO else "")
+                       + f"VesselFinder: {say}.\n\n"
+                       "When it runs out the page does not break - it falls back to the "
+                       "free sources - but out at sea those can go half a day without a "
+                       "word, and the harbour cameras are told when to open by this.")
+    return out
+
+
 def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) -> list:
     """A paid position, but only when the free ones have left the page unable to do its job."""
     if not VF_KEY:
@@ -794,18 +872,47 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         quiet_min = 99999
 
     # Where she was last seen, and whether that is anywhere a camera could care about.
-    here = None
-    for p in reversed(have or []):
-        if p.get("lat") is not None:
-            here = (float(p["lat"]), float(p["lon"]))
-            break
-    if here is None and track_points:
+    #
+    # The newest position ANYBODY has, by its timestamp - not the last thing the free
+    # sources happened to hand over this round.
+    #
+    # On 2 November the receipt read "near": "Funchal" while she was 109 nm from Sevilla
+    # and 500 from Madeira. The foundation's feed is a rolling window rather than a live
+    # stream, and its newest entry had not moved since 31 October; on a round where the
+    # two live streams heard nothing, that frozen window was the whole of `have`, and the
+    # gate measured her distance to port from a place she had left a day and a half
+    # earlier. Same shape of fault as the weather grid on 1 November, same cure: ask what
+    # is newest, not what is last in a list.
+    seen = []
+    for q in (have or []):
+        if q.get("lat") is not None and q.get("seen_utc"):
+            seen.append((q["seen_utc"], float(q["lat"]), float(q["lon"])))
+    if track_points:
         last = track_points[-1]
-        here = (float(last["lat"]), float(last["lon"]))
-    if here is None:
+        if last.get("lat") is not None and last.get("t"):
+            seen.append((last["t"], float(last["lat"]), float(last["lon"])))
+    if not seen:
         print("  -> VesselFinder: no position to judge by, leaving it alone")
         return []
+    at_utc, _la, _lo = max(seen, key=lambda c: c[0])
+    here = (_la, _lo)
     reach = _ports_in_reach(plan_ports, track_points)
+    # ...and the lenses that are not in a port at all.
+    #
+    # VF_NEAR_NM is measured to a port, and Sevilla's port is forty-two miles up the
+    # Guadalquivir. The one camera on that river is at the MOUTH, which is the whole
+    # reason the club at Sanlucar was asked for permission. Measured to the quay she
+    # only came inside fifty miles with thirteen miles still to run to the lens - about
+    # two hours - so the four-hour sea cadence covered the approach she was being
+    # watched for, and the dot the notice is worked out from could have been four hours
+    # and twenty-three miles stale at the moment she passed it.
+    #
+    # A passage with a camera on it is somewhere she can be approaching, exactly as a
+    # port is. The ports keep their own deliberate test in _ports_in_reach; this adds
+    # the rest of the lenses.
+    for q in ((read_json(DATA / "ports.json", {}) or {}).get("passages") or []):
+        if q.get("lat") is not None and (q.get("cameras") or []):
+            reach.append(q)
     port, off = None, None
     for q in reach:
         d = nm_between(here, (float(q["lat"]), float(q["lon"])))
@@ -4385,6 +4492,14 @@ def main() -> int:
         for pt in fetch_from_foundation():
             pot.setdefault(pt["seen_utc"], pt)
         merged = [pot[t] for t in sorted(pot)]
+
+        # What is left in the account, at most once a day. Kept out of the position gate
+        # on purpose: that function's sequence of calls is what stands between one credit
+        # and ten, and nothing else belongs in the middle of it.
+        if VF_KEY:
+            told = _vf_balance(read_json(VF_STATE, {}) or {})
+            if told:
+                write_json(VF_STATE, dict(read_json(VF_STATE, {}) or {}, **told))
 
         # Fourth, and only if the three free ones have left us blind near a port.
         plan_ports = (read_json(DATA / "ports.json", {}) or {}).get("ports") or []
