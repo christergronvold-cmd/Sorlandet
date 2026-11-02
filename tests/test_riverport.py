@@ -147,6 +147,24 @@ if max(legs) > 12:
     fails.append(f"one leg of the river is {max(legs):.0f} nm long - at that length it is"
                  f" cutting across a bend rather than following it")
 
+# 6. ...and it must be the way IN, not the way past.
+#
+#    At 37.315 the water forks. One branch is also called Rio Guadalquivir and carries on
+#    north past the city on the west side; the other goes through the Nueva Esclusa at
+#    37.319 and up the dock to the quays. The first tracing took the wrong one, and the
+#    last leg went from the canal across Triana into the dock - "siste biten der, over
+#    land er litt feil". The lock is the thing that tells the two apart.
+LOCK = (37.31895, -6.00574)          # Nueva Esclusa, from OpenStreetMap
+SAL = (37.38612, -6.00085)           # Muelle de la Sal, where the line should stop
+past_lock = min(update.nm_between(LOCK, p) for p in kept)
+if past_lock > 0.6:
+    fails.append(f"the run in never comes within {past_lock:.1f} nm of the lock at Sevilla"
+                 f" - it is going up the branch that passes the city, not into the dock")
+ends_at = update.nm_between(kept[-1], SAL)
+if ends_at > 0.25:
+    fails.append(f"the line stops {ends_at * 1852:.0f} m from Muelle de la Sal - it should"
+                 f" end in the water off the quays, not short of them or past them")
+
 print(f"Sevilla: pilotage {[(round(a,3), round(b,3)) for a, b in kept]},"
       f" {update.nm_between(MOUTH, QUAY):.0f} nm of river;"
       f" route {doc.get('distance_nm') if doc else None} nm along"
