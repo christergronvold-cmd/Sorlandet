@@ -155,15 +155,16 @@ if max(legs) > 12:
 #    last leg went from the canal across Triana into the dock - "siste biten der, over
 #    land er litt feil". The lock is the thing that tells the two apart.
 LOCK = (37.31895, -6.00574)          # Nueva Esclusa, from OpenStreetMap
-SAL = (37.38612, -6.00085)           # Muelle de la Sal, where the line should stop
+SAL = (37.37237, -5.99198)           # Muelle de las Delicias, where she actually lies
 past_lock = min(update.nm_between(LOCK, p) for p in kept)
 if past_lock > 0.6:
     fails.append(f"the run in never comes within {past_lock:.1f} nm of the lock at Sevilla"
                  f" - it is going up the branch that passes the city, not into the dock")
 ends_at = update.nm_between(kept[-1], SAL)
-if ends_at > 0.25:
-    fails.append(f"the line stops {ends_at * 1852:.0f} m from Muelle de la Sal - it should"
-                 f" end in the water off the quays, not short of them or past them")
+if ends_at > 0.15:
+    fails.append(f"the line stops {ends_at * 1852:.0f} m from Muelle de las Delicias - it"
+                 f" should end in the channel abeam the quay she lies at, neither short of"
+                 f" it nor a mile past it up at the city bridges")
 
 print(f"Sevilla: pilotage {[(round(a,3), round(b,3)) for a, b in kept]},"
       f" {update.nm_between(MOUTH, QUAY):.0f} nm of river;"
