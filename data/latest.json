@@ -2,21 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-03T10:27:42Z",
+ "updated_utc": "2026-11-03T10:29:15Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "ais_src": "TER",
   "lat": 36.79861,
   "lon": -6.81206,
   "sog_kn": 2.3,
-  "cog_deg": 99.0,
-  "heading_deg": 88,
-  "nav_status": 0,
-  "destination": "ES SVQ",
-  "draught_m": 4.1,
+  "cog_deg": 99,
+  "heading_deg": null,
   "seen_utc": "2026-11-03T10:23:56Z",
-  "source": "vesselfinder",
+  "source": "foundation",
+  "nav_status": 0,
   "nav_status_utc": "2026-11-03T10:23:56Z"
  },
  "voyage": {
@@ -26,7 +23,7 @@
   "heard_utc": "2026-11-03T10:23:56Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-03T10:27:40Z",
+  "fetched_utc": "2026-11-03T10:29:14Z",
   "sea": {
    "wave_height_m": 0.38,
    "wave_direction_deg": 246,
