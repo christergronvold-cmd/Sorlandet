@@ -3934,6 +3934,57 @@ def resolve_still(template: str, every_s: int = 900) -> tuple[str, bytes] | None
     return None
 
 
+def crop_to_band(path: Path, band) -> bool:
+    """Cut a frame down to the strip of it that has water in it.
+
+    The camera at Bajo de Guia is mounted at the sailing club and most of what it sees is
+    the club: lawn, hedge, paving, boats on their trailers. The water is a band across the
+    top, perhaps a quarter of the height, and that band is the entire reason we have the
+    picture. She crosses it turning in from the sea, and at a mile and a half she is sixty
+    pixels long in a frame of two and a half thousand. Shown whole on a phone she is a
+    speck in a photograph of a garden.
+
+    So a camera may declare the strip worth keeping, as four fractions of its own frame.
+    The crop starts at the very top on purpose where it can: the club prints the date and
+    time into the top corner, and a frame that cannot say when it was taken is worth much
+    less than one that can.
+
+    Declining is always safe. No band, no Pillow, a band that does not make sense, a file
+    that will not open - the frame is left exactly as it arrived. A smaller picture is a
+    convenience; a missing one is a gap in the record.
+    """
+    try:
+        from PIL import Image
+    except Exception:
+        return False
+    try:
+        left, top, right, bottom = (float(v) for v in band)
+    except (TypeError, ValueError):
+        print(f"  ! {path.name}: the camera's band is not four numbers - frame left whole")
+        return False
+    if not (0 <= left < right <= 1 and 0 <= top < bottom <= 1):
+        print(f"  ! {path.name}: band {band} is not four fractions in order"
+              f" - frame left whole")
+        return False
+    try:
+        with Image.open(path) as raw:
+            im = raw.convert("RGB")
+            box = (round(left * im.width), round(top * im.height),
+                   round(right * im.width), round(bottom * im.height))
+            if box[2] - box[0] < 320 or box[3] - box[1] < 120:
+                print(f"  ! {path.name}: that band leaves {box[2]-box[0]}x{box[3]-box[1]}"
+                      f" pixels - too little to see a ship in; frame left whole")
+                return False
+            was = f"{im.width}x{im.height}"
+            im.crop(box).save(path, "JPEG", quality=85, optimize=True, progressive=True)
+    except Exception as exc:
+        print(f"  ! could not crop {path.name}: {exc}")
+        return False
+    print(f"  cropped {path.name} from {was} to the water band"
+          f" ({box[2]-box[0]}x{box[3]-box[1]})")
+    return True
+
+
 def grab_still(url: str, dest: Path) -> bool:
     """A camera that publishes one JPEG rather than a stream. Just fetch the JPEG.
 
@@ -4061,6 +4112,8 @@ def capture_frames(seconds: int) -> None:
             got = (grab_frame(cam["hls"], dest) if cam.get("hls")
                    else grab_still(cam["img"], dest))
             if got:
+                if cam.get("band"):
+                    crop_to_band(dest, cam["band"])
                 taken += 1
                 print(f"  captured {dest.name} ({dest.stat().st_size // 1024} kB)")
     if taken:
