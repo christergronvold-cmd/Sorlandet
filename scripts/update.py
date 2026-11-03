@@ -910,9 +910,9 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     # A passage with a camera on it is somewhere she can be approaching, exactly as a
     # port is. The ports keep their own deliberate test in _ports_in_reach; this adds
     # the rest of the lenses.
-    for q in ((read_json(DATA / "ports.json", {}) or {}).get("passages") or []):
-        if q.get("lat") is not None and (q.get("cameras") or []):
-            reach.append(q)
+    passages = [q for q in ((read_json(DATA / "ports.json", {}) or {}).get("passages") or [])
+                if q.get("lat") is not None and (q.get("cameras") or [])]
+    reach = reach + passages
     port, off = None, None
     for q in reach:
         d = nm_between(here, (float(q["lat"]), float(q["lon"])))
@@ -925,6 +925,21 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         wait_min, state = VF_MOVING_MIN, "under way"
     elif _move_expected_today(reach):
         wait_min, state = VF_WATCH_MIN, "lying still on a day she is due to move"
+    elif port is not None and any(port is q for q in passages):
+        # Lying still off a PASSAGE, which is not a place anybody lies still.
+        #
+        # Six hours is the right spacing for a ship at a quay for the week. On the night
+        # of 2 November it was the wrong spacing by a mile: she came up the Gulf of Cadiz,
+        # slowed through the afternoon, and anchored eighteen miles off the mouth of the
+        # Guadalquivir at 19:54 with navstat 1 - waiting for the tide and a pilot, as
+        # every ship does there. The plan has her due in Sevilla on the 5th, so no move
+        # was "expected today", and the gate settled down to asking every six hours.
+        #
+        # But the whole reason the club at Sanlucar was asked for a camera is the hour she
+        # weighs and goes in. A ship anchored off a port has arrived; a ship anchored off
+        # a PASSAGE is waiting to go through one, and the going through is the event. An
+        # hour costs a credit. Being six hours late costs the thing this was built for.
+        wait_min, state = VF_WATCH_MIN, "lying still, waiting to go in"
     else:
         wait_min, state = VF_QUIET_H * 60, "lying still"
     if quiet_min < wait_min:

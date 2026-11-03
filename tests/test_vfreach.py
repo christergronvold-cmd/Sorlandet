@@ -115,6 +115,34 @@ if r3["fixes"]:
     fails.append("asked again after 45 minutes in mid-Atlantic - the sea cadence is gone"
                  " and the credits with it")
 
+# 3b. Lying still off the river mouth, waiting for the tide: that is an hour's cadence,
+#     not six hours. Her real numbers from the night of 2 November - anchored eighteen
+#     miles off, navstat 1, the plan not due in Sevilla until the 5th.
+def still_at(lat, lon, ns=1):
+    """Six fixes in the same spot, spanning five hours and ending 90 minutes ago - long
+    enough for _lying_still to be sure of it, recent enough to be the newest we hold."""
+    return [{"t": U.iso(NOW - timedelta(minutes=m)),
+             "lat": lat, "lon": lon, "sog": 0.1, "ns": ns}
+            for m in (360, 300, 240, 180, 120, 90)]
+
+
+waiting = still_at(36.8419, -6.7235)
+off_mouth = U.nm_between((36.8419, -6.7235), (MOUTH["lat"], MOUTH["lon"]))
+r3b = run([], waiting, asked_min_ago=90)
+if not r3b["fixes"]:
+    fails.append(f"anchored {off_mouth:.0f} nm off the camera waiting to go in, 90 minutes"
+                 f" since the last request, and it did not ask. The hour she weighs is the"
+                 f" whole reason that camera was asked for")
+
+# 3c. ...but a ship lying still off a PORT has arrived, and that is the six-hour case the
+#     anchorage at Funchal taught us: 288 credits in six days, before the gate existed.
+FUNCHAL = next(q for q in PLAN["ports"] if q["name"] == "Funchal")
+at_anchor = still_at(FUNCHAL["lat"] + 0.011, FUNCHAL["lon"])
+r3c = run([], at_anchor, asked_min_ago=90)
+if r3c["fixes"]:
+    fails.append("asked again after 90 minutes while she lay at anchor off a port with no"
+                 " move due - that is the six-hour case, and the credits go with it")
+
 # 4. The balance is read, and read sparingly.
 if not hasattr(U, "_vf_balance"):
     fails.append("update.py never asks what is left in the account: no credits, no expiry"
