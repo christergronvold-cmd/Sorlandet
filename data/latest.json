@@ -2,52 +2,52 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-04T06:20:28Z",
+ "updated_utc": "2026-11-04T06:49:56Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 36.76648,
-  "lon": -6.44075,
-  "sog_kn": 5.4,
-  "cog_deg": 81.2,
-  "heading_deg": 78,
+  "lat": 36.79162,
+  "lon": -6.35484,
+  "sog_kn": 9.3,
+  "cog_deg": 69.8,
+  "heading_deg": 68,
   "nav_status": 0,
-  "seen_utc": "2026-11-04T06:15:52Z",
+  "seen_utc": "2026-11-04T06:46:12Z",
   "source": "aisstream.io",
   "destination": "ES SVQ",
   "draught_m": 4.1,
   "eta_text": "05.11 13:00",
-  "nav_status_utc": "2026-11-04T06:15:52Z"
+  "nav_status_utc": "2026-11-04T06:46:12Z"
  },
  "voyage": {
   "destination": "ES SVQ",
   "eta_text": "05.11 13:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-04T06:15:52Z"
+  "heard_utc": "2026-11-04T06:46:12Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-04T06:20:24Z",
+  "fetched_utc": "2026-11-04T06:49:53Z",
   "sea": {
-   "wave_height_m": 0.42,
-   "wave_direction_deg": 251,
-   "wave_period_s": 4.65,
+   "wave_height_m": 0.4,
+   "wave_direction_deg": 253,
+   "wave_period_s": 4.55,
    "swell_height_m": 0.34,
-   "swell_period_s": 2.65,
-   "wind_wave_height_m": 0.06,
-   "sea_temp_c": 18.8,
-   "time_utc": "2026-11-04T06:15"
+   "swell_period_s": 2.7,
+   "wind_wave_height_m": 0.04,
+   "sea_temp_c": 19.6,
+   "time_utc": "2026-11-04T06:45"
   },
   "air": {
    "temp_c": 18.0,
-   "feels_c": 19.1,
-   "wind_ms": 1.02,
+   "feels_c": 19.2,
+   "wind_ms": 0.71,
    "gust_ms": 2.0,
-   "wind_direction_deg": 259,
-   "pressure_hpa": 1010.7,
+   "wind_direction_deg": 278,
+   "pressure_hpa": 1010.9,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-11-04T06:15"
+   "time_utc": "2026-11-04T06:45"
   }
  },
  "sun": {
@@ -64,8 +64,8 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 822,
-  "distance_nm": 3539.5,
+  "points": 829,
+  "distance_nm": 3543.9,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
