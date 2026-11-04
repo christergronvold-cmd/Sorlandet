@@ -92,6 +92,29 @@ if got(BAR, 5.0, 240) != RIVER["name"]:
     fails.append("no capture on the way OUT past Sanlúcar - leaving is as photogenic as"
                  " arriving, and the rule is meant to be the same rule")
 
+# ------------------------------------------- the round before the lens, 4 November 2026
+# The real fixes from that morning. The job decides once per round, from the last fix, so
+# the round that STARTS before she reaches the lens has to say yes - by the next one she is
+# past it. On the day it saw 4.4 nm against a 3 nm reach and said no.
+BEFORE = (36.76648, -6.44075)   # 06:15:52 UTC, 5.4 kn, 081 - the round that missed her
+reach = float(RIVER.get("capture_nm") or RIVER.get("see_nm") or update.CAPTURE_NM)
+if reach < 6:
+    fails.append(f"the river mouth captures from {reach} nm - a ship at ten knots covers"
+                 f" five in one round, so the round before the lens never starts")
+if got(BEFORE, 5.4, 81) != RIVER["name"]:
+    fails.append(f"no capture from the 06:15 fix on 4 November,"
+                 f" {update.cam_off(RIVER, BEFORE, GRABBABLE):.1f} nm off the lens and"
+                 f" closing - that is the round she passed the camera in")
+# The same distance going out, as she will on 10 November: down the river at ten knots.
+UPRIVER = (36.86608, -6.35292)  # 07:18:22 UTC, 4.6 nm above the lens
+if got(UPRIVER, 10.0, 190) != RIVER["name"]:
+    fails.append("no capture coming DOWN the river 4.6 nm above the lens - on the way out"
+                 " that is the last round before she passes it")
+# ...and the page still waits until she is close enough for the lens to see her.
+if float(RIVER.get("see_nm") or 0) > 3:
+    fails.append(f"see_nm at the river mouth is {RIVER.get('see_nm')} - the page should"
+                 f" open the camera at 3 nm; widen capture_nm, not see_nm")
+
 # --------------------------------------------------------------- the promise of a credit
 # Two clubs have now lent us a camera on the condition that they are named, and the page
 # builds that line from this field rather than from a name written into the code. A
@@ -114,7 +137,8 @@ if not any(c.get("permission") for c in RIVER["cameras"]
 
 print(f"over the bar at Sanlúcar: {update.cam_off(RIVER, BAR, GRABBABLE):.1f} nm from the"
       f" lens, {update.nm_between(BAR, (SEVILLA['lat'], SEVILLA['lon'])):.0f} nm from the"
-      f" quay in Sevilla, reach {RIVER.get('see_nm')} nm")
+      f" quay in Sevilla, page reach {RIVER.get('see_nm')} nm,"
+      f" capture reach {RIVER.get('capture_nm')} nm")
 if fails:
     print("FAILURES")
     for f in fails:

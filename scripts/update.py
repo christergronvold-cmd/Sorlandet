@@ -3793,7 +3793,17 @@ def capture_port(position: dict, plan: dict, track: list | None = None) -> dict 
         off = cam_off(site, (lat, lon), cams)
         speed = sog if have_reported else abs(
             closing_made_good(track, (float(site["lat"]), float(site["lon"]))) or 0)
-        if off > float(site.get("see_nm") or CAPTURE_NM) or speed < CAPTURE_LEAVING_KN:
+        # How far out the JOB starts taking pictures, which is not the same question as
+        # how far out the PAGE opens the camera. see_nm answers the second: the Sanlúcar
+        # lens sees a mile and a half, so the page waits until 3 nm. Used for both, it
+        # cost us the morning of 4 November. The decision is made once, at the start of a
+        # round, from the last fix - so the round starting 06:20 UTC saw her 4.4 nm off at
+        # 5.4 kn, outside 3 nm, and took nothing. She passed the lens at 0.19 nm at 06:46,
+        # inside that very round, and the first frame was 06:50. A ship doing ten knots
+        # covers five miles in a round; the reach has to be wider than that. capture_nm
+        # says so per site, and a site without one keeps its old behaviour.
+        reach = float(site.get("capture_nm") or site.get("see_nm") or CAPTURE_NM)
+        if off > reach or speed < CAPTURE_LEAVING_KN:
             continue
         print(f"* she is passing {site['name']}, {off:.1f} nm off its nearest camera "
               f"at {speed:.1f} kn "
