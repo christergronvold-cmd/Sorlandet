@@ -11,7 +11,18 @@ cd "$(dirname "$0")/.." || exit 2
 PY=$(ls tests/test_*.py | sort)
 FAIL=0
 for t in $PY; do
-  out=$(timeout 300 python3 "$t" 2>&1)
+  # The five-minute cap is kept in python, not in `timeout`: that is GNU coreutils, and a
+  # Mac does not have it. On 5 November every test on the Mac "failed" with
+  # "timeout: command not found" before a single check had run.
+  out=$(python3 -c '
+import subprocess, sys
+try:
+    r = subprocess.run([sys.executable, sys.argv[1]], stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT, text=True, timeout=300)
+    print(r.stdout, end="")
+except subprocess.TimeoutExpired:
+    print("TIMEOUT - still running after 300 s")
+' "$t" 2>&1)
   if echo "$out" | grep -q "ALL CHECKS PASSED"; then
     printf '.'
   else
