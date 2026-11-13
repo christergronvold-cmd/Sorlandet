@@ -103,11 +103,11 @@ try:
     with sync_playwright() as pw:
         b = pw.chromium.launch(args=["--no-sandbox"])
         pg = b.new_page()
-        for pattern in ("**://*.tile.openstreetmap.org/**", "**://tiles.openseamap.org/**",
-                        "**://gibs.earthdata.nasa.gov/**", "**://gc.zgo.at/**"):
-            pg.route(pattern, lambda r: r.abort())
-        pg.goto(f"http://127.0.0.1:{httpd.server_address[1]}/index.html",
-                wait_until="domcontentloaded")
+        local = f"http://127.0.0.1:{httpd.server_address[1]}/"
+        # Nothing leaves the machine - see test_lens for what a live camera stream does.
+        pg.route("**/*", lambda r: r.continue_() if r.request.url.startswith(local)
+                 else r.abort())
+        pg.goto(local + "index.html", wait_until="domcontentloaded")
         run = """([pts, ports]) => ({
             stays: portStays(pts, ports).map(v => ({port: v.port, in: v.in, out: v.out,
                                                     ended: v.ended})),

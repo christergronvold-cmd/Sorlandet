@@ -105,9 +105,14 @@ with sync_playwright() as pw:
     pg = b.new_page(viewport={"width": 1280, "height": 1400})
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
-    for pattern in ("**://*.tile.openstreetmap.org/**", "**://tiles.openseamap.org/**",
-                    "**://gibs.earthdata.nasa.gov/**", "**://gc.zgo.at/**"):
-        pg.route(pattern, lambda r: r.abort())
+    # Nothing leaves the machine. This used to block four map and counter hosts by name, and
+    # everything else went out for real - including a YouTube live camera on the page, whose
+    # stream request never finishes. networkidle then never came, and the test timed out
+    # about one run in four, or every run inside the full suite. (The OSM pattern did not
+    # even match: the tiles come from tile.openstreetmap.org, with no subdomain in front.)
+    local = f"http://127.0.0.1:{PORT}/"
+    pg.route("**/*", lambda r: r.continue_() if r.request.url.startswith(local)
+             else r.abort())
     pg.goto(f"http://127.0.0.1:{PORT}/index.html", wait_until="networkidle")
     pg.wait_for_timeout(2500)
     body = pg.inner_text("body")
