@@ -745,8 +745,13 @@ function portStays(points, ports) {
     const pi = at(pt);
     if (pi < 0) { prev = null; continue; }
     const last = stays[stays.length - 1];
+    // PORT_REJOIN_H is for coming BACK: seen outside, then inside again. If the fix before
+    // this one was in the same port, she has not been seen anywhere else, and a long gap is
+    // only the feed going quiet - in Sevilla in November nights of ten and twelve hours
+    // between fixes at the quay cut one week alongside into nine stays, and the log said
+    // "Left Sevilla" while she lay tied up.
     const rejoin = last && last.pi === pi &&
-      (new Date(pt.t) - new Date(last.out)) <= PORT_REJOIN_H * 36e5;
+      (prev !== null || (new Date(pt.t) - new Date(last.out)) <= PORT_REJOIN_H * 36e5);
     if (rejoin) {
       if (prev) {
         last.dist += nm([prev.lat, prev.lon], [pt.lat, pt.lon]);
@@ -1247,7 +1252,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "08fbc49ef8";
+const BUILD = "ad054a1c9c";
 
 async function checkForNewBuild() {
   try {
