@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-13T02:38:59Z",
+ "updated_utc": "2026-11-13T03:08:24Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -22,7 +22,7 @@
   "heard_utc": "2026-11-12T08:43:35Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-13T02:37:57Z",
+  "fetched_utc": "2026-11-13T03:08:23Z",
   "sea": {
    "wave_height_m": null,
    "wave_direction_deg": null,
@@ -31,7 +31,19 @@
    "swell_period_s": null,
    "wind_wave_height_m": null,
    "sea_temp_c": null,
-   "time_utc": "2026-11-13T02:30"
+   "time_utc": "2026-11-13T03:00"
+  },
+  "air": {
+   "temp_c": 17.0,
+   "feels_c": 18.3,
+   "wind_ms": 1.44,
+   "gust_ms": 5.9,
+   "wind_direction_deg": 214,
+   "pressure_hpa": 1012.1,
+   "cloud_pct": 81,
+   "precip_mm": 0.0,
+   "weather_code": 2,
+   "time_utc": "2026-11-13T03:00"
   }
  },
  "sun": {
@@ -42,10 +54,13 @@
   },
   "civil_timezone": "Europe/Madrid",
   "civil_place": "Sevilla",
-  "civil_country": "Spain"
+  "civil_country": "Spain",
+  "sunrise_utc": "2026-11-13T07:01",
+  "sunset_utc": "2026-11-13T17:14",
+  "daylight_hours": 10.2
  },
  "stats": {
-  "points": 627,
+  "points": 626,
   "distance_nm": 3586.2,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
