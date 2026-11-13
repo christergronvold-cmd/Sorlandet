@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-13T17:08:19Z",
+ "updated_utc": "2026-11-13T17:37:57Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -23,22 +23,36 @@
   "heard_utc": "2026-11-13T13:27:48Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-13T17:07:48Z",
+  "fetched_utc": "2026-11-13T17:37:55Z",
   "sea": {
-   "wave_height_m": 2.22,
+   "wave_height_m": 2.18,
    "wave_direction_deg": 260,
-   "wave_period_s": 9.05,
-   "swell_height_m": 1.84,
-   "swell_period_s": 7.55,
+   "wave_period_s": 9.1,
+   "swell_height_m": 1.82,
+   "swell_period_s": 7.65,
    "wind_wave_height_m": 0.78,
-   "sea_temp_c": 21.4,
-   "time_utc": "2026-11-13T17:00"
+   "sea_temp_c": 21.3,
+   "time_utc": "2026-11-13T17:30"
+  },
+  "air": {
+   "temp_c": 19.9,
+   "feels_c": 18.4,
+   "wind_ms": 7.4,
+   "gust_ms": 10.4,
+   "wind_direction_deg": 257,
+   "pressure_hpa": 1015.3,
+   "cloud_pct": 54,
+   "precip_mm": 0.0,
+   "weather_code": 2,
+   "time_utc": "2026-11-13T17:30",
+   "source": "open-meteo",
+   "fetched_utc": "2026-11-13T17:37:55Z"
   }
  },
  "sun": {
   "moon": {
    "age_days": 3.8,
-   "illumination": 0.15,
+   "illumination": 0.16,
    "phase": "waxing crescent"
   },
   "civil_timezone": "Atlantic/Canary",
@@ -49,7 +63,7 @@
   "daylight_hours": 10.3
  },
  "stats": {
-  "points": 644,
+  "points": 643,
   "distance_nm": 3665.9,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }

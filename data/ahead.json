@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-13T17:08:21Z",
+ "generated_utc": "2026-11-13T17:38:00Z",
  "to": "Las Palmas",
  "country": "Gran Canaria",
  "distance_nm": 662.5,
@@ -14,7 +14,7 @@
  "vmg_hold_h": 24.0,
  "pace_basis": "made good easing to the plan",
  "due_utc": "2026-11-18T12:00:00Z",
- "eta_utc": "2026-11-18T12:08:21Z",
+ "eta_utc": "2026-11-18T12:38:00Z",
  "route": [
   [
    36.4433,
@@ -93,8 +93,8 @@
   {
    "hours": 36,
    "time_utc": "2026-11-15T05:00:00Z",
-   "lat": 34.6717,
-   "lon": -8.7335,
+   "lat": 34.6698,
+   "lon": -8.7355,
    "wind_ms": 1.5,
    "wind_dir": 86,
    "gust_ms": 2.3,
@@ -108,13 +108,13 @@
   {
    "hours": 48,
    "time_utc": "2026-11-15T17:00:00Z",
-   "lat": 33.7958,
-   "lon": -9.6088,
+   "lat": 33.7892,
+   "lon": -9.6153,
    "wind_ms": 1.24,
    "wind_dir": 76,
    "gust_ms": 2.1,
    "temp_c": 20.7,
-   "weather_code": 1,
+   "weather_code": 2,
    "wave_m": 1.16,
    "wave_dir": 308,
    "wave_period_s": 8.65,
@@ -123,13 +123,13 @@
   {
    "hours": 72,
    "time_utc": "2026-11-16T17:00:00Z",
-   "lat": 31.7994,
-   "lon": -11.6036,
-   "wind_ms": 2.44,
-   "wind_dir": 19,
-   "gust_ms": 3.4,
+   "lat": 31.7803,
+   "lon": -11.6226,
+   "wind_ms": 2.38,
+   "wind_dir": 15,
+   "gust_ms": 3.3,
    "temp_c": 21.2,
-   "weather_code": 1,
+   "weather_code": 2,
    "wave_m": 1.06,
    "wave_dir": 315,
    "wave_period_s": 8.65,
@@ -138,16 +138,16 @@
   {
    "hours": 96,
    "time_utc": "2026-11-17T17:00:00Z",
-   "lat": 29.6886,
-   "lon": -13.7127,
-   "wind_ms": 3.8,
-   "wind_dir": 35,
-   "gust_ms": 5.2,
-   "temp_c": 22.3,
+   "lat": 29.6555,
+   "lon": -13.7457,
+   "wind_ms": 4.0,
+   "wind_dir": 37,
+   "gust_ms": 5.4,
+   "temp_c": 22.4,
    "weather_code": 2,
-   "wave_m": 1.3,
-   "wave_dir": 313,
-   "wave_period_s": 8.7,
+   "wave_m": 1.28,
+   "wave_dir": 315,
+   "wave_period_s": 8.75,
    "where": "sea"
   },
   {
@@ -200,6 +200,6 @@
   }
  ],
  "wind_source": "open-meteo",
- "wind_fetched_utc": "2026-11-13T17:08:21Z",
+ "wind_fetched_utc": "2026-11-13T17:38:00Z",
  "wind_held": false
 }
