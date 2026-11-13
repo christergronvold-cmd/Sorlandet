@@ -1252,7 +1252,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "ad054a1c9c";
+const BUILD = "d8725f2650";
 
 async function checkForNewBuild() {
   try {
@@ -3925,10 +3925,26 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   //
   // A port always wins. Skagen has both a call and a strait; when she is alongside there,
   // the quay camera is the one that matters.
+  // Where she is NOW, not where she was at the last fix. On 13 November she came down the
+  // Guadalquivir at eleven knots, and the 10:32 fix had her 3.6 miles above the Sanlúcar
+  // lens - outside its three-mile reach - with the next fix half an hour away. At that
+  // speed she is inside three miles for barely half an hour, so a page that only trusts
+  // the fix can sail her straight past the one camera on the river with the section shut.
+  // Run her on along her course for the time since the fix, capped at forty minutes and
+  // only when she is really making way. A passage opens if EITHER the fix or this says she
+  // is in reach; nothing else on the page uses it.
+  const drNow = (() => {
+    if (p.lat === undefined || !p.seen_utc || !(p.sog_kn > 1) || p.cog_deg == null) return null;
+    const ageH = Math.min(40, Math.max(0, (Date.now() - new Date(p.seen_utc)) / 6e4)) / 60;
+    const d = p.sog_kn * ageH, r = Math.PI / 180;
+    return [p.lat + d * Math.cos(p.cog_deg * r) / 60,
+            p.lon + d * Math.sin(p.cog_deg * r) / (60 * Math.cos(p.lat * r))];
+  })();
   const passing = (!camAtPort && p.lat !== undefined && !waiting)
     ? ((plan.passages || [])
         .filter(q => (q.cameras || []).length && q.lat != null)
-        .map(q => ({ q, off: nm([p.lat, p.lon], [q.lat, q.lon]) }))
+        .map(q => ({ q, off: Math.min(nm([p.lat, p.lon], [q.lat, q.lon]),
+                                      drNow ? nm(drNow, [q.lat, q.lon]) : Infinity) }))
         .filter(x => x.off <= (x.q.see_nm || PASS_SEE_NM))
         .sort((a, b) => a.off - b.off)[0] || null)
     : null;
