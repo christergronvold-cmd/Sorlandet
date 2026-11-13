@@ -279,6 +279,9 @@ _was = (update.now_utc, update.get_json, update.VF_STATE, update.VF_KEY)
 update.VF_STATE = Path(_tf.mkdtemp()) / "vesselfinder.json"
 update.VF_KEY = "test-key"
 update.get_json = lambda url, timeout=30: {"error": "Invalid user key"}
+# A fixed clock. This block used the real one and went red on 10 November, when the date
+# moved on and nothing in the code had changed.
+update.now_utc = lambda: START
 _track = [{"t": update.iso(update.now_utc() - timedelta(hours=h)), "lat": ANCHOR[0] + h * 0.1,
            "lon": ANCHOR[1], "sog": 6.0, "cog": 180} for h in (3, 2, 1)][::-1]
 _near = {"lat": ANCHOR[0], "lon": ANCHOR[1], "source": "foundation",
