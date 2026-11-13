@@ -1252,7 +1252,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "d8725f2650";
+const BUILD = "449a1791e1";
 
 async function checkForNewBuild() {
   try {
@@ -3942,7 +3942,9 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   })();
   const passing = (!camAtPort && p.lat !== undefined && !waiting)
     ? ((plan.passages || [])
-        .filter(q => (q.cameras || []).length && q.lat != null)
+        // closed_utc: she is through it and out the far side - see passage_open in update.py.
+        .filter(q => (q.cameras || []).length && q.lat != null
+                     && !(q.closed_utc && Date.now() >= new Date(q.closed_utc)))
         .map(q => ({ q, off: Math.min(nm([p.lat, p.lon], [q.lat, q.lon]),
                                       drNow ? nm(drNow, [q.lat, q.lon]) : Infinity) }))
         .filter(x => x.off <= (x.q.see_nm || PASS_SEE_NM))

@@ -28,6 +28,10 @@ import update  # noqa: E402
 
 fails = []
 PLAN = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))
+# The geometry is what is tested here, not the calendar. Once she is through a passage it
+# is closed by hand (closed_utc), and a test run after that would find nothing to measure.
+for _q in PLAN.get("passages") or []:
+    _q.pop("closed_utc", None)
 SEVILLA = next(p for p in PLAN["ports"] if p["name"] == "Sevilla")
 # It is not a camera AT Sevilla. It is a camera at a different place on the route, which
 # she passes a day before she gets there - and the plan has had a word for that since the

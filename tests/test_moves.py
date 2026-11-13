@@ -27,6 +27,10 @@ import update  # noqa: E402
 
 fails = []
 PLAN = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))
+# The geometry is what is tested here, not the calendar. Once she is through a passage it
+# is closed by hand (closed_utc), and a test run after that would find nothing to measure.
+for _q in PLAN.get("passages") or []:
+    _q.pop("closed_utc", None)
 PORTS = PLAN["ports"]
 FUNCHAL = next(p for p in PORTS if p["name"] == "Funchal")
 SEVILLA = next(p for p in PORTS if p["name"] == "Sevilla")

@@ -33,6 +33,10 @@ import update as U  # noqa: E402
 
 fails = []
 PLAN = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))
+# The geometry is what is tested here, not the calendar. Once she is through a passage it
+# is closed by hand (closed_utc), and a test run after that would find nothing to measure.
+for _q in PLAN.get("passages") or []:
+    _q.pop("closed_utc", None)
 MOUTH = next(q for q in PLAN["passages"] if "Guadalquivir" in q["name"])
 NOW = datetime(2026, 11, 2, 7, 15, tzinfo=timezone.utc)
 

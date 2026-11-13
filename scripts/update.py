@@ -911,7 +911,8 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     # port is. The ports keep their own deliberate test in _ports_in_reach; this adds
     # the rest of the lenses.
     passages = [q for q in ((read_json(DATA / "ports.json", {}) or {}).get("passages") or [])
-                if q.get("lat") is not None and (q.get("cameras") or [])]
+                if q.get("lat") is not None and (q.get("cameras") or [])
+                and passage_open(q)]
     reach = reach + passages
     port, off = None, None
     for q in reach:
@@ -1288,7 +1289,7 @@ def _watched_sites(plan: dict) -> list:
     """
     out = []
     for q in ((plan or {}).get("passages") or []) + ((plan or {}).get("ports") or []):
-        if q.get("lat") is not None and (q.get("cameras") or []):
+        if q.get("lat") is not None and (q.get("cameras") or []) and passage_open(q):
             out.append(q)
     return out
 
@@ -3742,6 +3743,25 @@ def cam_off(site: dict, here: tuple, cams: list) -> float:
     return nm_between(here, (float(site["lat"]), float(site["lon"])))
 
 
+def passage_open(site: dict) -> bool:
+    """False once a passage's closed_utc has gone by.
+
+    A passage has no dates because she has no appointment with it - but she does go
+    through it, and once she is out the far side there is nothing left to watch. On 13
+    November she came down the Guadalquivir and out over the bar at Sanlúcar at 10:56
+    UTC; with a nine-mile capture reach the job would have gone on photographing an
+    empty river mouth for another three quarters of an hour. Christer closes a passage
+    by hand when she is through it, and the page and the job both stop at once.
+    """
+    closed = site.get("closed_utc")
+    if not closed:
+        return True
+    try:
+        return now_utc() < parse_iso(closed)
+    except Exception:
+        return True
+
+
 def capture_port(position: dict, plan: dict, track: list | None = None) -> dict | None:
     """The port she is closing on and can be photographed at, or None.
 
@@ -3788,7 +3808,7 @@ def capture_port(position: dict, plan: dict, track: list | None = None) -> dict 
     # second chance at it.
     for site in (plan.get("passages") or []):
         cams = [c for c in (site.get("cameras") or []) if c.get("hls") or c.get("img")]
-        if not cams or site.get("lat") is None:
+        if not cams or not passage_open(site) or site.get("lat") is None:
             continue
         off = cam_off(site, (lat, lon), cams)
         speed = sog if have_reported else abs(
