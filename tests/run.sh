@@ -8,13 +8,18 @@
 set -u
 cd "$(dirname "$0")/.." || exit 2
 
+# The tests need Python 3.10+, playwright, cryptography and Pillow. The Mac's own python3
+# is 3.9 and has none of them, so they live in a venv of their own; use it when it is there.
+PYBIN=python3
+[ -x "$HOME/.venvs/sorlandet/bin/python3" ] && PYBIN="$HOME/.venvs/sorlandet/bin/python3"
+
 PY=$(ls tests/test_*.py | sort)
 FAIL=0
 for t in $PY; do
   # The five-minute cap is kept in python, not in `timeout`: that is GNU coreutils, and a
   # Mac does not have it. On 5 November every test on the Mac "failed" with
   # "timeout: command not found" before a single check had run.
-  out=$(python3 -c '
+  out=$("$PYBIN" -c '
 import subprocess, sys
 try:
     r = subprocess.run([sys.executable, sys.argv[1]], stdout=subprocess.PIPE,
