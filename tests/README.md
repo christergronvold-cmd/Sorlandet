@@ -24,6 +24,7 @@ The rule from here: a test that matters goes in the repo, next to the thing it c
 | `test_stillpath.py` | Frame capture fetched with HEAD, untested against the real server; eight fixes of her coming into St. Malo produced no pictures. Also guards the `CONTACT_UA` NameError that made every capture fail silently for three weeks. |
 | `test_engine.py` | The map drew a tacking sailing course while she was motoring out of Dublin under engine on all 124 messages. |
 | `test_heading.py` | With no course in the fix, the ship's arrow rotated to zero — due north — while she steered 180 all night. |
+| `test_windfallback.py` | 13 November: Open-Meteo's forecast host stopped answering a new runner and every wind figure went null while the waves kept coming. Checks the met.no translation, the fall-over from Open-Meteo to met.no (with its User-Agent, Expires and If-Modified-Since), that a failure of both holds the last good forecast for up to 12 h instead of writing nulls, and that the page says the forecast is old. |
 | `test_layers.py` | The layer defaults live in two places, `show` and the button markup, and nothing but an eye kept them in step. |
 
 ## Writing another one

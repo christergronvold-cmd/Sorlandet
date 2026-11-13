@@ -16,6 +16,7 @@ check that the page works before getting a key.
 from __future__ import annotations
 
 import base64
+import email.utils
 import json
 import math
 import os
@@ -141,13 +142,62 @@ def bearing(a: tuple[float, float], b: tuple[float, float]) -> float:
     return (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
-def get_json(url: str, timeout: int = 30) -> dict | None:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+def _http(url: str, headers: dict | None = None, timeout: int = 30) -> tuple[int, dict, bytes]:
+    """One GET. Returns (status, headers with lower-case names, body) for ANY status.
+
+    An error status is an answer, not an exception: the body of a 429 says why, and that
+    is the line the log needs. Only "no answer at all" - DNS, TLS, timeout - raises.
+    This is also the one seam the tests replace, so every caller above it runs for real.
+    """
+    h = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, headers=h)
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=ssl.create_default_context()) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError) as exc:
-        print(f"  ! could not fetch {url.split('?')[0]}: {exc}", file=sys.stderr)
+            return r.status, {k.lower(): v for k, v in r.headers.items()}, r.read()
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read() or b""
+        except Exception:
+            body = b""
+        return e.code, {k.lower(): v for k, v in (e.headers or {}).items()}, body
+
+
+def _why(body: bytes) -> str:
+    """The server's own words for a refusal, on one short line."""
+    try:
+        text = body.decode("utf-8", "replace").strip()
+    except Exception:
+        return ""
+    try:
+        doc = json.loads(text)
+        if isinstance(doc, dict) and doc.get("reason"):
+            text = str(doc["reason"])
+    except ValueError:
+        pass
+    return " ".join(text.split())[:200]
+
+
+def get_json(url: str, timeout: int = 30) -> dict | None:
+    """GET and decode. On failure, logs the host, the HTTP status and the reason given.
+
+    It used to log only "could not fetch <url>: <exception>", and on 13 November the wind
+    went null for hours with nothing on record to say whether Open-Meteo had answered
+    429, 400 or not at all.
+    """
+    where = url.split("?")[0]
+    try:
+        status, _, body = _http(url, timeout=timeout)
+    except Exception as exc:
+        print(f"  ! could not fetch {where}: no answer ({exc})", file=sys.stderr)
+        return None
+    if not 200 <= status < 300:
+        print(f"  ! could not fetch {where}: HTTP {status} {_why(body)}".rstrip(), file=sys.stderr)
+        return None
+    try:
+        return json.loads(body.decode("utf-8"))
+    except ValueError as exc:
+        print(f"  ! could not fetch {where}: HTTP {status} but not JSON ({exc})", file=sys.stderr)
         return None
 
 
@@ -1806,6 +1856,19 @@ def _grid_still_good(path, lat: float, lon: float) -> str | None:
 
 
 def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
+    """Wind ('wind') or wave ('waves') forecast for the grid.
+
+    Open-Meteo first, in one call. If that fails for the wind, MET Norway - see
+    metno_grid. The waves have no second source: met.no's locationforecast has no sea state.
+    """
+    grid = _grid_from_open_meteo(lat, lon, kind)
+    if grid or kind != "wind":
+        return grid
+    print("  ! open-meteo gave no wind grid - asking met.no instead")
+    return metno_grid(lat, lon)
+
+
+def _grid_from_open_meteo(lat: float, lon: float, kind: str) -> dict | None:
     """Wind ('wind') or wave ('waves') forecast for the grid, in one API call."""
     lats, lons = grid_around(lat, lon)
     base, fields = (
@@ -1859,9 +1922,387 @@ def fetch_grid(lat: float, lon: float, kind: str) -> dict | None:
 
     if not cells:
         return None
-    print(f"  -> {kind} grid: {len(cells)} points x {len(times)} time steps")
+    print(f"  -> {kind} grid: {len(cells)} points x {len(times)} time steps, from open-meteo")
     return {"generated_utc": iso(now_utc()), "times": times,
-            "step_hours": GRID_STEP, "cells": cells}
+            "step_hours": GRID_STEP, "cells": cells, "source": "open-meteo"}
+
+
+# ---------------------------------------- MET Norway, for when Open-Meteo will not answer
+
+# 13 November 2026, 15:34 UTC: a new runner took over the chain, and from that round on every
+# wind figure on the page was null while the waves kept coming. The waves come from
+# Open-Meteo's marine host; the wind, the sky and the temperature from its forecast host,
+# and that host had stopped answering the job. The log could not say why - it said only
+# "could not fetch" - and there was no second source, so a refusal of one host was a page
+# with no wind on it.
+#
+# The second source is MET Norway's locationforecast. It is free, needs no key, and asks two
+# things in return: a User-Agent that says who is calling and how to reach them, and that
+# a forecast is not fetched again before its Expires - after that, If-Modified-Since, so an
+# unchanged one comes back as an empty 304. Both are honoured here. Its data is CC BY 4.0,
+# so the page credits it whenever it is what is on screen.
+#
+# It has no sea state. The waves stay with Open-Meteo's marine host whatever happens here.
+METNO_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+REPO_URL = os.environ.get("REPO_URL", "https://github.com/christergronvold-cmd/Sorlandet")
+METNO_UA = os.environ.get("METNO_UA", f"sorlandet-tracker/1.0 (+{REPO_URL})")
+# Per-place copies of the last answer, for Expires and If-Modified-Since. Outside data/,
+# so the job never commits them; they last as long as the runner, which is long enough.
+METNO_CACHE = Path(os.environ.get("METNO_CACHE", str(ROOT / ".cache" / "metno")))
+# met.no answers one place per request, where Open-Meteo took 81 in one. So the fallback
+# grid is coarser - 5 x 5 over the same box, a point every 75 nm - and every point is
+# snapped to a fixed quarter-degree lattice, so the next round asks for the SAME places and
+# the cache can answer for it. The ladder ahead is snapped to a tenth of a degree, which
+# also folds the week she lies at a quay into a single request.
+METNO_GRID_CELLS = int(os.environ.get("METNO_GRID_CELLS", "5"))
+METNO_GRID_SNAP = 0.25
+METNO_AHEAD_SNAP = 0.1
+# When neither source answers, the last good forecast is kept for this long rather than
+# replaced by nulls. Twelve hours is two or three model runs: old, and the page says so,
+# but still a better guess at tomorrow than nothing.
+FORECAST_HOLD_H = float(os.environ.get("FORECAST_HOLD_H", "12"))
+WIND_KEYS = ("wind_ms", "wind_dir", "gust_ms", "temp_c", "weather_code")
+
+# met.no's symbol names, without the _day/_night/_polartwilight suffix, to the WMO codes
+# the page draws (its WMO and WMO_TEXT tables). WMO has no code for sleet that the page
+# knows, so sleet goes to the freezing-rain pair and sleet showers to snow showers - the
+# nearest glyphs on the page, and not weather Sørlandet is likely to meet on this voyage.
+# Anything with thunder in it is a thunderstorm, 95, whatever else it says.
+_METNO_WMO = {
+    "clearsky": 0, "fair": 1, "partlycloudy": 2, "cloudy": 3, "fog": 45,
+    "lightrain": 61, "rain": 63, "heavyrain": 65,
+    "lightrainshowers": 80, "rainshowers": 81, "heavyrainshowers": 82,
+    "lightsleet": 66, "sleet": 67, "heavysleet": 67,
+    "lightsleetshowers": 85, "sleetshowers": 85, "heavysleetshowers": 86,
+    "lightsnow": 71, "snow": 73, "heavysnow": 75,
+    "lightsnowshowers": 85, "snowshowers": 85, "heavysnowshowers": 86,
+}
+
+
+def metno_wmo(symbol: str | None) -> int | None:
+    """'partlycloudy_day' -> 2. Unknown or missing -> None (the page then draws no sky)."""
+    if not symbol:
+        return None
+    base = str(symbol).split("_")[0]
+    if "thunder" in base:
+        return 95
+    return _METNO_WMO.get(base)
+
+
+def metno_hours(doc: dict) -> dict:
+    """met.no's compact answer as {"YYYY-MM-DDTHH:00": {wind_ms, wind_dir, ...}}.
+
+    The sky is the symbol for the period that STARTS at that time - next_1_hours while it
+    is hourly, next_6_hours further out - which is how Open-Meteo's hourly weather_code
+    reads too. The compact product carries no gusts, so gust_ms stays None from here.
+    """
+    out = {}
+    for e in ((doc or {}).get("properties") or {}).get("timeseries") or []:
+        t = str(e.get("time") or "")
+        if len(t) < 13:
+            continue
+        d = e.get("data") or {}
+        inst = (d.get("instant") or {}).get("details") or {}
+        nxt = d.get("next_1_hours") or d.get("next_6_hours") or d.get("next_12_hours") or {}
+        out[t[:13] + ":00"] = {
+            "wind_ms": inst.get("wind_speed"),
+            "wind_dir": inst.get("wind_from_direction"),
+            "gust_ms": inst.get("wind_speed_of_gust"),
+            "temp_c": inst.get("air_temperature"),
+            "weather_code": metno_wmo((nxt.get("summary") or {}).get("symbol_code")),
+        }
+    return out
+
+
+def _stamp_dt(stamp: str) -> datetime:
+    return datetime.strptime(stamp, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
+
+
+def metno_at(hours: dict, stamp: str, max_gap_h: float = 6) -> dict | None:
+    """The values at one hour. Beyond about two days met.no steps six hours at a time, so
+    an hour in between is drawn on a straight line between its neighbours - the direction
+    the short way round - and takes the sky of the period it falls in."""
+    if not hours:
+        return None
+    if stamp in hours:
+        return dict(hours[stamp])
+    before = max((k for k in hours if k < stamp), default=None)
+    after = min((k for k in hours if k > stamp), default=None)
+    if not before or not after:
+        return None
+    t0, t1, t = _stamp_dt(before), _stamp_dt(after), _stamp_dt(stamp)
+    span = (t1 - t0).total_seconds()
+    if span <= 0 or span > max_gap_h * 3600:
+        return None
+    f = (t - t0).total_seconds() / span
+    a, b = hours[before], hours[after]
+
+    def lin(k):
+        if a.get(k) is None or b.get(k) is None:
+            return None
+        return round(a[k] + (b[k] - a[k]) * f, 1)
+
+    wd = None
+    if a.get("wind_dir") is not None and b.get("wind_dir") is not None:
+        turn = ((b["wind_dir"] - a["wind_dir"] + 540) % 360) - 180
+        wd = round((a["wind_dir"] + turn * f) % 360)
+    return {"wind_ms": lin("wind_ms"), "wind_dir": wd, "gust_ms": lin("gust_ms"),
+            "temp_c": lin("temp_c"), "weather_code": a.get("weather_code")}
+
+
+def _http_date(value) -> datetime | None:
+    try:
+        d = email.utils.parsedate_to_datetime(value)
+        return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
+def _metno_tally() -> dict:
+    return {"fetched": 0, "not_modified": 0, "cached": 0, "failed": [], "stop": False}
+
+
+def _tally_words(t: dict) -> str:
+    words = f"{t['fetched']} fetched, {t['not_modified']} not modified, " \
+            f"{t['cached']} still fresh in the cache"
+    if t["failed"]:
+        words += f", {len(t['failed'])} failed ({t['failed'][0]})"
+    if t["stop"]:
+        words += " - stopped asking after that"
+    return words
+
+
+def metno_point(lat: float, lon: float, tally: dict) -> dict | None:
+    """met.no's forecast for one place, as metno_hours gives it. None if it would not say.
+
+    Within Expires the cached copy is used without asking. After it, the request carries
+    If-Modified-Since and a 304 renews the copy. A 403 or 429 means "stop": the rest of
+    the round's places are not asked for, because asking again is what earns the ban.
+    """
+    if tally.get("stop"):
+        return None
+    lat, lon = round(lat, 4), round(lon, 4)          # met.no: no more than four decimals
+    path = METNO_CACHE / f"{lat:.4f}_{lon:.4f}.json"
+    cached = read_json(path, None)
+    if cached and cached.get("body"):
+        expires = _http_date(cached.get("expires"))
+        if expires and expires > now_utc():
+            tally["cached"] += 1
+            return metno_hours(cached["body"])
+    headers = {"User-Agent": METNO_UA}
+    if cached and cached.get("body") and cached.get("last_modified"):
+        headers["If-Modified-Since"] = cached["last_modified"]
+    try:
+        status, hdrs, body = _http(f"{METNO_URL}?lat={lat}&lon={lon}", headers=headers,
+                                   timeout=20)
+    except Exception as exc:
+        tally["failed"].append(f"no answer ({exc})")
+        tally["stop"] = True
+        return None
+
+    def keep(entry):
+        try:
+            write_json(path, entry, compact=True)
+        except OSError:
+            pass                                         # a cache that cannot be written is no cache
+
+    if status == 304 and cached and cached.get("body"):
+        cached["expires"] = hdrs.get("expires") or cached.get("expires")
+        keep(cached)
+        tally["not_modified"] += 1
+        return metno_hours(cached["body"])
+    if status in (200, 203):                             # 203: a product being retired - still good
+        try:
+            doc = json.loads(body.decode("utf-8"))
+        except ValueError:
+            tally["failed"].append(f"HTTP {status} but not JSON")
+            return None
+        keep({"expires": hdrs.get("expires"), "last_modified": hdrs.get("last-modified"),
+              "body": doc})
+        tally["fetched"] += 1
+        return metno_hours(doc)
+    tally["failed"].append(f"HTTP {status} {_why(body)}".rstrip())
+    if status in (403, 429) or status >= 500:
+        tally["stop"] = True                             # refused, or down: the next place won't do better
+    return None
+
+
+def _snap(v: float, step: float) -> float:
+    return round(round(v / step) * step, 4)
+
+
+def _grid_axis() -> list[str]:
+    """The hours a wind grid runs over: the same axis _time_index cuts from Open-Meteo.
+
+    It must be the same one. The wind and the wave grids share the page's one time slider
+    by INDEX, so a wind grid that started at "now" while the waves started two days back
+    would put Tuesday's wind over Sunday's sea.
+    """
+    back = (now_utc() - timedelta(hours=WAKE_HOURS)).replace(minute=0, second=0, microsecond=0)
+    return [(back + timedelta(hours=k)).strftime("%Y-%m-%dT%H:00")
+            for k in range(0, WAKE_HOURS + GRID_HOURS + 1, max(1, GRID_STEP))]
+
+
+def _fill_past(cell: dict, times: list[str], old: dict) -> None:
+    """met.no has no past. The hours behind her are taken from the last grid on disk, at
+    its nearest point, so the rewind slider still has wind on it."""
+    cells = old.get("cells") or []
+    where = {t: k for k, t in enumerate(old.get("times") or [])}
+    if not cells or not where:
+        return
+    kx = math.cos(math.radians(cell["lat"]))
+    near = min(cells, key=lambda c: (c["lat"] - cell["lat"]) ** 2
+               + ((c["lon"] - cell["lon"]) * kx) ** 2)
+    if (near["lat"] - cell["lat"]) ** 2 + ((near["lon"] - cell["lon"]) * kx) ** 2 > 1.0:
+        return                                           # more than a degree away: not here
+    now_stamp = now_utc().strftime("%Y-%m-%dT%H:00")
+    for i, t in enumerate(times):
+        k = where.get(t)
+        if t >= now_stamp or k is None:
+            continue
+        for key in ("ws", "wd", "wc", "t2"):
+            src = near.get(key) or []
+            if cell[key][i] is None and k < len(src):
+                cell[key][i] = src[k]
+
+
+def metno_grid(lat: float, lon: float) -> dict | None:
+    """The wind grid from met.no: METNO_GRID_CELLS square over the usual box."""
+    n = max(2, METNO_GRID_CELLS)
+    half_lat = (GRID_SPAN_NM / 2) / 60
+    half_lon = min(60.0, (GRID_SPAN_NM / 2) / (60 * max(0.15, math.cos(math.radians(lat)))))
+    spots = []
+    for i in range(n):
+        for j in range(n):
+            gl = max(-89.0, min(89.0, lat - half_lat + 2 * half_lat * i / (n - 1)))
+            go = (lon - half_lon + 2 * half_lon * j / (n - 1) + 180) % 360 - 180
+            s = (_snap(gl, METNO_GRID_SNAP), _snap(go, METNO_GRID_SNAP))
+            if s not in spots:
+                spots.append(s)
+
+    times = _grid_axis()
+    old = read_json(WIND, None) or {}
+    tally, cells = _metno_tally(), []
+    for a, b in spots:
+        hours = metno_point(a, b, tally)
+        if not hours:
+            continue
+        vals = [metno_at(hours, t) or {} for t in times]
+        num = lambda v, nd: None if v is None else round(float(v), nd)
+        whole = lambda v: None if v is None else int(round(float(v)))
+        cell = {"ws": [num(v.get("wind_ms"), 1) for v in vals],
+                "wd": [whole(v.get("wind_dir")) for v in vals],
+                "wc": [v.get("weather_code") for v in vals],
+                "t2": [num(v.get("temp_c"), 0) for v in vals],
+                "lat": round(a, 3), "lon": round(b, 3)}
+        _fill_past(cell, times, old)
+        cells.append(cell)
+
+    mark = "->" if cells else "!"
+    print(f"  {mark} wind grid from met.no: {len(cells)} of {len(spots)} points x "
+          f"{len(times)} time steps; {_tally_words(tally)}")
+    if not cells:
+        return None
+    return {"generated_utc": iso(now_utc()), "times": times, "step_hours": GRID_STEP,
+            "cells": cells, "source": "met.no"}
+
+
+def refresh_grids(lat: float, lon: float) -> None:
+    """Wind and wave grids for the map: kept while fresh, refetched when not.
+
+    If no source gives a wind grid, the last one stays - for up to FORECAST_HOLD_H. Its
+    generated_utc is left as it was, so the page can see and say how old it is. Past that
+    it is taken off rather than drawn as if it were today's.
+    """
+    for kind, path in (("wind", WIND), ("waves", WAVES)):
+        keep = _grid_still_good(path, lat, lon)
+        if keep:
+            print(f"  -> {kind} grid {keep}")
+            continue
+        grid = fetch_grid(lat, lon, kind)
+        if grid:
+            grid["centre"] = [round(lat, 3), round(lon, 3)]
+            write_json(path, grid)
+            continue
+        if kind != "wind":
+            print(f"  -> no {kind} grid this run, keeping the previous one")
+            continue
+        old = read_json(path, None) or {}
+        try:
+            age_h = (now_utc() - parse_iso(old["generated_utc"])).total_seconds() / 3600
+        except Exception:
+            age_h = None
+        if not old.get("cells"):
+            print("  ! no wind grid from any source, and none on disk to keep")
+        elif age_h is not None and age_h <= FORECAST_HOLD_H:
+            print(f"  ! no wind grid from any source - keeping the one from "
+                  f"{old['generated_utc']} ({age_h:.1f} h old)")
+        else:
+            write_json(path, {
+                "generated_utc": iso(now_utc()), "times": _grid_axis(),
+                "step_hours": GRID_STEP, "cells": [], "source": None,
+                "dropped": f"no source answered, and the last grid ({old.get('generated_utc')})"
+                           f" was older than {FORECAST_HOLD_H:.0f} h"})
+            print(f"  ! no wind grid from any source, and the last one is "
+                  f"{'?' if age_h is None else f'{age_h:.0f}'} h old - taken off the map")
+
+
+def metno_for_points(points: list) -> list:
+    """met.no's hours for each point of the ladder, None where it would not answer.
+    Points that snap to the same place share one request."""
+    tally, by_spot, out = _metno_tally(), {}, []
+    for p in points:
+        spot = (_snap(p["lat"], METNO_AHEAD_SNAP), _snap(p["lon"], METNO_AHEAD_SNAP))
+        if spot not in by_spot:
+            by_spot[spot] = metno_point(spot[0], spot[1], tally)
+        out.append(by_spot[spot])
+    print(f"  {'->' if any(out) else '!'} met.no for the forecast ahead: {len(by_spot)} "
+          f"place(s) for {len(points)} points; {_tally_words(tally)}")
+    return out
+
+
+class AheadRows(list):
+    """fetch_ahead's rows, plus where their wind came from and when (meta)."""
+    meta: dict = {}
+
+
+def hold_wind(rows: list) -> tuple[str, str] | None:
+    """Fill rows that have no wind from the last ahead.json, if that forecast is young
+    enough. Matched on the hour the forecast is FOR, within three hours: the ladder is
+    re-cut from the current hour every round, so exact matches are the exception.
+
+    Returns (the source it came from, when it was fetched), or None if nothing was held.
+    The time is the ORIGINAL fetch, carried through every round that holds it again, so
+    twelve hours means twelve hours since anyone actually forecast it.
+    """
+    old = read_json(AHEAD, {}) or {}
+    when = old.get("wind_fetched_utc") or old.get("generated_utc")
+    try:
+        if (now_utc() - parse_iso(when)).total_seconds() > FORECAST_HOLD_H * 3600:
+            return None
+    except Exception:
+        return None
+    have = []
+    for q in old.get("points") or []:
+        try:
+            if q.get("wind_ms") is not None:
+                have.append((parse_iso(q["time_utc"]), q))
+        except Exception:
+            continue
+    if not have:
+        return None
+    held = 0
+    for r in rows:
+        if r.get("wind_ms") is not None:
+            continue
+        t = parse_iso(r["time_utc"])
+        dt, q = min(((abs((t - tq).total_seconds()), q) for tq, q in have),
+                    key=lambda x: x[0])
+        if dt <= 3 * 3600:
+            for k in WIND_KEYS:
+                r[k] = q.get(k)
+            held += 1
+    return (old.get("wind_source") or "open-meteo", when) if held else None
 
 
 # --------------------------------------------------------- sun, moon, history
@@ -2529,6 +2970,18 @@ def fetch_ahead(points: list) -> list:
         blocks = data if isinstance(data, list) else [data]
         return (blocks[k].get("hourly") or {}) if k < len(blocks) else {}
 
+    # Open-Meteo first. If it gave no wind at all, MET Norway; if that gives nothing
+    # either, hold_wind below puts back the last good forecast. The waves are Open-Meteo's
+    # marine host either way.
+    air_ok = any(block(air, k).get("wind_speed_10m") for k in range(len(points)))
+    source = "open-meteo" if air_ok else None
+    met = [None] * len(points)
+    if not air_ok:
+        print("  ! open-meteo gave no wind for the forecast ahead - asking met.no instead")
+        met = metno_for_points(points)
+        if any(met):
+            source = "met.no"
+
     out = []
     for k, p in enumerate(points):
         when = base_hour + timedelta(hours=p["hours"])
@@ -2537,13 +2990,14 @@ def fetch_ahead(points: list) -> list:
         ai = a.get("time", []).index(stamp) if stamp in (a.get("time") or []) else None
         si = s.get("time", []).index(stamp) if stamp in (s.get("time") or []) else None
         pick = lambda d, key, i: (d.get(key) or [None])[i] if i is not None and d.get(key) else None
+        m = (metno_at(met[k], stamp) if met[k] else None) or {}
         row = {
             "hours": p["hours"], "time_utc": iso(when), "lat": p["lat"], "lon": p["lon"],
-            "wind_ms": pick(a, "wind_speed_10m", ai),
-            "wind_dir": pick(a, "wind_direction_10m", ai),
-            "gust_ms": pick(a, "wind_gusts_10m", ai),
-            "temp_c": pick(a, "temperature_2m", ai),
-            "weather_code": pick(a, "weather_code", ai),
+            "wind_ms": pick(a, "wind_speed_10m", ai) if air_ok else m.get("wind_ms"),
+            "wind_dir": pick(a, "wind_direction_10m", ai) if air_ok else m.get("wind_dir"),
+            "gust_ms": pick(a, "wind_gusts_10m", ai) if air_ok else m.get("gust_ms"),
+            "temp_c": pick(a, "temperature_2m", ai) if air_ok else m.get("temp_c"),
+            "weather_code": pick(a, "weather_code", ai) if air_ok else m.get("weather_code"),
             "wave_m": pick(s, "wave_height", si),
             "wave_dir": pick(s, "wave_direction", si),
             "wave_period_s": pick(s, "wave_period", si),
@@ -2565,7 +3019,25 @@ def fetch_ahead(points: list) -> list:
             if p.get(key) is not None:
                 row[key] = p[key]
         out.append(row)
-    return out
+
+    fresh = sum(1 for r in out if r["wind_ms"] is not None)
+    held = hold_wind(out) if fresh < len(out) else None
+    rows = AheadRows(out)
+    if held:
+        # Some or all of it is the old forecast, so the file is dated by the old one.
+        rows.meta = {"wind_source": source if fresh else held[0],
+                     "wind_fetched_utc": held[1], "wind_held": True}
+    elif fresh:
+        rows.meta = {"wind_source": source, "wind_fetched_utc": iso(now_utc()),
+                     "wind_held": False}
+    else:
+        rows.meta = {"wind_source": None, "wind_fetched_utc": None, "wind_held": False}
+    kept = sum(1 for r in out if r["wind_ms"] is not None) - fresh
+    print(f"  {'->' if fresh or kept else '!'} forecast ahead: wind from {source or 'no source'}"
+          f" for {fresh} of {len(out)} points"
+          + (f", {kept} held from the forecast fetched {held[1]} ({held[0]})" if held else "")
+          + ("" if fresh or kept else " - no source answered and nothing young enough to hold"))
+    return rows
 
 
 # ------------------------------------------------------- where she has been, and in what
@@ -3056,6 +3528,7 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                       "lat": round(lat, 4), "lon": round(lon, 4),
                       "where": "port" if holding else "sea"} for h in hrs]
             old = read_json(AHEAD, {}) or {}
+            ladder = fetch_ahead(still)
             write_json(AHEAD, {
                 "generated_utc": iso(now_utc()),
                 "to": (stay or port)["name"],
@@ -3066,7 +3539,8 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
                 # the page labels each forecast tile with it ("in Lerwick" rather than a
                 # bare hour), and without it the tiles lose the one word that says she is
                 # not at sea.
-                "points": fetch_ahead(still),
+                "points": ladder,
+                **getattr(ladder, "meta", {}),
             })
             print("* " + (f"alongside in {here['name']} until {here['depart']}"
                            if holding else
@@ -3329,6 +3803,7 @@ def _build_ahead(lat: float, lon: float, speed_kn: float | None,
             "eta_utc": iso(now_utc() + timedelta(hours=wait_h + eta_h)),
             "route": [[round(a, 4), round(b, 4)] for a, b in route],
             "points": ahead,
+            **getattr(ahead, "meta", {}),
         })
         vmg_note = (f"making good {vmg:.2f} kn on it over her last {vmg_window} h"
                     if vmg is not None else "no usable made-good rate in the track")
@@ -4775,17 +5250,7 @@ def main() -> int:
 
     sun = fetch_sun_moon(lat, lon, points)
 
-    for kind, path in (("wind", WIND), ("waves", WAVES)):
-        keep = _grid_still_good(path, lat, lon)
-        if keep:
-            print(f"  -> {kind} grid {keep}")
-            continue
-        grid = fetch_grid(lat, lon, kind)
-        if grid:
-            grid["centre"] = [round(lat, 3), round(lon, 3)]
-            write_json(path, grid)
-        else:
-            print(f"  -> no {kind} grid this run, keeping the previous one")
+    refresh_grids(lat, lon)
 
     # Every point written from now on says whether its speed was reported by the ship or
     # worked out here. Points written before that distinction existed cannot be classified

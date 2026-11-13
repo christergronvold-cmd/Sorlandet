@@ -1252,7 +1252,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "449a1791e1";
+const BUILD = "45f3dc159c";
 
 async function checkForNewBuild() {
   try {
@@ -2368,11 +2368,19 @@ function setupGrids(wind, waves) {
     const g = wind || waves;
     const cells = (g && g.cells || []).length;
     live.hidden = !cells;
-    live.textContent = `${cells} point grid`;
+    // The job refetches the grid every 75 minutes. Older than two hours means no forecast
+    // service has answered since, and the job is holding the last good one (for up to
+    // twelve hours) - so the label says how old it is instead of passing it off as fresh.
+    const ageH = g && g.generated_utc ? (Date.now() - new Date(g.generated_utc)) / 36e5 : 0;
+    const metno = wind && wind.source === "met.no";
+    live.textContent = `${cells} point grid` + (ageH >= 2 ? ` · ${Math.round(ageH)} h old` : "");
     live.title = g && g.generated_utc
       ? `Fetched once for everyone by the job at ${
           g.generated_utc.replace("T", " ").replace("Z", " UTC")}, centred on where she `
         + `was then. No forecast request is made by your browser.`
+        + (ageH >= 2 ? ` The forecast service has not answered since, so this is the last`
+                       + ` good forecast, kept until a new one comes.` : "")
+        + (metno ? ` Wind and sky: MET Norway (CC BY 4.0).` : "")
       : "The forecast grid the job writes along with her position.";
   }
   document.getElementById("windwhen").textContent = gridLabel(gridIndex);
@@ -3406,6 +3414,24 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   const whereNote = pt => pt.where === "port" ? `in ${pt.port || ahead.to}`
                         : pt.where === "onward" ? `to ${pt.port || ""}`
                         : "";
+  // Where the wind on these tiles came from, when it is not the usual. The job falls back
+  // to MET Norway when Open-Meteo will not answer, and when neither does it keeps the last
+  // good forecast for up to twelve hours rather than blank the tiles - in which case the
+  // reader is told the forecast is older than it looks. met.no is credited as its licence
+  // asks.
+  const windNote = a => {
+    const ageH = a.wind_fetched_utc ? (Date.now() - new Date(a.wind_fetched_utc)) / 36e5 : 0;
+    const old = a.wind_held || ageH >= 2;
+    const at = a.wind_fetched_utc ? new Date(a.wind_fetched_utc).toISOString().slice(11, 16) : "";
+    const bits = [];
+    if (old && a.wind_fetched_utc) {
+      bits.push(`Wind and sky are the forecast from ${at} UTC, ${Math.round(ageH)} h old` +
+        ` — the forecast service has not answered since`);
+    }
+    if (a.wind_source === "met.no") bits.push("wind and sky from MET Norway");
+    return bits.length ? `<div class="wind-note" style="font-size:12px;color:var(--muted);` +
+      `margin:-4px 0 8px">${bits.join(" · ")}</div>` : "";
+  };
   const aheadStrip = (ahead?.points || []).filter(pt => pt.hours > 0).map(pt => `
     <div><b class="plain">${pt.hours >= 48 ? `in ${Math.round(pt.hours / 24)} days` : `in ${pt.hours} h`}</b>
       <div class="ic">${WMO[pt.weather_code] || "🧭"}</div>
@@ -3434,7 +3460,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
        for where she will be, not where she is — including the days she is alongside${
          (ahead.points || []).some(x => x.hours > 120)
            ? " · beyond five days it is an outlook, not a forecast" : ""}
-     </div><div class="fc">${aheadStrip}</div>`,
+     </div>${windNote(ahead)}<div class="fc">${aheadStrip}</div>`,
     { key: "ahead", open: true,
       note: Number.isFinite(ahead.distance_nm) ? `${Math.round(ahead.distance_nm)} nm to run`
           : "" }) : "";
