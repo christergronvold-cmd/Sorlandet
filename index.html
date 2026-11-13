@@ -615,6 +615,34 @@ function nm(a, b) {
 }
 
 
+// Her speed over the shortest recent window that holds two fixes: the last hour if it
+// can, then two, three ... up to six. Out at sea the foundation's feed reports every
+// seven minutes in theory and every two or three hours in practice, and it sends no speed
+// at all, so "the last hour" alone left the tile at a dash most of the day. Distance is
+// summed fix to fix along the track, skipping steps under 0.02 nm (receiver jitter, the
+// same rule as the job), and divided by the time between the first and last fix in the
+// window. Returns { kn, h } or null when six hours hold fewer than two fixes.
+const SPEED_WINDOWS_H = [1, 2, 3, 4, 5, 6];
+function speedOverWindow(points, nowMs = Date.now()) {
+  const fixes = (points || [])
+    .map(q => ({ t: Date.parse(q.t), lat: q.lat, lon: q.lon }))
+    .filter(q => Number.isFinite(q.t) && q.lat != null && q.lon != null && q.t <= nowMs + 6e4)
+    .sort((a, b) => a.t - b.t);
+  for (const h of SPEED_WINDOWS_H) {
+    const inside = fixes.filter(q => q.t >= nowMs - h * 36e5);
+    if (inside.length < 2) continue;
+    const spanH = (inside[inside.length - 1].t - inside[0].t) / 36e5;
+    if (spanH < 1 / 60) continue;               // two fixes in the same minute say nothing
+    let dist = 0;
+    for (let i = 1; i < inside.length; i++) {
+      const step = nm([inside[i - 1].lat, inside[i - 1].lon], [inside[i].lat, inside[i].lon]);
+      if (step >= 0.02) dist += step;
+    }
+    return { kn: dist / spanH, h };
+  }
+  return null;
+}
+
 // ------------------------------------------------------- voyage maths and log
 // Cumulative distance along the planned route, port by port, following waypoints.
 function routeDistances(ports) {
@@ -1252,7 +1280,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "45f3dc159c";
+const BUILD = "985580b962";
 
 async function checkForNewBuild() {
   try {
@@ -2575,6 +2603,7 @@ function drawRewind() {
 
   el("rw-wind").textContent = w?.wind_ms != null
     ? `Wind ${N(w.wind_ms)} m/s from ${compass(w.wind_dir)}${w.gust_ms != null ? ` · gusts ${N(w.gust_ms)}` : ""}`
+      + (w.source === "met.no" ? " · MET Norway" : "")
     : "wind not recorded for this hour";
   el("rw-wave").textContent = w?.wave_m != null
     ? `Waves ${N(w.wave_m)} m from ${compass(w.wave_dir)}`
@@ -4520,11 +4549,29 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
 
   // ---- the weather, in one card
   const sky = waiting ? null : skyOf(air);   // also used by the Air tile in the strip
+  // Where the wind and air figures came from, when it is not the usual: MET Norway when
+  // Open-Meteo would not answer the job (credited, as its licence asks), or the last good
+  // reading held for up to twelve hours when neither would - with its age, so an
+  // afternoon's wind is not read as this minute's.
+  const airNote = (() => {
+    if (waiting || !air) return "";
+    const bits = [];
+    if (air.held && air.fetched_utc) {
+      const h = (Date.now() - new Date(air.fetched_utc)) / 36e5;
+      bits.push(`Wind and air are the reading from ${
+        new Date(air.fetched_utc).toISOString().slice(11, 16)} UTC, ${
+        h < 1 ? `${Math.round(h * 60)} min` : `${Math.round(h)} h`} old — no weather `
+        + "service has answered since");
+    }
+    if (air.source === "met.no") bits.push("wind and air from MET Norway");
+    return bits.join(" · ");
+  })();
   const wgroup = (name, body) =>
     `<div class="wgroup"><h3>${name}</h3>${body}</div>`;
   const weatherCard = wideCard("Weather where she is" + NOWCHIP, waiting
     ? row("Status", "waiting for position")
-    : `<div class="wcols">
+    : `${airNote ? `<div class="air-note" style="font-size:12px;color:var(--muted);`
+                   + `margin:-4px 0 8px">${airNote}</div>` : ""}<div class="wcols">
         ${wgroup(`Wind · ${beaufort(air.wind_ms)}`, `
           ${row("Speed", `${N(air.wind_ms)} m/s`)}
           ${row("From", `${compass(air.wind_direction_deg)} (${N(air.wind_direction_deg, 0)}°)`)}
@@ -4549,6 +4596,7 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   // These are the questions the page is opened to answer, and until now every one of them
   // was a scroll away underneath it. The map says where; this says how she is.
   const kpi = document.getElementById("kpi");
+  const kpiSpeed = speedOverWindow(track.points);
   // The label is a fifth of a phone screen wide - about seventy pixels. "TO LERWICK" does
   // not fit in it and came out as "TO LERWI...", which is worse than no label at all, so
   // the port name lives in the tooltip and in the Voyage plan card underneath.
@@ -4566,12 +4614,27 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
       // last heard her. The number was not wrong; the label was. A reading this old is a
       // reading about the PAST, and the label now says so - a figure that admits its age
       // is worth more than a figure that looks live and is not.
-      tile(N(p.sog_kn), "kn", fixAgeMin > STALE_MIN ? `Speed ${agoShort(fixAgeMin)}` : "Speed",
-           fixAgeMin > STALE_MIN
-             ? `Her speed when she was last heard, ${ago(p.seen_utc)} - not her speed now. `
-               + "She may have stopped, anchored or got under way since."
-             : ""),
-      tile(N(air.wind_ms), "m/s", "Wind"),
+      //
+      // Then the speed went missing altogether: the foundation's feed sends no speed, and
+      // with no sog the tile was a dash most of the day at sea. So: the speed she reports,
+      // when there is one and it is fresh; otherwise her speed over the shortest window of
+      // the track that holds two fixes, up to six hours, with the window in the label -
+      // "Speed 3h" is the last three hours. Only when even that is empty does the old,
+      // aged reading come back.
+      (p.sog_kn != null && fixAgeMin <= STALE_MIN)
+        ? tile(N(p.sog_kn), "kn", "Speed", "The speed she reported at her last fix.")
+        : kpiSpeed
+          ? tile(N(kpiSpeed.kn), "kn", `Speed ${kpiSpeed.h}h`,
+                 `Her average speed over the last ${kpiSpeed.h === 1 ? "hour" : `${kpiSpeed.h} hours`}, `
+                 + "worked out from the positions on the track - the shortest recent window "
+                 + "that holds two fixes.")
+          : tile(N(p.sog_kn), "kn", p.sog_kn != null && fixAgeMin > STALE_MIN
+                   ? `Speed ${agoShort(fixAgeMin)}` : "Speed",
+                 p.sog_kn != null && fixAgeMin > STALE_MIN
+                   ? `Her speed when she was last heard, ${ago(p.seen_utc)} - not her speed now. `
+                     + "She may have stopped, anchored or got under way since."
+                   : "No speed reported, and fewer than two positions in the last six hours."),
+      tile(N(air.wind_ms), "m/s", "Wind", airNote ? airNote.replace(/<[^>]+>/g, "") : ""),
       tile(N(sea.wave_height_m), "m", "Sea"),
       // The sky rides in the top corner rather than beside the reading: "12 °C" says how
       // cold it is but not what it is doing, and the same number reads very differently

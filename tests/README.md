@@ -25,6 +25,7 @@ The rule from here: a test that matters goes in the repo, next to the thing it c
 | `test_engine.py` | The map drew a tacking sailing course while she was motoring out of Dublin under engine on all 124 messages. |
 | `test_heading.py` | With no course in the fix, the ship's arrow rotated to zero — due north — while she steered 180 all night. |
 | `test_windfallback.py` | 13 November: Open-Meteo's forecast host stopped answering a new runner and every wind figure went null while the waves kept coming. Checks the met.no translation, the fall-over from Open-Meteo to met.no (with its User-Agent, Expires and If-Modified-Since), that a failure of both holds the last good forecast for up to 12 h instead of writing nulls, and that the page says the forecast is old. |
+| `test_airnow.py` | 13 November: after the forecast fall-over, the strip still showed dashes for Wind and Air - the weather where she is (and along the track she sailed) came from Open-Meteo alone - and SPEED was a dash most of the day at sea because the foundation's feed sends no speed. Checks the met.no fall-over and the 12-hour hold for the air in latest.json, met.no for the current hour of the wake, the credit and age on the page, and the speed over the shortest window with two fixes ("Speed 3h"). |
 | `test_layers.py` | The layer defaults live in two places, `show` and the button markup, and nothing but an eye kept them in step. |
 
 ## Writing another one

@@ -152,7 +152,7 @@ check("no symbol", U.metno_wmo(None), None)
 
 hrs = U.metno_hours(metno_doc())
 h5 = hrs[STAMP(BASE + timedelta(hours=5))]
-check("hour 5, as met.no gave it", h5,
+check("hour 5, as met.no gave it", {k: h5[k] for k in U.WIND_KEYS},
       {"wind_ms": 9.0, "wind_dir": 10.0, "gust_ms": None, "temp_c": 18.0, "weather_code": 61})
 h6 = hrs[STAMP(BASE + timedelta(hours=60))]
 check("from 60 h on the sky comes from next_6_hours",
@@ -177,7 +177,8 @@ check("a row per hour", [r["hours"] for r in rows], HOURS)
 check("every hour has a wind from met.no",
       [r["wind_ms"] is not None for r in rows], [True] * len(HOURS))
 want = U.metno_at(hrs, STAMP(BASE + timedelta(hours=6)))
-check("hour 6 is met.no's hour 6", {k: rows[1][k] for k in U.WIND_KEYS}, want)
+check("hour 6 is met.no's hour 6", {k: rows[1][k] for k in U.WIND_KEYS},
+      {k: want[k] for k in U.WIND_KEYS})
 check("the waves still come from Open-Meteo's marine host",
       {r["wave_m"] for r in rows}, {1.4})
 check("the file says where the wind came from",

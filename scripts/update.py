@@ -1741,7 +1741,8 @@ def fetch_weather(lat: float, lon: float) -> dict:
             }
         )
     )
-    if air and isinstance(air.get("current"), dict):
+    if air and isinstance(air.get("current"), dict) and \
+            air["current"].get("wind_speed_10m") is not None:
         cur = air["current"]
         weather["air"] = {
             "temp_c": cur.get("temperature_2m"),
@@ -1754,8 +1755,76 @@ def fetch_weather(lat: float, lon: float) -> dict:
             "precip_mm": cur.get("precipitation"),
             "weather_code": cur.get("weather_code"),
             "time_utc": cur.get("time"),
+            "source": "open-meteo",
+            "fetched_utc": weather["fetched_utc"],
         }
+        print("  -> weather where she is: air from open-meteo")
+    else:
+        print("  ! open-meteo gave no air weather where she is - asking met.no instead")
+        got = metno_air(lat, lon)
+        if got:
+            weather["air"] = got
 
+    return weather
+
+
+def metno_air(lat: float, lon: float) -> dict | None:
+    """The air where she is, from met.no, in the fields fetch_weather writes.
+
+    met.no's compact product has no feels-like temperature and no gusts; those stay None
+    and the card shows a dash for them. The hour is the current one, or met.no's first
+    if its series has not reached the current hour yet.
+    """
+    tally = _metno_tally()
+    hours = metno_point(_snap(lat, METNO_AHEAD_SNAP), _snap(lon, METNO_AHEAD_SNAP), tally)
+    stamp = now_utc().strftime("%Y-%m-%dT%H:00")
+    v = metno_at(hours, stamp) if hours else None
+    if not v and hours:
+        first = min(hours)
+        if (_stamp_dt(first) - _stamp_dt(stamp)).total_seconds() <= 3600:
+            stamp, v = first, dict(hours[first])
+    if not v or v.get("wind_ms") is None:
+        print(f"  ! met.no gave no air weather where she is either; {_tally_words(tally)}")
+        return None
+    print(f"  -> weather where she is: air from met.no; {_tally_words(tally)}")
+    return {
+        "temp_c": v.get("temp_c"), "feels_c": None,
+        "wind_ms": v.get("wind_ms"), "gust_ms": v.get("gust_ms"),
+        "wind_direction_deg": None if v.get("wind_dir") is None else round(v["wind_dir"]),
+        "pressure_hpa": v.get("pressure_hpa"), "cloud_pct": v.get("cloud_pct"),
+        "precip_mm": v.get("precip_mm"), "weather_code": v.get("weather_code"),
+        "time_utc": stamp, "source": "met.no", "fetched_utc": iso(now_utc()),
+    }
+
+
+def settle_weather(weather: dict, previous: dict | None) -> dict:
+    """What goes into latest.json when a source has failed.
+
+    No sea and no air at all: the previous reading, marked stale, as before. Air missing
+    on its own - Open-Meteo's forecast host and met.no both down while the marine host
+    answers, as on 13 November - holds the previous air for up to FORECAST_HOLD_H,
+    dated by when it was really fetched and marked held, so the page can say how old it
+    is. Past that the card shows dashes rather than an afternoon's wind as if it were now.
+    """
+    earlier = ((previous or {}).get("weather") or {})
+    if not weather.get("sea") and not weather.get("air") and earlier:
+        weather = {**earlier, "stale": True}
+        weather.pop("air", None)                 # decided below, with the same age limit
+        print("  -> no weather data, keeping the previous reading")
+    if weather.get("air"):
+        return weather
+    old = earlier.get("air") or {}
+    when = old.get("fetched_utc") or earlier.get("fetched_utc")
+    try:
+        age_h = (now_utc() - parse_iso(when)).total_seconds() / 3600
+    except Exception:
+        age_h = None
+    if old.get("wind_ms") is not None and age_h is not None and age_h <= FORECAST_HOLD_H:
+        weather["air"] = {**old, "held": True, "fetched_utc": when}
+        print(f"  ! no air weather from any source - holding the reading from {when} "
+              f"({age_h:.1f} h old)")
+    elif old:
+        print("  ! no air weather from any source, and the last reading is too old to hold")
     return weather
 
 
@@ -2010,6 +2079,10 @@ def metno_hours(doc: dict) -> dict:
             "gust_ms": inst.get("wind_speed_of_gust"),
             "temp_c": inst.get("air_temperature"),
             "weather_code": metno_wmo((nxt.get("summary") or {}).get("symbol_code")),
+            # Only the card "where she is now" uses these; the forecasts carry WIND_KEYS.
+            "pressure_hpa": inst.get("air_pressure_at_sea_level"),
+            "cloud_pct": inst.get("cloud_area_fraction"),
+            "precip_mm": (nxt.get("details") or {}).get("precipitation_amount"),
         }
     return out
 
@@ -3110,6 +3183,29 @@ def fetch_past(slots: list) -> list:
         blocks = data if isinstance(data, list) else [data]
         return (blocks[k].get("hourly") or {}) if k < len(blocks) else {}
 
+    # met.no has no past - its series begins at the current hour - so when Open-Meteo will
+    # not answer it can fill only the hour she is in now. That is still worth having: the
+    # job runs every half hour, each hour is "now" once, and an hour that got weather is
+    # kept by _build_wake, so the wake fills in hour by hour for as long as Open-Meteo is
+    # out. Hours already past stay empty and are asked for again from Open-Meteo next round.
+    air_ok = any(block(air, k).get("wind_speed_10m") for k in range(len(slots)))
+    met = {}
+    if not air_ok:
+        now_stamp = now_utc().strftime("%Y-%m-%dT%H:00")
+        current = [k for k, sl in enumerate(slots)
+                   if parse_iso(sl["t"]).strftime("%Y-%m-%dT%H:00") >= now_stamp]
+        if current:
+            tally = _metno_tally()
+            for k in current:
+                met[k] = metno_point(_snap(slots[k]["lat"], METNO_AHEAD_SNAP),
+                                     _snap(slots[k]["lon"], METNO_AHEAD_SNAP), tally)
+            print(f"  {'->' if any(met.values()) else '!'} wake: open-meteo gave no weather;"
+                  f" met.no for the current hour ({len(current)} of {len(slots)} hours -"
+                  f" it has no past); {_tally_words(tally)}")
+        else:
+            print(f"  ! wake: open-meteo gave no weather for {len(slots)} past hours, and"
+                  f" met.no has no past to ask")
+
     out = []
     for k, slot in enumerate(slots):
         stamp = parse_iso(slot["t"]).strftime("%Y-%m-%dT%H:00")
@@ -3117,15 +3213,19 @@ def fetch_past(slots: list) -> list:
         ai = a.get("time", []).index(stamp) if stamp in (a.get("time") or []) else None
         si = sea_b.get("time", []).index(stamp) if stamp in (sea_b.get("time") or []) else None
         pick = lambda d, key, i: (d.get(key) or [None])[i] if i is not None and d.get(key) else None
-        out.append({**slot,
-                    "wind_ms": pick(a, "wind_speed_10m", ai),
-                    "wind_dir": pick(a, "wind_direction_10m", ai),
-                    "gust_ms": pick(a, "wind_gusts_10m", ai),
-                    "temp_c": pick(a, "temperature_2m", ai),
-                    "weather_code": pick(a, "weather_code", ai),
-                    "wave_m": pick(sea_b, "wave_height", si),
-                    "wave_dir": pick(sea_b, "wave_direction", si),
-                    "wave_period_s": pick(sea_b, "wave_period", si)})
+        m = (metno_at(met[k], stamp) if met.get(k) else None) or {}
+        row = {**slot,
+               "wind_ms": pick(a, "wind_speed_10m", ai) if air_ok else m.get("wind_ms"),
+               "wind_dir": pick(a, "wind_direction_10m", ai) if air_ok else m.get("wind_dir"),
+               "gust_ms": pick(a, "wind_gusts_10m", ai) if air_ok else m.get("gust_ms"),
+               "temp_c": pick(a, "temperature_2m", ai) if air_ok else m.get("temp_c"),
+               "weather_code": pick(a, "weather_code", ai) if air_ok else m.get("weather_code"),
+               "wave_m": pick(sea_b, "wave_height", si),
+               "wave_dir": pick(sea_b, "wave_direction", si),
+               "wave_period_s": pick(sea_b, "wave_period", si)}
+        if not air_ok and row["wind_ms"] is not None:
+            row["source"] = "met.no"
+        out.append(row)
     return out
 
 
@@ -5198,13 +5298,9 @@ def main() -> int:
     position, lat, lon = _where_she_is(position, points)
 
     weather = fetch_weather(lat, lon)
-    # If the weather service is down, keep the previous weather instead of blanking
-    # the cards on the page.
-    if not weather.get("sea") and not weather.get("air"):
-        earlier = (previous.get("weather") or {}) if previous else {}
-        if earlier:
-            weather = {**earlier, "stale": True}
-            print("  -> no weather data, keeping the previous reading")
+    # If a weather service is down, keep the previous reading instead of blanking the
+    # cards on the page - within limits, see settle_weather.
+    weather = settle_weather(weather, previous)
 
     # ---- what the crew typed in: destination, ETA, draught
     #
