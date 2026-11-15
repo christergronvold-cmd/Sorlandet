@@ -2,63 +2,66 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-15T17:01:24Z",
+ "updated_utc": "2026-11-15T17:30:51Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 32.36833333333333,
-  "lon": -11.116666666666667,
-  "sog_kn": null,
-  "cog_deg": null,
-  "heading_deg": null,
-  "seen_utc": "2026-11-15T13:15:48Z",
-  "source": "foundation",
+  "ais_src": "TER",
+  "lat": 32.1655,
+  "lon": -11.27233,
+  "sog_kn": 3.9,
+  "cog_deg": 226.6,
+  "heading_deg": 234,
   "nav_status": 8,
-  "nav_status_utc": "2026-11-15T11:34:23Z"
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "seen_utc": "2026-11-15T17:29:22Z",
+  "source": "vesselfinder",
+  "nav_status_utc": "2026-11-15T17:29:22Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-15T11:34:23Z"
+  "heard_utc": "2026-11-15T17:29:22Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-15T17:01:23Z",
+  "fetched_utc": "2026-11-15T17:30:49Z",
   "sea": {
-   "wave_height_m": 1.28,
-   "wave_direction_deg": 324,
-   "wave_period_s": 8.3,
-   "swell_height_m": 0.92,
-   "swell_period_s": 6.75,
-   "wind_wave_height_m": 0.28,
-   "sea_temp_c": 21.3,
-   "time_utc": "2026-11-15T17:00"
+   "wave_height_m": 1.3,
+   "wave_direction_deg": 327,
+   "wave_period_s": 8.1,
+   "swell_height_m": 0.94,
+   "swell_period_s": 6.7,
+   "wind_wave_height_m": 0.32,
+   "sea_temp_c": 21.0,
+   "time_utc": "2026-11-15T17:30"
   },
   "air": {
-   "temp_c": 20.6,
+   "temp_c": 20.7,
    "feels_c": null,
-   "wind_ms": 4.8,
+   "wind_ms": 5.4,
    "gust_ms": null,
-   "wind_direction_deg": 36,
-   "pressure_hpa": 1022.1,
-   "cloud_pct": 3.9,
+   "wind_direction_deg": 34,
+   "pressure_hpa": 1022.0,
+   "cloud_pct": 9.4,
    "precip_mm": 0.0,
    "weather_code": 0,
    "time_utc": "2026-11-15T17:00",
    "source": "met.no",
-   "fetched_utc": "2026-11-15T17:01:24Z"
+   "fetched_utc": "2026-11-15T17:30:50Z"
   }
  },
  "sun": {
   "moon": {
    "age_days": 5.8,
-   "illumination": 0.33,
+   "illumination": 0.34,
    "phase": "first quarter"
   }
  },
  "stats": {
-  "points": 636,
-  "distance_nm": 3985.6,
+  "points": 637,
+  "distance_nm": 4000.1,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
