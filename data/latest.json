@@ -2,21 +2,19 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-17T08:55:35Z",
+ "updated_utc": "2026-11-17T09:25:06Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "ais_src": "TER",
   "lat": 30.51523,
   "lon": -12.94638,
   "sog_kn": 1.1,
-  "cog_deg": 196.5,
-  "heading_deg": 216,
-  "nav_status": 8,
-  "destination": "ES LPA",
-  "draught_m": 4.1,
+  "cog_deg": 196,
+  "heading_deg": null,
   "seen_utc": "2026-11-17T08:51:53Z",
-  "source": "vesselfinder",
+  "source": "foundation",
+  "sog_derived": true,
+  "nav_status": 8,
   "nav_status_utc": "2026-11-17T08:51:53Z"
  },
  "voyage": {
@@ -26,30 +24,30 @@
   "heard_utc": "2026-11-17T08:51:53Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-17T08:54:28Z",
+  "fetched_utc": "2026-11-17T09:25:04Z",
   "sea": {
    "wave_height_m": 1.4,
    "wave_direction_deg": 311,
-   "wave_period_s": 9.25,
-   "swell_height_m": 1.34,
-   "swell_period_s": 7.7,
+   "wave_period_s": 9.15,
+   "swell_height_m": 1.36,
+   "swell_period_s": 7.65,
    "wind_wave_height_m": 0.0,
    "sea_temp_c": 22.8,
-   "time_utc": "2026-11-17T08:45"
+   "time_utc": "2026-11-17T09:15"
   },
   "air": {
-   "temp_c": 21.0,
-   "feels_c": null,
-   "wind_ms": 2.4,
-   "gust_ms": null,
-   "wind_direction_deg": 34,
-   "pressure_hpa": 1022.0,
-   "cloud_pct": 26.6,
+   "temp_c": 21.8,
+   "feels_c": 23.0,
+   "wind_ms": 2.62,
+   "gust_ms": 3.8,
+   "wind_direction_deg": 353,
+   "pressure_hpa": 1022.6,
+   "cloud_pct": 66,
    "precip_mm": 0.0,
-   "weather_code": 1,
-   "time_utc": "2026-11-17T08:00",
-   "source": "met.no",
-   "fetched_utc": "2026-11-17T08:55:02Z"
+   "weather_code": 2,
+   "time_utc": "2026-11-17T09:15",
+   "source": "open-meteo",
+   "fetched_utc": "2026-11-17T09:25:04Z"
   }
  },
  "sun": {
@@ -60,7 +58,10 @@
   },
   "civil_timezone": "Atlantic/Canary",
   "civil_place": "Las Palmas",
-  "civil_country": "Gran Canaria"
+  "civil_country": "Gran Canaria",
+  "sunrise_utc": "2026-11-17T07:19",
+  "sunset_utc": "2026-11-17T17:53",
+  "daylight_hours": 10.6
  },
  "stats": {
   "points": 647,
