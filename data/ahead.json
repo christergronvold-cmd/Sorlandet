@@ -1,24 +1,24 @@
 {
- "generated_utc": "2026-11-18T03:17:01Z",
+ "generated_utc": "2026-11-18T03:46:31Z",
  "to": "Las Palmas",
  "country": "Gran Canaria",
- "distance_nm": 41.0,
- "direct_nm": 37.2,
+ "distance_nm": 38.4,
+ "direct_nm": 34.9,
  "route_basis": "direct",
  "under_engine": true,
  "winding": 1.1,
  "tacks": null,
  "speed_kn": 9.0,
- "vmg_kn": 8.2,
+ "vmg_kn": 8.16,
  "vmg_window_h": 24,
  "vmg_hold_h": 24.0,
  "pace_basis": "made good",
  "due_utc": "2026-11-18T12:00:00Z",
- "eta_utc": "2026-11-18T08:17:01Z",
+ "eta_utc": "2026-11-18T08:46:31Z",
  "route": [
   [
-   28.4878,
-   -14.8402
+   28.4449,
+   -14.8614
   ],
   [
    28.1,
@@ -33,12 +33,12 @@
   {
    "hours": 0,
    "time_utc": "2026-11-18T03:00:00Z",
-   "lat": 28.4878,
-   "lon": -14.8402,
-   "wind_ms": 5.28,
-   "wind_dir": 61,
+   "lat": 28.4449,
+   "lon": -14.8614,
+   "wind_ms": 5.38,
+   "wind_dir": 55,
    "gust_ms": 7.5,
-   "temp_c": 22.8,
+   "temp_c": 22.7,
    "weather_code": 2,
    "wave_m": 1.16,
    "wave_dir": 338,
@@ -207,6 +207,6 @@
   }
  ],
  "wind_source": "open-meteo",
- "wind_fetched_utc": "2026-11-18T03:17:01Z",
+ "wind_fetched_utc": "2026-11-18T03:46:31Z",
  "wind_held": false
 }
