@@ -2,51 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-18T12:13:32Z",
+ "updated_utc": "2026-11-18T12:43:56Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14599,
-  "lon": -15.42764,
+  "lat": 28.14598,
+  "lon": -15.42766,
   "sog_kn": null,
   "cog_deg": null,
   "heading_deg": null,
-  "seen_utc": "2026-11-18T12:04:43Z",
-  "source": "foundation",
   "nav_status": 5,
-  "nav_status_utc": "2026-11-18T11:55:44Z"
+  "seen_utc": "2026-11-18T12:40:43Z",
+  "source": "aisstream.io",
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "eta_text": "18.11 10:00",
+  "nav_status_utc": "2026-11-18T12:25:43Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-18T12:04:43Z"
+  "heard_utc": "2026-11-18T12:40:43Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-18T12:12:05Z",
+  "fetched_utc": "2026-11-18T12:43:54Z",
   "sea": {
    "wave_height_m": 0.82,
-   "wave_direction_deg": 354,
-   "wave_period_s": 9.25,
+   "wave_direction_deg": 353,
+   "wave_period_s": 9.3,
    "swell_height_m": 0.52,
    "swell_period_s": 7.6,
-   "wind_wave_height_m": 0.1,
+   "wind_wave_height_m": 0.12,
    "sea_temp_c": 23.8,
-   "time_utc": "2026-11-18T12:00"
+   "time_utc": "2026-11-18T12:30"
   },
   "air": {
-   "temp_c": 23.6,
-   "feels_c": null,
-   "wind_ms": 5.6,
-   "gust_ms": null,
-   "wind_direction_deg": 63,
-   "pressure_hpa": 1021.8,
-   "cloud_pct": 4.7,
+   "temp_c": 25.0,
+   "feels_c": 26.5,
+   "wind_ms": 3.33,
+   "gust_ms": 7.1,
+   "wind_direction_deg": 33,
+   "pressure_hpa": 1021.1,
+   "cloud_pct": 53,
    "precip_mm": 0.0,
-   "weather_code": 0,
-   "time_utc": "2026-11-18T12:00",
-   "source": "met.no",
-   "fetched_utc": "2026-11-18T12:12:37Z"
+   "weather_code": 2,
+   "time_utc": "2026-11-18T12:30",
+   "source": "open-meteo",
+   "fetched_utc": "2026-11-18T12:43:54Z"
   }
  },
  "sun": {
@@ -54,11 +57,17 @@
    "age_days": 8.6,
    "illumination": 0.63,
    "phase": "first quarter"
-  }
+  },
+  "civil_timezone": "Atlantic/Canary",
+  "civil_place": "Las Palmas",
+  "civil_country": "Gran Canaria",
+  "sunrise_utc": "2026-11-18T07:25",
+  "sunset_utc": "2026-11-18T18:07",
+  "daylight_hours": 10.7
  },
  "stats": {
-  "points": 688,
-  "distance_nm": 4331.7,
+  "points": 691,
+  "distance_nm": 4331.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
