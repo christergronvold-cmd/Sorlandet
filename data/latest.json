@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-19T08:20:51Z",
+ "updated_utc": "2026-11-19T08:52:31Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -24,16 +24,16 @@
   "heard_utc": "2026-11-19T06:10:47Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-19T08:19:24Z",
+  "fetched_utc": "2026-11-19T08:51:59Z",
   "sea": {
-   "wave_height_m": 1.44,
+   "wave_height_m": 1.46,
    "wave_direction_deg": 341,
    "wave_period_s": 12.85,
-   "swell_height_m": 1.36,
-   "swell_period_s": 11.8,
-   "wind_wave_height_m": 0.14,
+   "swell_height_m": 1.38,
+   "swell_period_s": 11.75,
+   "wind_wave_height_m": 0.12,
    "sea_temp_c": 23.7,
-   "time_utc": "2026-11-19T08:15"
+   "time_utc": "2026-11-19T08:45"
   },
   "air": {
    "temp_c": 21.6,
@@ -47,15 +47,21 @@
    "weather_code": 3,
    "time_utc": "2026-11-19T08:00",
    "source": "met.no",
-   "fetched_utc": "2026-11-19T08:19:55Z"
+   "fetched_utc": "2026-11-19T08:52:31Z"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 9.4,
+   "age_days": 9.5,
    "illumination": 0.71,
    "phase": "waxing gibbous"
-  }
+  },
+  "civil_timezone": "Atlantic/Canary",
+  "civil_place": "Las Palmas",
+  "civil_country": "Gran Canaria",
+  "sunrise_utc": "2026-11-19T07:26",
+  "sunset_utc": "2026-11-19T18:07",
+  "daylight_hours": 10.7
  },
  "stats": {
   "points": 706,
