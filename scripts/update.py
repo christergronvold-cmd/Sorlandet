@@ -5120,6 +5120,172 @@ def _where_she_is(position: dict, points: list) -> tuple[dict, float, float]:
     return position, float(position["lat"]), float(position["lon"])
 
 
+# ------------------------------------------------------------ other ships near her
+
+# For the Ships button on the page: everything else aisstream hears within about thirty
+# miles of her, written to data/nearby_ships.json at the end of each round. A minute is
+# enough - ships transmit every few seconds to every few minutes - and it comes AFTER the
+# long listen for her, so the positions are a minute old when the round is committed,
+# not half an hour.
+#
+# None of this may cost her own position. A missing key, a refused connection or a
+# malformed message ends here, logged, and the round goes on as if it had not been tried.
+# On failure the previous file is left alone; the page does not draw a ship heard more
+# than two hours ago, so an old list fades out by itself.
+NEARBY = DATA / "nearby_ships.json"
+NEARBY_NM = float(os.environ.get("NEARBY_NM", "30"))
+NEARBY_SECONDS = int(os.environ.get("NEARBY_SECONDS", "60"))
+NEARBY_MESSAGES = ["PositionReport", "StandardClassBPositionReport",
+                   "ExtendedClassBPositionReport", "ShipStaticData", "StaticDataReport"]
+
+
+def ais_type(code) -> str | None:
+    """The AIS ship-type number, in words a reader knows."""
+    try:
+        c = int(code)
+    except (TypeError, ValueError):
+        return None
+    named = {30: "fishing", 31: "towing", 32: "towing", 33: "dredging", 34: "diving",
+             35: "military", 36: "sailing", 37: "pleasure craft", 50: "pilot",
+             51: "search and rescue", 52: "tug", 53: "port tender", 55: "law enforcement",
+             58: "medical"}
+    if c in named:
+        return named[c]
+    for lo, word in ((40, "high-speed craft"), (60, "passenger"), (70, "cargo"),
+                     (80, "tanker"), (90, "other")):
+        if lo <= c <= lo + 9:
+            return word
+    return None
+
+
+def nearby_box(lat: float, lon: float, nm: float) -> list:
+    """aisstream's [[lat, lon], [lat, lon]] corners for a square nm either side of her."""
+    dlat = nm / 60
+    dlon = nm / (60 * max(0.15, math.cos(math.radians(lat))))
+    return [[round(lat - dlat, 4), round(lon - dlon, 4)],
+            [round(lat + dlat, 4), round(lon + dlon, 4)]]
+
+
+def fetch_nearby_ships(api_key: str, lat: float, lon: float,
+                       seconds: float | None = None, connect=None) -> list | None:
+    """Ships aisstream hears within NEARBY_NM of (lat, lon), nearest first, not her.
+
+    None if it could not listen at all - the caller then keeps the previous file.
+    `connect` is the websocket opener; the tests hand in a fake one.
+    """
+    if connect is None:
+        try:
+            from websockets.sync.client import connect
+        except ImportError:
+            print("  ! nearby ships: the 'websockets' package is missing", file=sys.stderr)
+            return None
+    seconds = min(NEARBY_SECONDS, LISTEN_SECONDS) if seconds is None else seconds
+    subscribe = {"APIKey": api_key, "BoundingBoxes": [nearby_box(lat, lon, NEARBY_NM)],
+                 "FilterMessageTypes": NEARBY_MESSAGES}
+    where: dict[str, dict] = {}
+    about: dict[str, dict] = {}
+    heard = 0
+    deadline = now_utc() + timedelta(seconds=seconds)
+    try:
+        with connect("wss://stream.aisstream.io/v0/stream",
+                     open_timeout=20, ping_interval=20, ping_timeout=20) as ws:
+            ws.send(json.dumps(subscribe))
+            while True:
+                left = (deadline - now_utc()).total_seconds()
+                if left <= 0:
+                    break
+                try:
+                    raw = ws.recv(timeout=min(left, 30))
+                except TimeoutError:
+                    continue
+                try:
+                    msg = json.loads(raw)
+                except ValueError:
+                    continue
+                if not isinstance(msg, dict):
+                    continue
+                if msg.get("error"):
+                    # A refused key or a bad subscription: an answer, but not a list of
+                    # ships. Return None so the previous file stands.
+                    print(f"  ! nearby ships: aisstream said {msg['error']}", file=sys.stderr)
+                    return None
+                heard += 1
+                meta = msg.get("MetaData") or {}
+                mmsi = str(meta.get("MMSI") or "").strip()
+                if not mmsi or mmsi == str(MMSI):
+                    continue                              # not her - she is drawn already
+                kind = msg.get("MessageType")
+                body = (msg.get("Message") or {}).get(kind) or {}
+                info = about.setdefault(mmsi, {})
+                name = (meta.get("ShipName") or "").strip()
+                if name:
+                    info["name"] = name
+                if kind == "ShipStaticData":
+                    if (body.get("Name") or "").strip():
+                        info["name"] = body["Name"].strip()
+                    if body.get("Type") is not None:
+                        info["type_code"] = body.get("Type")
+                    continue
+                if kind == "StaticDataReport":
+                    a = body.get("ReportA") or {}
+                    b = body.get("ReportB") or {}
+                    if a.get("Valid") and (a.get("Name") or "").strip():
+                        info["name"] = a["Name"].strip()
+                    if b.get("Valid") and b.get("ShipType") is not None:
+                        info["type_code"] = b.get("ShipType")
+                    continue
+                plat = body.get("Latitude", meta.get("latitude"))
+                plon = body.get("Longitude", meta.get("longitude"))
+                if plat is None or plon is None:
+                    continue
+                try:
+                    t = iso(parse_iso(str(meta.get("time_utc") or "")))
+                except Exception:
+                    t = iso(now_utc())
+                if mmsi in where and where[mmsi]["t"] > t:
+                    continue                              # keep the newest fix
+                hdg = body.get("TrueHeading")
+                where[mmsi] = {"lat": round(float(plat), 5), "lon": round(float(plon), 5),
+                               "cog": None if body.get("Cog") in (None, 360) else round(float(body["Cog"]), 1),
+                               "sog": clean_sog(body.get("Sog")),
+                               "heading": None if hdg in (None, 511) else hdg, "t": t}
+    except Exception as exc:
+        print(f"  ! nearby ships: could not listen to aisstream ({exc})", file=sys.stderr)
+        return None
+
+    ships = []
+    for mmsi, w in where.items():
+        d = nm_between((lat, lon), (w["lat"], w["lon"]))
+        if d > NEARBY_NM:
+            continue                                      # the corners of the box
+        info = about.get(mmsi, {})
+        ships.append({"mmsi": mmsi, "name": info.get("name") or None,
+                      "type": ais_type(info.get("type_code")),
+                      "type_code": info.get("type_code"), **w, "nm": round(d, 1)})
+    ships.sort(key=lambda x: x["nm"])
+    print(f"  -> nearby ships: {len(ships)} within {NEARBY_NM:.0f} nm "
+          f"({heard} messages in {seconds:.0f} s)")
+    return ships
+
+
+def update_nearby_ships(api_key: str, lat: float, lon: float, connect=None) -> None:
+    """Write data/nearby_ships.json, or leave it be. Never raises."""
+    key = (api_key or os.environ.get("AISSTREAM_KEY") or "").strip()
+    if not key:
+        print("  -> nearby ships: no aisstream key - skipped")
+        return
+    try:
+        ships = fetch_nearby_ships(key, lat, lon, connect=connect)
+        if ships is None:
+            print("  -> nearby ships: keeping the previous list")
+            return
+        write_json(NEARBY, {"generated_utc": iso(now_utc()), "source": "aisstream.io",
+                            "centre": [round(lat, 4), round(lon, 4)],
+                            "radius_nm": NEARBY_NM, "ships": ships})
+    except Exception as exc:
+        print(f"  ! nearby ships failed: {exc}", file=sys.stderr)
+
+
 def main() -> int:
     api_key = os.environ.get("AISSTREAM_API_KEY", "").strip()
     demo = not api_key
@@ -5347,6 +5513,8 @@ def main() -> int:
     sun = fetch_sun_moon(lat, lon, points)
 
     refresh_grids(lat, lon)
+    if not demo:
+        update_nearby_ships(api_key, lat, lon)
 
     # Every point written from now on says whether its speed was reported by the ship or
     # worked out here. Points written before that distinction existed cannot be classified
