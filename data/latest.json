@@ -2,21 +2,19 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-18T23:45:04Z",
+ "updated_utc": "2026-11-19T00:14:39Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "ais_src": "TER",
   "lat": 28.14597,
   "lon": -15.42765,
   "sog_kn": 0.0,
-  "cog_deg": 340.3,
-  "heading_deg": 1,
-  "nav_status": 5,
-  "destination": "ES LPA",
-  "draught_m": 4.1,
+  "cog_deg": 340,
+  "heading_deg": null,
   "seen_utc": "2026-11-18T23:43:46Z",
-  "source": "vesselfinder",
+  "source": "foundation",
+  "sog_derived": true,
+  "nav_status": 5,
   "nav_status_utc": "2026-11-18T23:43:46Z"
  },
  "voyage": {
@@ -26,30 +24,30 @@
   "heard_utc": "2026-11-18T23:43:46Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-18T23:45:03Z",
+  "fetched_utc": "2026-11-19T00:14:37Z",
   "sea": {
-   "wave_height_m": 1.12,
-   "wave_direction_deg": 347,
+   "wave_height_m": 1.16,
+   "wave_direction_deg": 346,
    "wave_period_s": 11.3,
-   "swell_height_m": 0.8,
-   "swell_period_s": 12.55,
-   "wind_wave_height_m": 0.14,
+   "swell_height_m": 0.86,
+   "swell_period_s": 12.45,
+   "wind_wave_height_m": 0.28,
    "sea_temp_c": 23.7,
-   "time_utc": "2026-11-18T23:45"
+   "time_utc": "2026-11-19T00:00"
   },
   "air": {
-   "temp_c": 21.7,
-   "feels_c": 24.9,
-   "wind_ms": 1.72,
-   "gust_ms": 3.3,
-   "wind_direction_deg": 306,
+   "temp_c": 21.6,
+   "feels_c": 25.0,
+   "wind_ms": 1.43,
+   "gust_ms": 3.2,
+   "wind_direction_deg": 295,
    "pressure_hpa": 1021.8,
-   "cloud_pct": 62,
+   "cloud_pct": 64,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-11-18T23:45",
+   "time_utc": "2026-11-19T00:00",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-18T23:45:03Z"
+   "fetched_utc": "2026-11-19T00:14:37Z"
   }
  },
  "sun": {
@@ -61,8 +59,8 @@
   "civil_timezone": "Atlantic/Canary",
   "civil_place": "Las Palmas",
   "civil_country": "Gran Canaria",
-  "sunrise_utc": "2026-11-18T07:25",
-  "sunset_utc": "2026-11-18T18:07",
+  "sunrise_utc": "2026-11-19T07:26",
+  "sunset_utc": "2026-11-19T18:07",
   "daylight_hours": 10.7
  },
  "stats": {
