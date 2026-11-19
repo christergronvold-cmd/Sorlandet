@@ -2,21 +2,19 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-19T06:12:36Z",
+ "updated_utc": "2026-11-19T06:42:46Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "ais_src": "TER",
   "lat": 28.14599,
   "lon": -15.42765,
   "sog_kn": 0.1,
-  "cog_deg": 340.3,
-  "heading_deg": 1,
-  "nav_status": 5,
-  "destination": "ES LPA",
-  "draught_m": 4.1,
+  "cog_deg": 340,
+  "heading_deg": null,
   "seen_utc": "2026-11-19T06:10:47Z",
-  "source": "vesselfinder",
+  "source": "foundation",
+  "sog_derived": true,
+  "nav_status": 5,
   "nav_status_utc": "2026-11-19T06:10:47Z"
  },
  "voyage": {
@@ -26,16 +24,16 @@
   "heard_utc": "2026-11-19T06:10:47Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-19T06:12:05Z",
+  "fetched_utc": "2026-11-19T06:41:43Z",
   "sea": {
-   "wave_height_m": 1.38,
+   "wave_height_m": 1.4,
    "wave_direction_deg": 342,
-   "wave_period_s": 12.75,
-   "swell_height_m": 1.28,
-   "swell_period_s": 12.0,
+   "wave_period_s": 12.8,
+   "swell_height_m": 1.3,
+   "swell_period_s": 11.95,
    "wind_wave_height_m": 0.16,
    "sea_temp_c": 23.7,
-   "time_utc": "2026-11-19T06:00"
+   "time_utc": "2026-11-19T06:30"
   },
   "air": {
    "temp_c": 21.5,
@@ -49,21 +47,18 @@
    "weather_code": 45,
    "time_utc": "2026-11-19T06:00",
    "source": "met.no",
-   "fetched_utc": "2026-11-19T06:12:36Z"
+   "fetched_utc": "2026-11-19T06:42:15Z"
   }
  },
  "sun": {
   "moon": {
-   "age_days": 9.3,
+   "age_days": 9.4,
    "illumination": 0.7,
    "phase": "waxing gibbous"
   },
   "civil_timezone": "Atlantic/Canary",
   "civil_place": "Las Palmas",
-  "civil_country": "Gran Canaria",
-  "sunrise_utc": "2026-11-19T07:26",
-  "sunset_utc": "2026-11-19T18:07",
-  "daylight_hours": 10.7
+  "civil_country": "Gran Canaria"
  },
  "stats": {
   "points": 706,
