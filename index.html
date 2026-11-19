@@ -214,6 +214,21 @@
   .big .sky{font-size:23px; vertical-align:-1px}
   .arrow{display:inline-block; color:var(--accent)}
   .card.wide{grid-column:1/-1}
+  /* Around her: two switches, and a map under each that is only there while it is on. */
+  .around-sw{display:flex; gap:18px; flex-wrap:wrap; margin:2px 0 10px}
+  .around-sw label{display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px}
+  .around-sw input{appearance:none; -webkit-appearance:none; width:38px; height:22px; margin:0;
+    border-radius:11px; background:var(--line); position:relative; cursor:pointer;
+    transition:background .15s}
+  .around-sw input::after{content:""; position:absolute; top:3px; left:3px; width:16px;
+    height:16px; border-radius:50%; background:#fff; transition:left .15s}
+  .around-sw input:checked{background:var(--accent)}
+  .around-sw input:checked::after{left:19px}
+  .around-sw input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .around-map{margin-top:10px}
+  .around-map iframe{width:100%; height:420px; border:0; border-radius:8px; display:block;
+    background:var(--panel)}
+  .around-map .credit{font-size:12px; color:var(--muted); margin-top:4px}
   /* Voyage plan and the clock carry the compound values - "26 Sept 08:00 · as the crew set
      it, 12 hours ago", "nautical zone UTC+0 · 2 hours behind St. Malo". In a 243px column
      those fold onto two and three lines, and a folded line is harder to read than the fact
@@ -462,6 +477,25 @@
 
   <div class="grid" id="cards"></div>
 
+  <!-- Around her. Outside #cards on purpose: that grid is rebuilt from scratch on every
+       five-minute refresh, and an iframe rebuilt is an iframe reloaded - the map would
+       jump back to its start, zoom and all, under the reader's thumb every five minutes.
+       Out here it is built once and only its contents change. Shut to begin with, and
+       both switches off: nothing is fetched from anyone until a reader asks for it. -->
+  <div class="grid" id="aroundgrid">
+    <details class="card wide fold" data-fold="around" id="around">
+      <summary><h2>Around her</h2><span class="count">ships and planes nearby</span></summary>
+      <div class="foldbody">
+        <div class="around-sw">
+          <label><input type="checkbox" role="switch" id="sw-ships"> Ships</label>
+          <label><input type="checkbox" role="switch" id="sw-planes"> Planes</label>
+        </div>
+        <div class="around-map" id="around-ships" hidden></div>
+        <div class="around-map" id="around-planes" hidden></div>
+      </div>
+    </details>
+  </div>
+
   <footer>
     Positions from three sources at once: the ship's own position page at
     <a href="https://en.fullriggeren.no/" target="_blank" rel="noopener">fullriggeren.no</a>, the
@@ -596,6 +630,10 @@ function rememberFolds() {
   try { saved = JSON.parse(localStorage.getItem("folds") || "{}") || {}; } catch {}
   for (const el of document.querySelectorAll("details[data-fold]")) {
     const key = el.dataset.fold;
+    // The cards in #cards are new elements every render; the Around card is not, and
+    // must not collect a listener per refresh.
+    if (el.dataset.foldBound) continue;
+    el.dataset.foldBound = "1";
     if (key in saved) el.open = !!saved[key];
     el.addEventListener("toggle", () => {
       saved[key] = el.open;
@@ -1280,7 +1318,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "985580b962";
+const BUILD = "674868eb48";
 
 async function checkForNewBuild() {
   try {
@@ -2817,6 +2855,108 @@ function indexForTime(times, isoTime) {
 }
 
 let layers = [];
+// ------------------------------------------------------------------- around her
+// Two maps a reader can switch on: the ships round her and the aircraft overhead. Neither
+// is ours - both are other people's live maps in a frame - so they are off until asked
+// for, remembered per browser, and loaded only while their switch is on and the card is
+// open. A closed card or a switch turned off removes the frame, and with it the traffic.
+//
+// Ships: VesselFinder's free embedded map. Their snippet is aismap.js, which writes the
+// frame with document.write - and that only works while a page is still loading, which
+// this card never is. So the frame is built here the way aismap.js builds it, with her
+// MMSI (the map centres on her and follows her) and her track switched on.
+//
+// Planes: tar1090 on adsb.lol, a community ADS-B network with open data. Not
+// Flightradar24: its terms do not allow framing it. The map is centred on her last
+// position and is only re-pointed when she has moved more than five miles, so it does not
+// reload under the reader on every refresh.
+const AROUND_KEY = "sorlandet.around";
+const AROUND_MMSI = 257165000;
+const AROUND_PLANES_NM = 5;
+let aroundPos = null, aroundPlanesAt = null;
+
+function aroundState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(AROUND_KEY) || "{}") || {};
+    return { ships: !!s.ships, planes: !!s.planes };
+  } catch { return { ships: false, planes: false }; }
+}
+
+function shipsSrc() {
+  const q = new URLSearchParams({
+    zoom: "9", lat: "", lon: "", width: "100%", height: "420", names: "true",
+    mmsi: String(AROUND_MMSI), track: "true", fleet: "false", fleet_name: "false",
+    fleet_hide_old_positions: "false", clicktoact: "false", store_pos: "false",
+    ra: location.href.split("#")[0] });
+  return "https://www.vesselfinder.com/aismap?" + q.toString();
+}
+
+function planesSrc(pos) {
+  return `https://globe.adsb.lol/?lat=${pos[0].toFixed(4)}&lon=${pos[1].toFixed(4)}`
+    + "&zoom=9&hideSidebar";
+}
+
+function buildAround() {
+  const card = document.getElementById("around");
+  if (!card) return;
+  const state = aroundState();
+  const sw = { ships: document.getElementById("sw-ships"),
+               planes: document.getElementById("sw-planes") };
+  if (!card.dataset.wired) {
+    card.dataset.wired = "1";
+    for (const k of ["ships", "planes"]) {
+      sw[k].addEventListener("change", () => {
+        const s = aroundState();
+        s[k] = sw[k].checked;
+        try { localStorage.setItem(AROUND_KEY, JSON.stringify(s)); } catch {}
+        buildAround();
+      });
+    }
+    card.addEventListener("toggle", buildAround);
+  }
+  sw.ships.checked = state.ships;
+  sw.planes.checked = state.planes;
+
+  const ships = document.getElementById("around-ships");
+  if (state.ships && card.open) {
+    if (!ships.querySelector("iframe")) {
+      ships.innerHTML = `<iframe src="${shipsSrc()}" title="Ships around Sørlandet"
+          loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="credit">Map and AIS from <a href="https://www.vesselfinder.com/?mmsi=${
+          AROUND_MMSI}" target="_blank" rel="noopener">VesselFinder</a> — their free
+          embedded map, centred on her.</div>`;
+    }
+    ships.hidden = false;
+  } else {
+    ships.innerHTML = "";
+    ships.hidden = true;
+  }
+
+  const planes = document.getElementById("around-planes");
+  if (state.planes && card.open && aroundPos) {
+    const moved = aroundPlanesAt ? nm(aroundPlanesAt, aroundPos) : Infinity;
+    const frame = planes.querySelector("iframe");
+    if (!frame || moved > AROUND_PLANES_NM) {
+      aroundPlanesAt = aroundPos.slice();
+      const src = planesSrc(aroundPlanesAt);
+      if (frame) frame.src = src;
+      else planes.innerHTML = `<iframe src="${src}" title="Aircraft around Sørlandet"
+          loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="credit">Aircraft from <a href="https://adsb.lol" target="_blank"
+          rel="noopener">adsb.lol</a> (tar1090, open data under ODbL), centred where she
+          was last heard. If the map stays blank, <a class="planes-link" href="${src}"
+          target="_blank" rel="noopener">open it in a new tab</a>.</div>`;
+      const link = planes.querySelector(".planes-link");
+      if (link) link.href = src;
+    }
+    planes.hidden = false;
+  } else {
+    planes.innerHTML = "";
+    planes.hidden = true;
+    if (!state.planes || !card.open) aroundPlanesAt = null;
+  }
+}
+
 async function load() {
   const bust = "?v=" + Date.now();
   const [latest, track, plan, wind, waves, history, ahead, wakeFile, courseFile,
@@ -4684,6 +4824,8 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
 
   wireSharing();
   rememberFolds();
+  if (p && p.lat != null && p.lon != null) aroundPos = [p.lat, p.lon];
+  buildAround();
 
   document.getElementById("stamp").textContent = " The page refreshes itself every 5 minutes.";
 }
