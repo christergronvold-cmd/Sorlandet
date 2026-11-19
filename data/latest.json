@@ -2,51 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-19T14:32:20Z",
+ "updated_utc": "2026-11-19T15:01:44Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14599,
-  "lon": -15.42765,
-  "sog_kn": 0.1,
-  "cog_deg": 340.3,
-  "heading_deg": 0,
+  "lat": 28.146,
+  "lon": -15.42767,
+  "sog_kn": null,
+  "cog_deg": null,
+  "heading_deg": null,
   "nav_status": 5,
-  "seen_utc": "2026-11-19T14:28:45Z",
+  "seen_utc": "2026-11-19T14:58:45Z",
   "source": "aisstream.io",
-  "nav_status_utc": "2026-11-19T14:28:45Z"
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "eta_text": "18.11 10:00",
+  "nav_status_utc": "2026-11-19T14:40:51Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-19T06:10:47Z"
+  "heard_utc": "2026-11-19T14:58:45Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-19T14:31:46Z",
+  "fetched_utc": "2026-11-19T15:01:43Z",
   "sea": {
    "wave_height_m": 1.58,
    "wave_direction_deg": 343,
-   "wave_period_s": 12.45,
+   "wave_period_s": 12.4,
    "swell_height_m": 1.46,
    "swell_period_s": 11.5,
-   "wind_wave_height_m": 0.12,
+   "wind_wave_height_m": 0.1,
    "sea_temp_c": 23.6,
-   "time_utc": "2026-11-19T14:30"
+   "time_utc": "2026-11-19T15:00"
   },
   "air": {
-   "temp_c": 23.1,
-   "feels_c": null,
-   "wind_ms": 6.6,
-   "gust_ms": null,
-   "wind_direction_deg": 78,
-   "pressure_hpa": 1021.2,
-   "cloud_pct": 92.2,
+   "temp_c": 24.4,
+   "feels_c": 26.4,
+   "wind_ms": 3.09,
+   "gust_ms": 6.4,
+   "wind_direction_deg": 65,
+   "pressure_hpa": 1020.6,
+   "cloud_pct": 93,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-11-19T14:00",
-   "source": "met.no",
-   "fetched_utc": "2026-11-19T14:32:18Z"
+   "time_utc": "2026-11-19T15:00",
+   "source": "open-meteo",
+   "fetched_utc": "2026-11-19T15:01:43Z"
   }
  },
  "sun": {
@@ -63,7 +66,7 @@
   "daylight_hours": 10.7
  },
  "stats": {
-  "points": 709,
+  "points": 711,
   "distance_nm": 4331.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
