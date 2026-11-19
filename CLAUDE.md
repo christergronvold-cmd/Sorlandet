@@ -16,3 +16,7 @@ Når du har committa og alle testane er grøne, push sjølv:
     git pull --rebase && git push
 
 Er éin eller fleire testar raude, skal du ikkje pushe. Sei frå kva som feila.
+
+## Språk
+
+Commit-meldinger og annen norsk tekst skrives på bokmål, aldri nynorsk.
