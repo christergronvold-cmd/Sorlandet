@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-20T06:18:19Z",
+ "updated_utc": "2026-11-20T06:20:16Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -11,12 +11,9 @@
   "sog_kn": null,
   "cog_deg": null,
   "heading_deg": null,
-  "nav_status": 5,
   "seen_utc": "2026-11-20T06:10:47Z",
-  "source": "aisstream.io",
-  "destination": "ES LPA",
-  "draught_m": 4.1,
-  "eta_text": "18.11 10:00",
+  "source": "foundation",
+  "nav_status": 5,
   "nav_status_utc": "2026-11-20T05:13:57Z"
  },
  "voyage": {
@@ -26,7 +23,7 @@
   "heard_utc": "2026-11-20T06:10:47Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-20T06:17:17Z",
+  "fetched_utc": "2026-11-20T06:19:55Z",
   "sea": {
    "wave_height_m": 1.58,
    "wave_direction_deg": 344,
@@ -49,13 +46,13 @@
    "weather_code": 3,
    "time_utc": "2026-11-20T06:15",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-20T06:17:17Z"
+   "fetched_utc": "2026-11-20T06:19:55Z"
   }
  },
  "sun": {
   "moon": {
    "age_days": 10.3,
-   "illumination": 0.79,
+   "illumination": 0.8,
    "phase": "waxing gibbous"
   },
   "civil_timezone": "Atlantic/Canary",
