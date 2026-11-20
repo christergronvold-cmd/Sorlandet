@@ -5167,11 +5167,14 @@ def nearby_box(lat: float, lon: float, nm: float) -> list:
 
 
 def fetch_nearby_ships(api_key: str, lat: float, lon: float,
-                       seconds: float | None = None, connect=None) -> list | None:
+                       seconds: float | None = None, connect=None,
+                       heard_about: dict | None = None) -> list | None:
     """Ships aisstream hears within NEARBY_NM of (lat, lon), nearest first, not her.
 
     None if it could not listen at all - the caller then keeps the previous file.
-    `connect` is the websocket opener; the tests hand in a fake one.
+    `connect` is the websocket opener; the tests hand in a fake one. `heard_about`, if
+    given, is filled with every name and type heard, by MMSI - including ships whose
+    position did not come in this minute - so the caller can remember them.
     """
     if connect is None:
         try:
@@ -5253,6 +5256,8 @@ def fetch_nearby_ships(api_key: str, lat: float, lon: float,
         print(f"  ! nearby ships: could not listen to aisstream ({exc})", file=sys.stderr)
         return None
 
+    if heard_about is not None:
+        heard_about.update({k: v for k, v in about.items() if v})
     ships = []
     for mmsi, w in where.items():
         d = nm_between((lat, lon), (w["lat"], w["lon"]))
@@ -5268,6 +5273,15 @@ def fetch_nearby_ships(api_key: str, lat: float, lon: float,
     return ships
 
 
+# A ship sends its position every few seconds to every few minutes, but its name and type
+# only about every six minutes - so a minute's listening caught the type of one ship in
+# fifteen on 20 November. What is heard is therefore remembered by MMSI, in the same file,
+# and filled in on later rounds: after an hour or two in a harbour most ships have both.
+# Kept for NEARBY_KNOWN_DAYS and at most NEARBY_KNOWN_MAX ships, newest first.
+NEARBY_KNOWN_DAYS = 30
+NEARBY_KNOWN_MAX = 600
+
+
 def update_nearby_ships(api_key: str, lat: float, lon: float, connect=None) -> None:
     """Write data/nearby_ships.json, or leave it be. Never raises."""
     key = (api_key or os.environ.get("AISSTREAM_KEY") or "").strip()
@@ -5275,13 +5289,45 @@ def update_nearby_ships(api_key: str, lat: float, lon: float, connect=None) -> N
         print("  -> nearby ships: no aisstream key - skipped")
         return
     try:
-        ships = fetch_nearby_ships(key, lat, lon, connect=connect)
+        old = read_json(NEARBY, {}) or {}
+        known = dict(old.get("known") or {})
+        heard: dict = {}
+        ships = fetch_nearby_ships(key, lat, lon, connect=connect, heard_about=heard)
         if ships is None:
             print("  -> nearby ships: keeping the previous list")
             return
-        write_json(NEARBY, {"generated_utc": iso(now_utc()), "source": "aisstream.io",
+        stamp = iso(now_utc())
+        for mmsi, info in heard.items():
+            k = dict(known.get(mmsi) or {})
+            if info.get("name"):
+                k["name"] = info["name"]
+            if info.get("type_code") is not None:
+                k["type_code"] = info["type_code"]
+            k["t"] = stamp
+            known[mmsi] = k
+        filled = 0
+        for x in ships:
+            k = known.get(x["mmsi"]) or {}
+            if not x.get("name") and k.get("name"):
+                x["name"] = k["name"]
+                filled += 1
+            if x.get("type_code") is None and k.get("type_code") is not None:
+                x["type_code"] = k["type_code"]
+                x["type"] = ais_type(k["type_code"])
+                filled += 1
+            if x["mmsi"] in known:
+                known[x["mmsi"]]["t"] = stamp
+        cutoff = iso(now_utc() - timedelta(days=NEARBY_KNOWN_DAYS))
+        known = dict(sorted(((m, k) for m, k in known.items() if (k.get("t") or "") >= cutoff),
+                            key=lambda mk: mk[1].get("t") or "", reverse=True)[:NEARBY_KNOWN_MAX])
+        write_json(NEARBY, {"generated_utc": stamp, "source": "aisstream.io",
                             "centre": [round(lat, 4), round(lon, 4)],
-                            "radius_nm": NEARBY_NM, "ships": ships})
+                            "radius_nm": NEARBY_NM, "ships": ships, "known": known},
+                   compact=False)
+        named = sum(1 for x in ships if x.get("name"))
+        typed = sum(1 for x in ships if x.get("type"))
+        print(f"  -> nearby ships: {named} of {len(ships)} named, {typed} typed"
+              f" ({filled} filled in from earlier rounds; {len(known)} ships remembered)")
     except Exception as exc:
         print(f"  ! nearby ships failed: {exc}", file=sys.stderr)
 

@@ -1297,7 +1297,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "c1f0d36061";
+const BUILD = "7bce7a1362";
 
 async function checkForNewBuild() {
   try {
@@ -2895,10 +2895,17 @@ function drawShips(file) {
     const deg = x.heading != null ? x.heading : x.cog;
     return L.marker([x.lat, x.lon], { icon: nearbyIcon(x.sog > 0.5 || x.heading != null ? deg : null),
                                       zIndexOffset: -200, keyboard: false })
+      // A ship at the quay still reports a course over ground - 201° for one lying in
+      // Las Palmas at 0.0 kn - and it means nothing. Under half a knot she is lying still.
+      // AIS carries no photograph, so the picture, owner and history are a link away, on
+      // VesselFinder's page for that MMSI.
       .bindPopup(`<b>${x.name || `MMSI ${x.mmsi}`}</b>${x.type ? `<br>${x.type}` : ""}`
-        + `<br>${x.sog != null ? `${N(x.sog)} kn` : "speed unknown"}`
-        + `${x.cog != null ? ` · course ${Math.round(x.cog)}°` : ""}`
+        + `<br>${x.sog == null ? "speed unknown"
+                 : x.sog < 0.5 ? "lying still"
+                 : `${N(x.sog)} kn${x.cog != null ? ` · course ${Math.round(x.cog)}°` : ""}`}`
         + `<br><span style="color:var(--muted)">position ${shipAge(x.t)} · MMSI ${x.mmsi}</span>`
+        + `<br><a href="https://www.vesselfinder.com/vessels/details/${encodeURIComponent(x.mmsi)}"`
+        + ` target="_blank" rel="noopener">Photo and details on VesselFinder</a>`
         + `<br><span style="color:var(--muted);font-size:11px">Ships: aisstream.io</span>`);
   })).addTo(map);
   note.hidden = false;

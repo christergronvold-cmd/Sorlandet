@@ -148,6 +148,31 @@ check("a class B type from report B", c.get("type"), "sailing")
 if "nearby ships: 3 within 30 nm" not in out:
     fails.append(f"the log does not say what was heard: {out!r}")
 
+# Names and types come every six minutes, positions every few seconds. What was heard
+# on an earlier round is remembered and filled in.
+f1 = json.loads(U.NEARBY.read_text())
+if (f1.get("known") or {}).get("224000001", {}).get("type_code") != 60:
+    fails.append(f"what was heard is not remembered in the file: {f1.get('known')}")
+only_positions = [pos(224000001, "", 28.22, -15.33, mins=0),
+                  pos(538000002, "", 28.06, -15.31, mins=0)]
+_, out = quiet(U.update_nearby_ships, "KEY", HERE[0], HERE[1],
+               connect=opener(only_positions, []))
+f2 = {x["mmsi"]: x for x in json.loads(U.NEARBY.read_text())["ships"]}
+check("a later round with positions only still names the ship",
+      f2.get("224000001", {}).get("name"), "VOLCAN DE TAMASITE")
+check("...and still knows its type", f2.get("224000001", {}).get("type"), "passenger")
+check("...and the tanker's", f2.get("538000002", {}).get("type"), "tanker")
+check("...and the new position is the one drawn", f2.get("224000001", {}).get("lat"), 28.22)
+if "filled in from earlier rounds" not in out:
+    fails.append(f"the log does not say what was filled in: {out!r}")
+# Old memories go.
+f3 = json.loads(U.NEARBY.read_text())
+f3["known"]["123456789"] = {"name": "FORGOTTEN", "t": U.iso(NOW - timedelta(days=40))}
+U.write_json(U.NEARBY, f3)
+quiet(U.update_nearby_ships, "KEY", HERE[0], HERE[1], connect=opener(only_positions, []))
+if "123456789" in (json.loads(U.NEARBY.read_text()).get("known") or {}):
+    fails.append("a ship last heard forty days ago is still remembered")
+
 # ---- 2. it must never cost the round ------------------------------------------------
 before = U.NEARBY.read_text()
 log = []
@@ -276,9 +301,23 @@ with sync_playwright() as pw:
     pg.evaluate("() => document.querySelectorAll('.nearby-ship')[0].dispatchEvent(new MouseEvent('click', {bubbles: true}))")
     pg.wait_for_timeout(300)
     popup = pg.evaluate("() => (document.querySelector('.leaflet-popup-content') || {}).textContent || ''")
-    for words in ("VOLCAN DE TAMASITE", "passenger", "14.0 kn", "12 min ago"):
+    for words in ("VOLCAN DE TAMASITE", "passenger", "14.0 kn", "course 272°", "12 min ago",
+                  "VesselFinder"):
         if words not in popup:
             fails.append(f"the popup does not say {words!r}: {popup!r}")
+    link = pg.evaluate("() => (document.querySelector('.leaflet-popup-content a') || {}).href || ''")
+    if link != "https://www.vesselfinder.com/vessels/details/224000001":
+        fails.append(f"the VesselFinder link is not to this ship's page: {link!r}")
+    # The tanker is at 0.1 kn: lying still, and no course.
+    pg.evaluate("""() => { const m = [...document.querySelectorAll('.nearby-ship')];
+        m[1].dispatchEvent(new MouseEvent('click', {bubbles: true})); }""")
+    pg.wait_for_timeout(300)
+    still = pg.evaluate("() => (document.querySelector('.leaflet-popup-content') || {}).textContent || ''")
+    if "NORDIC TANKER" in still:
+        if "lying still" not in still or "course" in still:
+            fails.append(f"a ship at 0.1 kn should be lying still, with no course: {still!r}")
+    else:
+        fails.append(f"could not open the tanker's popup: {still!r}")
 
     # Remembered, and off again.
     pg.goto(URL, wait_until="load")
