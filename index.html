@@ -341,7 +341,7 @@
   .windbar .aroundrow .tag{color:var(--muted); font-weight:600; font-size:12px;
     text-transform:uppercase; letter-spacing:.04em; white-space:nowrap}
   .windbar .aroundrow .note{color:var(--muted); font-size:11.5px}
-  .nearby-ship svg{overflow:visible}
+  .nearby-ship svg{overflow:visible; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45))}
   /* Now sits to the LEFT of the slider and is always present. It used to appear only once
      you had moved away from now, which both hid the way back and reflowed the whole bar at
      the moment you were trying to aim at. */
@@ -1297,7 +1297,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "e35d905aa8";
+const BUILD = "c1f0d36061";
 
 async function checkForNewBuild() {
   try {
@@ -2852,17 +2852,26 @@ try { shipsOn = localStorage.getItem(SHIPS_KEY) === "1"; } catch { shipsOn = shi
 
 const SHIPS_CREDIT = 'Ships: <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a>';
 
+// Big enough to find and to tap. They began at 18 px and grey, and in a harbour they sank
+// among the sea marks - "Skipene er veldig små". Now 28 px, a dark hull with a white edge
+// and a soft shadow: darker than the water and the quays, unlike the red, green and black
+// of the marks, and nothing like her own blue marker. The bow points the way she heads;
+// a ship with no known direction is a plain dot, claiming nothing.
+const NEARBY_PX = 28;
 const nearbyIcon = deg => {
   const known = deg !== null && deg !== undefined && isFinite(deg);
+  const z = NEARBY_PX, c = z / 2;
   return L.divIcon({
     className: "nearby-ship",
-    html: `<svg width="18" height="18" viewBox="0 0 18 18"${
+    html: `<svg width="${z}" height="${z}" viewBox="0 0 28 28"${
         known ? ` style="transform:rotate(${deg}deg)"` : ""}>
       ${known
-        ? `<path d="M9 1 L13 8 L13 16 L5 16 L5 8 Z" fill="#5d6b78" stroke="#fff" stroke-width="1.4"/>`
-        : `<circle cx="9" cy="9" r="4.5" fill="#5d6b78" stroke="#fff" stroke-width="1.4"/>`}
+        ? `<path d="M14 2 C18 6 20 10 20 14 L20 25 L8 25 L8 14 C8 10 10 6 14 2 Z"
+                 fill="#2b3440" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+           <line x1="14" y1="9" x2="14" y2="20" stroke="#fff" stroke-width="1.4" opacity=".7"/>`
+        : `<circle cx="14" cy="14" r="7" fill="#2b3440" stroke="#fff" stroke-width="2"/>`}
     </svg>`,
-    iconSize: [18, 18], iconAnchor: [9, 9]
+    iconSize: [z, z], iconAnchor: [c, c], popupAnchor: [0, -c + 4]
   });
 };
 
