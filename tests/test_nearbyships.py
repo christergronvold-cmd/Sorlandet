@@ -243,9 +243,16 @@ BLOCK = ("**://*.tile.openstreetmap.org/**", "**://tiles.openseamap.org/**",
 
 STATE = """() => {
     const b = document.getElementById('shipstoggle');
-    const row = document.querySelector('#windbar .aroundrow');
+    const row = document.querySelector('#windbar .barhead');
+    const btns = [...document.querySelectorAll('#windbar > button')].map(x => x.id);
     return {
       row: !!row, tag: row ? row.textContent.replace(/\\s+/g, ' ').trim() : '',
+      first: row ? row === document.getElementById('windbar').firstElementChild : false,
+      btns,
+      sameLine: (() => { const a = document.getElementById('shipstoggle'),
+                         w = document.getElementById('windtoggle');
+                         return !!a && !!w && Math.abs(a.getBoundingClientRect().top
+                                - w.getBoundingClientRect().top) < 2; })(),
       on: b ? b.classList.contains('on') : null, text: b ? b.textContent.trim() : '',
       planes: !!document.getElementById('planestoggle'),
       oldCard: !!document.getElementById('around') || !!document.querySelector('iframe[src*="vesselfinder"],iframe[src*="adsb"]'),
@@ -268,8 +275,14 @@ with sync_playwright() as pw:
     pg.goto(URL, wait_until="load")
     pg.wait_for_timeout(2000)
     s = pg.evaluate(STATE)
-    if not s["row"] or not s["tag"].lower().startswith("around her"):
-        fails.append(f"no Around her row in the bar under the map: {s['tag']!r}")
+    if not s["row"] or not s["tag"].lower().startswith("around her") or not s["first"]:
+        fails.append(f"Around her is not the heading at the top of the bar: {s['tag']!r}")
+    want = ["shipstoggle", "windtoggle", "wavetoggle", "weathertoggle", "sattoggle"]
+    if s["btns"][:5] != want:
+        fails.append(f"the buttons under the heading are not Ships, Wind, Waves, Weather,"
+                     f" Satellite: {s['btns']}")
+    if not s["sameLine"]:
+        fails.append("Ships is not on the same line as Wind")
     if s["planes"]:
         fails.append("there is a Planes button; aircraft were dropped")
     if s["oldCard"]:
@@ -355,19 +368,19 @@ with sync_playwright() as pw:
     p3.wait_for_timeout(2000)
     lay = p3.evaluate("""() => {
         const bar = document.getElementById('windbar');
-        const row = bar.querySelector('.aroundrow');
-        const rr = row.getBoundingClientRect();
-        const others = [...bar.children].filter(e => e !== row && !e.hidden
+        const head = bar.querySelector('.barhead');
+        const hr = head.getBoundingClientRect();
+        const others = [...bar.children].filter(e => e !== head && !e.hidden
             && getComputedStyle(e).display !== 'none').map(e => e.getBoundingClientRect());
         const btn = document.getElementById('shipstoggle').getBoundingClientRect();
-        return { below: others.every(o => o.bottom <= rr.top + 1),
+        return { above: others.every(o => o.top >= hr.bottom - 1),
                  fits: btn.right <= window.innerWidth && btn.left >= 0,
                  scrollX: document.documentElement.scrollWidth > window.innerWidth + 1 };
     }""")
-    if not lay["below"]:
-        fails.append("on a phone the Around her row is not a line of its own below the bar")
+    if not lay["above"]:
+        fails.append("on a phone the Around her heading is not above everything in the bar")
     if not lay["fits"] or lay["scrollX"]:
-        fails.append(f"on a phone the row runs off the screen: {lay}")
+        fails.append(f"on a phone the bar runs off the screen: {lay}")
     c3.close()
     br.close()
 httpd.shutdown()

@@ -333,14 +333,14 @@
     padding:4px 9px; font:inherit; font-size:12.5px; cursor:pointer;
   }
   .windbar button.on{color:var(--accent); border-color:var(--accent)}
-  /* Around her: what else is on the water, on a row of its own at the bottom of the bar.
-     flex-basis 100% forces the line break; the order keeps it last on a phone too, where
-     the slider and its label are moved onto a row of their own (order 9-11). */
-  .windbar .aroundrow{flex:1 0 100%; order:20; display:flex; flex-wrap:wrap;
-    align-items:center; gap:9px 12px; padding-top:9px; border-top:1px solid var(--line)}
-  .windbar .aroundrow .tag{color:var(--muted); font-weight:600; font-size:12px;
-    text-transform:uppercase; letter-spacing:.04em; white-space:nowrap}
-  .windbar .aroundrow .note{color:var(--muted); font-size:11.5px}
+  /* The heading over the bar. flex-basis 100% gives it a line of its own, and order -1
+     keeps it first on a phone too, where the slider is reordered onto a row of its own. */
+  .windbar .barhead{flex:1 0 100%; order:-1; display:flex; align-items:baseline;
+    flex-wrap:wrap; gap:4px 10px}
+  .windbar .barhead h3{margin:0; font-size:12px; font-weight:650; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.06em}
+  .windbar .barhead .note{color:var(--muted); font-size:11.5px; background:none; border:0;
+    padding:0; margin:0; border-radius:0; box-shadow:none}
   .nearby-ship svg{overflow:visible; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45))}
   /* Now sits to the LEFT of the slider and is always present. It used to appear only once
      you had moved away from now, which both hid the way back and reflowed the whole bar at
@@ -448,6 +448,12 @@
   <div id="map"></div>
 
   <div class="windbar" id="windbar" hidden>
+    <!-- One heading over the whole bar, and every layer of the map under it - the ships
+         around her first, then the weather. -->
+    <div class="barhead"><h3>Around her</h3>
+      <span class="note" id="shipsnote" hidden></span></div>
+    <button id="shipstoggle" aria-pressed="false"
+            title="Other ships within about 30 nm of her, as the job last heard them on AIS">Ships</button>
     <button id="windtoggle" class="on" title="Show or hide the wind arrows">Wind ✓</button>
     <button id="wavetoggle" title="Show or hide the wave forecast">Waves</button>
     <button id="weathertoggle" class="on" title="Show or hide sky and temperature">Weather ✓</button>
@@ -460,12 +466,6 @@
     <span id="satwhen" hidden style="color:#7a3fb8;font-size:11.5px;font-weight:650"></span>
     <span id="windlive" hidden title="The grid is being fetched for what you see"
           style="color:var(--accent);font-size:11.5px;font-weight:650">live grid</span>
-    <div class="aroundrow">
-      <span class="tag">Around her</span>
-      <button id="shipstoggle" aria-pressed="false"
-              title="Other ships within about 30 nm of her, as the job last heard them on AIS">Ships</button>
-      <span class="note" id="shipsnote" hidden></span>
-    </div>
   </div>
 
   <div id="rewind" hidden>
@@ -1297,7 +1297,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "7bce7a1362";
+const BUILD = "79ab091026";
 
 async function checkForNewBuild() {
   try {
