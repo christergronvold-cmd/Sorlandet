@@ -304,9 +304,13 @@ with sync_playwright() as pw:
         fails.append(f"the moving ship is not turned to its heading: {s['markers']}")
     size = pg.evaluate("""() => { const m = document.querySelector('.nearby-ship svg');
         return m ? m.getBoundingClientRect().width : 0; }""")
-    if size < 26:
+    if size < 32:
         fails.append(f"the ship icons are {size:.0f} px - too small to find among the sea"
-                     f" marks (\"Skipene er veldig små\"), wanted at least 26")
+                     f" marks and quays (\"Skipene er veldig små\"), wanted at least 32")
+    fill = pg.evaluate("""() => [...document.querySelectorAll('.nearby-ship path, .nearby-ship circle')]
+        .map(e => e.getAttribute('fill')).filter(f => f && f !== 'none')[0] || ''""")
+    if fill.lower() != "#f0359a":
+        fails.append(f"the ships are not pink (like VesselFinder's): fill {fill!r}")
     if "Ships: aisstream.io" not in s["credit"]:
         fails.append(f"the map does not credit aisstream.io: {s['credit']!r}")
     if "2 ships" not in (s["note"] or ""):

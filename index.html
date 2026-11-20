@@ -1297,7 +1297,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "79ab091026";
+const BUILD = "c552fb7b81";
 
 async function checkForNewBuild() {
   try {
@@ -2852,26 +2852,31 @@ try { shipsOn = localStorage.getItem(SHIPS_KEY) === "1"; } catch { shipsOn = shi
 
 const SHIPS_CREDIT = 'Ships: <a href="https://aisstream.io" target="_blank" rel="noopener">aisstream.io</a>';
 
-// Big enough to find and to tap. They began at 18 px and grey, and in a harbour they sank
-// among the sea marks - "Skipene er veldig små". Now 28 px, a dark hull with a white edge
-// and a soft shadow: darker than the water and the quays, unlike the red, green and black
-// of the marks, and nothing like her own blue marker. The bow points the way she heads;
-// a ship with no known direction is a plain dot, claiming nothing.
-const NEARBY_PX = 28;
+// Big enough to find and to tap, and a colour nothing else on the map uses. They began
+// at 18 px and grey and sank among the sea marks ("Skipene er veldig små"); at 28 px and
+// dark they were still hard to tell from the cranes and bollards on the quays ("vanskelig
+// å skille de fra land installasjoner"). So: 34 px, and pink like VesselFinder's ships -
+// with a dark outer edge under the white one, because the quays on this map are a pale
+// pink themselves and a pink hull needs a line round it to stand off them. The bow
+// points the way she heads; a ship with no known direction is a plain dot.
+const NEARBY_PX = 34;
+const NEARBY_FILL = "#f0359a";
+const NEARBY_EDGE = "#5a0f36";
 const nearbyIcon = deg => {
   const known = deg !== null && deg !== undefined && isFinite(deg);
   const z = NEARBY_PX, c = z / 2;
+  const hull = "M14 2 C18 6 20 10 20 14 L20 25 L8 25 L8 14 C8 10 10 6 14 2 Z";
   return L.divIcon({
     className: "nearby-ship",
     html: `<svg width="${z}" height="${z}" viewBox="0 0 28 28"${
         known ? ` style="transform:rotate(${deg}deg)"` : ""}>
       ${known
-        ? `<path d="M14 2 C18 6 20 10 20 14 L20 25 L8 25 L8 14 C8 10 10 6 14 2 Z"
-                 fill="#2b3440" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-           <line x1="14" y1="9" x2="14" y2="20" stroke="#fff" stroke-width="1.4" opacity=".7"/>`
-        : `<circle cx="14" cy="14" r="7" fill="#2b3440" stroke="#fff" stroke-width="2"/>`}
+        ? `<path d="${hull}" fill="none" stroke="${NEARBY_EDGE}" stroke-width="4" stroke-linejoin="round"/>
+           <path d="${hull}" fill="${NEARBY_FILL}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>`
+        : `<circle cx="14" cy="14" r="7" fill="none" stroke="${NEARBY_EDGE}" stroke-width="4"/>
+           <circle cx="14" cy="14" r="7" fill="${NEARBY_FILL}" stroke="#fff" stroke-width="1.6"/>`}
     </svg>`,
-    iconSize: [z, z], iconAnchor: [c, c], popupAnchor: [0, -c + 4]
+    iconSize: [z, z], iconAnchor: [c, c], popupAnchor: [0, -c + 5]
   });
 };
 
