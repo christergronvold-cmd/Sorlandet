@@ -5134,7 +5134,14 @@ def _where_she_is(position: dict, points: list) -> tuple[dict, float, float]:
 # than two hours ago, so an old list fades out by itself.
 NEARBY = DATA / "nearby_ships.json"
 NEARBY_NM = float(os.environ.get("NEARBY_NM", "30"))
-NEARBY_SECONDS = int(os.environ.get("NEARBY_SECONDS", "60"))
+# Three minutes, not one. A ship at a quay sends its position only every three minutes,
+# so a one-minute listen heard about a third of them: 15 ships in Las Palmas on 20
+# November against some eighty on VesselFinder's map of the same harbour.
+NEARBY_SECONDS = int(os.environ.get("NEARBY_SECONDS", "180"))
+# ...and a ship heard on an earlier round stays in the list for this long if it is not
+# heard again, at the position and with the age it was heard at. The page draws nothing
+# older than two hours either, so the two limits agree.
+NEARBY_KEEP_H = float(os.environ.get("NEARBY_KEEP_H", "2"))
 NEARBY_MESSAGES = ["PositionReport", "StandardClassBPositionReport",
                    "ExtendedClassBPositionReport", "ShipStaticData", "StaticDataReport"]
 
@@ -5317,6 +5324,28 @@ def update_nearby_ships(api_key: str, lat: float, lon: float, connect=None) -> N
                 filled += 1
             if x["mmsi"] in known:
                 known[x["mmsi"]]["t"] = stamp
+        # Ships heard on earlier rounds and not this one: kept, as they were, while they
+        # are young enough and still inside the circle round where she is now.
+        fresh = {x["mmsi"] for x in ships}
+        keep_from = iso(now_utc() - timedelta(hours=NEARBY_KEEP_H))
+        carried = 0
+        for x in old.get("ships") or []:
+            try:
+                if x["mmsi"] in fresh or str(x["mmsi"]) == str(MMSI) or x.get("t", "") < keep_from:
+                    continue
+                d = nm_between((lat, lon), (float(x["lat"]), float(x["lon"])))
+            except Exception:
+                continue
+            if d > NEARBY_NM:
+                continue
+            k = known.get(x["mmsi"]) or {}
+            if not x.get("name") and k.get("name"):
+                x["name"] = k["name"]
+            if x.get("type_code") is None and k.get("type_code") is not None:
+                x["type_code"], x["type"] = k["type_code"], ais_type(k["type_code"])
+            ships.append({**x, "nm": round(d, 1)})
+            carried += 1
+        ships.sort(key=lambda x: x["nm"])
         cutoff = iso(now_utc() - timedelta(days=NEARBY_KNOWN_DAYS))
         known = dict(sorted(((m, k) for m, k in known.items() if (k.get("t") or "") >= cutoff),
                             key=lambda mk: mk[1].get("t") or "", reverse=True)[:NEARBY_KNOWN_MAX])
@@ -5326,7 +5355,8 @@ def update_nearby_ships(api_key: str, lat: float, lon: float, connect=None) -> N
                    compact=False)
         named = sum(1 for x in ships if x.get("name"))
         typed = sum(1 for x in ships if x.get("type"))
-        print(f"  -> nearby ships: {named} of {len(ships)} named, {typed} typed"
+        print(f"  -> nearby ships: {len(ships)} in the list ({len(ships) - carried} heard now,"
+              f" {carried} kept from earlier rounds); {named} named, {typed} typed"
               f" ({filled} filled in from earlier rounds; {len(known)} ships remembered)")
     except Exception as exc:
         print(f"  ! nearby ships failed: {exc}", file=sys.stderr)

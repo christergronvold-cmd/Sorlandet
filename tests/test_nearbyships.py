@@ -165,6 +165,33 @@ check("...and the tanker's", f2.get("538000002", {}).get("type"), "tanker")
 check("...and the new position is the one drawn", f2.get("224000001", {}).get("lat"), 28.22)
 if "filled in from earlier rounds" not in out:
     fails.append(f"the log does not say what was filled in: {out!r}")
+# A ship heard on an earlier round and not this one stays, as it was, for two hours.
+f4 = json.loads(U.NEARBY.read_text())
+f4["ships"].append({"mmsi": "777000007", "name": "MOORED QUIET", "type": "cargo",
+                    "type_code": 70, "lat": 28.15, "lon": -15.42, "cog": None, "sog": 0.0,
+                    "heading": 180, "t": U.iso(NOW - timedelta(minutes=50)), "nm": 0.4})
+f4["ships"].append({"mmsi": "888000008", "name": "LONG GONE", "lat": 28.15, "lon": -15.41,
+                    "sog": 0.0, "t": U.iso(NOW - timedelta(hours=3)), "nm": 0.9})
+f4["ships"].append({"mmsi": "999000009", "name": "FAR NOW", "lat": 29.5, "lon": -15.4,
+                    "sog": 0.0, "t": U.iso(NOW - timedelta(minutes=10)), "nm": 1.0})
+U.write_json(U.NEARBY, f4)
+_, out = quiet(U.update_nearby_ships, "KEY", HERE[0], HERE[1], connect=opener(only_positions, []))
+f5 = {x["mmsi"]: x for x in json.loads(U.NEARBY.read_text())["ships"]}
+if "777000007" not in f5:
+    fails.append("a ship at the quay, heard 50 minutes ago and not this round, was dropped")
+elif f5["777000007"]["t"] != f4["ships"][-3]["t"]:
+    fails.append("a ship kept from an earlier round was given a new time - it would look fresh")
+if "888000008" in f5:
+    fails.append("a ship last heard three hours ago is still in the list")
+if "999000009" in f5:
+    fails.append("a ship now more than 30 nm from her is still in the list")
+if "kept from earlier rounds" not in out:
+    fails.append(f"the log does not say how many were kept: {out!r}")
+_src = (ROOT / "scripts" / "update.py").read_text()
+if 'NEARBY_SECONDS", "180"' not in _src:
+    fails.append("the job listens for less than three minutes - a ship at a quay sends only"
+                 " every three, so most of them are missed")
+
 # Old memories go.
 f3 = json.loads(U.NEARBY.read_text())
 f3["known"]["123456789"] = {"name": "FORGOTTEN", "t": U.iso(NOW - timedelta(days=40))}
