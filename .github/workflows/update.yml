@@ -183,16 +183,25 @@ jobs:
           save "Refresh"
           echo "::endgroup::"
 
+          # Rounds are counted in TIME now, not in number. A round is normally a 29-minute
+          # listen, but near a port while she is moving (approach mode, decided by
+          # update.py at the start of each round) it is about seven minutes - and eleven
+          # of those would end the run after an hour and a quarter. So: rounds until the
+          # hours are used up, and each round is told how much is left (ROUND_BUDGET_S)
+          # so a normal one started late cannot run past the job's 350-minute limit.
           HOURS="${{ inputs.hours || '5.5' }}"
-          ROUNDS=$(python3 -c "print(max(1, min(11, round(float('$HOURS') * 2))))")
-          echo "Running $ROUNDS rounds of 29 minutes"
+          END=$(( $(date +%s) + $(python3 -c "print(int(min(5.5, float('$HOURS')) * 3600))") ))
+          echo "Running rounds for $HOURS hours, until $(date -u -d @$END +%H:%M) UTC"
 
           stalls=0
-          for round in $(seq 1 "$ROUNDS"); do
-            echo "::group::Round $round of $ROUNDS"
+          round=0
+          while [ $(( END - $(date +%s) )) -gt 300 ]; do
+            round=$((round + 1))
+            echo "::group::Round $round"
             fresh
             set +e
-            timeout --kill-after=60 "$ROUND_TIMEOUT" python3 scripts/update.py
+            ROUND_BUDGET_S=$(( END - $(date +%s) )) \
+              timeout --kill-after=60 "$ROUND_TIMEOUT" python3 scripts/update.py
             rc=$?
             set -e
             # 124 is timeout's own code; 137 means it had to send KILL as well.

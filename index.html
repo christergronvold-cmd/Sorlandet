@@ -1297,7 +1297,7 @@ function isSelfHealReload() {
 // phone's home screen can hold on to it far longer than that. The result is a parent
 // looking at a version from days ago, seeing bugs that were fixed, with no way to know.
 // So the page checks its own source for a newer build stamp and heals itself once.
-const BUILD = "c552fb7b81";
+const BUILD = "fa9fe6ae12";
 
 async function checkForNewBuild() {
   try {
@@ -4812,7 +4812,9 @@ pilotage, so the last mile into each port is approximate."><b style="font-size:1
   wireSharing();
   rememberFolds();
 
-  document.getElementById("stamp").textContent = " The page refreshes itself every 5 minutes.";
+  document.getElementById("stamp").textContent = d?.approach?.on
+    ? " She is coming in or going out: the page refreshes itself every minute."
+    : " The page refreshes itself every 5 minutes.";
 }
 
 function wireSharing() {
@@ -4861,7 +4863,17 @@ load().catch(e => {
     "<b>No data yet.</b> Run <code>python3 scripts/update.py</code> to create data/latest.json.";
   console.error(e);
 });
-setInterval(() => load().catch(console.error), 5 * 60 * 1000);
+// Every five minutes - or every minute while the job is in approach mode (latest.json
+// says so), when she is coming into or leaving a port and the job publishes her about
+// every seven minutes. Polling every five then would put up to five more minutes between
+// the quay and the map.
+const REFRESH_MS = 5 * 60 * 1000, APPROACH_REFRESH_MS = 60 * 1000;
+function refreshEvery() {
+  return window.__latest?.approach?.on ? APPROACH_REFRESH_MS : REFRESH_MS;
+}
+(function scheduleLoad() {
+  setTimeout(() => load().catch(console.error).finally(scheduleLoad), refreshEvery());
+})();
 // The ship list is its own file, read only while the Ships button is on.
 refreshShips();
 setInterval(() => { if (shipsOn) refreshShips(); }, 5 * 60 * 1000);

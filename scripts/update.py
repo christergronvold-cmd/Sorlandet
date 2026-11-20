@@ -5189,7 +5189,10 @@ def fetch_nearby_ships(api_key: str, lat: float, lon: float,
         except ImportError:
             print("  ! nearby ships: the 'websockets' package is missing", file=sys.stderr)
             return None
-    seconds = min(NEARBY_SECONDS, LISTEN_SECONDS) if seconds is None else seconds
+    if seconds is None:
+        # A minute, not three, in approach mode: the whole round is seven minutes then,
+        # and her own position is what the reader on the quay is waiting for.
+        seconds = min(NEARBY_SECONDS, LISTEN_SECONDS, 60 if APPROACH_ON else NEARBY_SECONDS)
     subscribe = {"APIKey": api_key, "BoundingBoxes": [nearby_box(lat, lon, NEARBY_NM)],
                  "FilterMessageTypes": NEARBY_MESSAGES}
     where: dict[str, dict] = {}
@@ -5362,13 +5365,115 @@ def update_nearby_ships(api_key: str, lat: float, lon: float, connect=None) -> N
         print(f"  ! nearby ships failed: {exc}", file=sys.stderr)
 
 
+# ------------------------------------------------------------------ coming in, going out
+
+# 18 November, Las Palmas. Christer stood on the quay as she came in, and the map was
+# behind her the whole way. Not because the positions were old - every one was a minute
+# or four old when it was published - but because they were published every half hour:
+# at 09:12 the map put her two miles south of the entrance at 6.5 knots, and it went on
+# saying so until 09:42, by which time she was inside and nearly alongside. A fix heard
+# at 09:21 waited twenty minutes in the job for the round to end.
+#
+# So near a port, while she is moving or due to sail, a round listens for APPROACH_LISTEN
+# seconds instead of twenty-nine minutes, and the workflow publishes after each one: a
+# new position on the page about every seven minutes, and the page itself asks every
+# minute while it is on. Seven, not five: GitHub Pages builds a branch at most about ten
+# times an hour before it starts dropping them. None of this costs a credit - it is how
+# often we PUBLISH, not how often anybody is asked.
+APPROACH_NM = float(os.environ.get("APPROACH_NM", "20"))
+APPROACH_LISTEN = int(os.environ.get("APPROACH_LISTEN", "360"))
+APPROACH_MOVING_KN = 1.0
+APPROACH_RECENT_MIN = 45
+APPROACH_ON = False
+
+
+def approach_mode(previous: dict | None, track_points: list, plan_ports: list,
+                  passages: list | None = None) -> dict:
+    """{"on": bool, "port", "nm", "why"} - whether this round should be a short one.
+
+    On when she is within APPROACH_NM of a port she is in, bound for or has just left (or
+    of a passage with a camera on it) AND either moving - a fix in the last 45 minutes at
+    a knot or more, or 0.3 nm covered in that time - or the plan has her sailing from that
+    port today. Arriving is caught by "moving"; sailing needs the plan, because a ship at
+    the quay on the morning she leaves is not moving until she is.
+    """
+    off = {"on": False}
+    try:
+        pts = [p for p in (track_points or []) if p.get("t") and p.get("lat") is not None]
+        here = None
+        if pts:
+            here = (float(pts[-1]["lat"]), float(pts[-1]["lon"]))
+        elif previous and (previous.get("position") or {}).get("lat") is not None:
+            pp = previous["position"]
+            here = (float(pp["lat"]), float(pp["lon"]))
+        if not here:
+            return off
+        reach = list(_ports_in_reach(plan_ports or [], pts))
+        reach += [q for q in (passages or []) if q.get("lat") is not None]
+        best, d = None, None
+        for q in reach:
+            dd = nm_between(here, (float(q["lat"]), float(q["lon"])))
+            if d is None or dd < d:
+                best, d = q, dd
+        if best is None or d > APPROACH_NM:
+            return off
+        since = now_utc() - timedelta(minutes=APPROACH_RECENT_MIN)
+        recent = [p for p in pts if parse_iso(p["t"]) >= since]
+        moving = any((p.get("sog") or 0) >= APPROACH_MOVING_KN for p in recent)
+        if not moving and len(recent) >= 2:
+            moving = nm_between((recent[0]["lat"], recent[0]["lon"]),
+                                (recent[-1]["lat"], recent[-1]["lon"])) >= 0.3
+        sailing_today = best.get("depart") == today_iso()
+        if not (moving or sailing_today):
+            return off
+        why = (f"moving, {d:.1f} nm from {best['name']}" if moving
+               else f"due to sail from {best['name']} today")
+        return {"on": True, "port": best.get("name"), "nm": round(d, 1), "why": why}
+    except Exception as exc:
+        print(f"  ! approach mode could not be worked out ({exc}) - normal round",
+              file=sys.stderr)
+        return off
+
+
+def round_listen_seconds(listen: int, approach: dict, budget_s: str = "") -> int:
+    """How long this round listens: as configured, cut to APPROACH_LISTEN in approach
+    mode, and never past what the workflow has left of its run, less four minutes for
+    the rest of the round."""
+    out = listen
+    if approach.get("on") and out > APPROACH_LISTEN:
+        out = APPROACH_LISTEN
+        print(f"* approach mode: {approach.get('why')} - listening {out}s, so the page"
+              f" gets her every few minutes")
+    try:
+        budget = int(budget_s or 0)
+    except ValueError:
+        budget = 0
+    if budget > 0 and out > max(30, budget - 240):
+        out = max(30, budget - 240)
+        print(f"* {budget}s left in this run - listening {out}s")
+    return out
+
+
 def main() -> int:
+    global LISTEN_SECONDS, APPROACH_ON
     api_key = os.environ.get("AISSTREAM_API_KEY", "").strip()
     demo = not api_key
 
     track = read_json(TRACK, {"mmsi": MMSI, "ship": SHIP_NAME, "points": []})
     points = track.get("points") or []
     previous = read_json(LATEST, {})
+
+    # How long this round may listen. Short near a port while she moves (approach_mode),
+    # and never past what the workflow has left of its run (ROUND_BUDGET_S) - the run is
+    # measured in hours now, not in a fixed count of half-hour rounds.
+    plan_all = read_json(DATA / "ports.json", {}) or {}
+    approach = approach_mode(
+        previous, points, plan_all.get("ports") or [],
+        [q for q in (plan_all.get("passages") or []) if (q.get("cameras") or [])
+         and passage_open(q)])
+    APPROACH_ON = bool(approach.get("on"))
+    LISTEN_SECONDS = round_listen_seconds(LISTEN_SECONDS, approach,
+                                          os.environ.get("ROUND_BUDGET_S", ""))
 
     collected: list[dict] = []
     if demo:
@@ -5620,6 +5725,8 @@ def main() -> int:
             "position": shown,
             "voyage": voyage or None,
             "weather": weather,
+            # The page asks every minute instead of every five while this is on.
+            "approach": approach if approach.get("on") else {"on": False},
             "sun": sun or {},
             "stats": {
                 "points": len(points),
