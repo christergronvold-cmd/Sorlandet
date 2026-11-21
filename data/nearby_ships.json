@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-21T20:14:35Z",
+ "generated_utc": "2026-11-21T20:16:44Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -238,7 +238,7 @@
    "cog": 0.0,
    "sog": 0.0,
    "heading": null,
-   "t": "2026-11-21T20:13:09Z",
+   "t": "2026-11-21T20:16:38Z",
    "nm": 0.5
   },
   {
@@ -1269,6 +1269,19 @@
    "nm": 1.4
   },
   {
+   "mmsi": "227841520",
+   "name": null,
+   "type": null,
+   "type_code": null,
+   "lat": 28.1228,
+   "lon": -15.41952,
+   "cog": 148.8,
+   "sog": 3.4,
+   "heading": null,
+   "t": "2026-11-21T20:16:40Z",
+   "nm": 1.5
+  },
+  {
    "mmsi": "227335300",
    "name": "TI FLOT II",
    "type": "sailing",
@@ -1634,6 +1647,15 @@
   }
  ],
  "known": {
+  "224456789": {
+   "type_code": 0,
+   "t": "2026-11-21T20:16:44Z"
+  },
+  "211222860": {
+   "name": "PETER VON SEESTERMUE",
+   "t": "2026-11-21T20:16:44Z",
+   "type_code": 36
+  },
   "211399160": {
    "name": "MADLA",
    "type_code": 36,
@@ -1648,10 +1670,6 @@
    "name": "EL KENTUCKY",
    "t": "2026-11-21T20:14:35Z",
    "type_code": 36
-  },
-  "224456789": {
-   "type_code": 0,
-   "t": "2026-11-21T20:14:35Z"
   },
   "224292160": {
    "name": "V.B. TAMARAN",
@@ -1717,11 +1735,6 @@
    "name": "HEROINAS DE SALVORA",
    "t": "2026-11-21T20:14:35Z",
    "type_code": 51
-  },
-  "211222860": {
-   "name": "PETER VON SEESTERMUE",
-   "t": "2026-11-21T20:14:35Z",
-   "type_code": 36
   },
   "225983994": {
    "name": "VB LA GRACIOSA",
