@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-22T23:43:43Z",
+ "generated_utc": "2026-11-22T23:45:54Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -905,6 +905,19 @@
    "nm": 1.2
   },
   {
+   "mmsi": "654048710",
+   "name": "ALPHA PECHE 2",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.15922,
+   "lon": -15.40721,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T23:45:50Z",
+   "nm": 1.3
+  },
+  {
    "mmsi": "224255540",
    "name": "PILOT N",
    "type": "pilot",
@@ -928,19 +941,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T23:11:05Z",
-   "nm": 1.3
-  },
-  {
-   "mmsi": "654048710",
-   "name": "ALPHA PECHE 2",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.15925,
-   "lon": -15.40727,
-   "cog": null,
-   "sog": 0.1,
-   "heading": null,
-   "t": "2026-11-22T22:06:51Z",
    "nm": 1.3
   },
   {
@@ -1244,6 +1244,16 @@
   }
  ],
  "known": {
+  "654048710": {
+   "type_code": 30,
+   "t": "2026-11-22T23:45:54Z",
+   "name": "ALPHA PECHE 2"
+  },
+  "225320000": {
+   "name": "COSTA ATLANTICA",
+   "t": "2026-11-22T23:45:54Z",
+   "type_code": 33
+  },
   "211399160": {
    "name": "MADLA",
    "type_code": 36,
@@ -1754,11 +1764,6 @@
    "t": "2026-11-22T22:08:51Z",
    "type_code": 99
   },
-  "654048710": {
-   "type_code": 30,
-   "t": "2026-11-22T22:08:51Z",
-   "name": "ALPHA PECHE 2"
-  },
   "225994849": {
    "name": "HASTA LA VISTA",
    "t": "2026-11-22T22:08:51Z",
@@ -2065,11 +2070,6 @@
    "name": "BENTAYGA CARGO",
    "t": "2026-11-22T20:28:48Z",
    "type_code": 79
-  },
-  "225320000": {
-   "name": "COSTA ATLANTICA",
-   "t": "2026-11-22T20:28:48Z",
-   "type_code": 33
   },
   "225987223": {
    "name": "AFRIKAT",

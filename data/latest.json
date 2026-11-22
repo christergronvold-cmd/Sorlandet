@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-22T23:43:43Z",
+ "updated_utc": "2026-11-22T23:45:54Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -10,13 +10,10 @@
   "lon": -15.42765,
   "sog_kn": 0.0,
   "cog_deg": 174,
-  "heading_deg": 0,
-  "nav_status": 5,
+  "heading_deg": null,
   "seen_utc": "2026-11-22T23:35:15Z",
-  "source": "aisstream.io",
-  "destination": "ES LPA",
-  "draught_m": 4.1,
-  "eta_text": "18.11 10:00",
+  "source": "foundation",
+  "nav_status": 5,
   "nav_status_utc": "2026-11-22T23:35:15Z"
  },
  "voyage": {
@@ -26,30 +23,30 @@
   "heard_utc": "2026-11-22T23:35:15Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-22T23:40:41Z",
+  "fetched_utc": "2026-11-22T23:45:33Z",
   "sea": {
    "wave_height_m": 1.04,
    "wave_direction_deg": 5,
    "wave_period_s": 6.9,
    "swell_height_m": 0.74,
-   "swell_period_s": 4.5,
-   "wind_wave_height_m": 0.1,
+   "swell_period_s": 4.35,
+   "wind_wave_height_m": 0.08,
    "sea_temp_c": 23.4,
-   "time_utc": "2026-11-22T23:30"
+   "time_utc": "2026-11-22T23:45"
   },
   "air": {
    "temp_c": 20.4,
-   "feels_c": 22.9,
-   "wind_ms": 1.42,
-   "gust_ms": 2.6,
-   "wind_direction_deg": 321,
-   "pressure_hpa": 1022.5,
-   "cloud_pct": 87,
+   "feels_c": null,
+   "wind_ms": 5.7,
+   "gust_ms": null,
+   "wind_direction_deg": 120,
+   "pressure_hpa": 1022.6,
+   "cloud_pct": 96.9,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-11-22T23:30",
-   "source": "open-meteo",
-   "fetched_utc": "2026-11-22T23:40:41Z"
+   "time_utc": "2026-11-22T23:00",
+   "source": "met.no",
+   "fetched_utc": "2026-11-22T23:45:34Z"
   }
  },
  "approach": {
@@ -60,13 +57,7 @@
    "age_days": 13.1,
    "illumination": 0.97,
    "phase": "full moon"
-  },
-  "civil_timezone": "Atlantic/Canary",
-  "civil_place": "Las Palmas",
-  "civil_country": "Gran Canaria",
-  "sunrise_utc": "2026-11-22T07:28",
-  "sunset_utc": "2026-11-22T18:06",
-  "daylight_hours": 10.6
+  }
  },
  "stats": {
   "points": 928,
