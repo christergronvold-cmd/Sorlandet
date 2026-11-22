@@ -2,22 +2,20 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-22T01:46:21Z",
+ "updated_utc": "2026-11-22T01:48:16Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14597,
-  "lon": -15.42765,
-  "sog_kn": 0.0,
-  "cog_deg": 171.6,
-  "heading_deg": 0,
+  "lat": 28.14598,
+  "lon": -15.42767,
+  "sog_kn": null,
+  "cog_deg": null,
+  "heading_deg": null,
+  "seen_utc": "2026-11-22T01:34:50Z",
+  "source": "foundation",
+  "sog_derived": true,
   "nav_status": 5,
-  "seen_utc": "2026-11-22T01:41:06Z",
-  "source": "aisstream.io",
-  "destination": "ES LPA",
-  "draught_m": 4.1,
-  "eta_text": "18.11 10:00",
-  "nav_status_utc": "2026-11-22T01:41:06Z"
+  "nav_status_utc": "2026-11-22T01:20:07Z"
  },
  "voyage": {
   "destination": "ES LPA",
@@ -26,30 +24,30 @@
   "heard_utc": "2026-11-22T01:41:06Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-22T01:43:20Z",
+  "fetched_utc": "2026-11-22T01:47:54Z",
   "sea": {
-   "wave_height_m": 1.12,
+   "wave_height_m": 1.1,
    "wave_direction_deg": 352,
-   "wave_period_s": 8.55,
+   "wave_period_s": 8.5,
    "swell_height_m": 0.94,
-   "swell_period_s": 8.6,
+   "swell_period_s": 8.65,
    "wind_wave_height_m": 0.22,
    "sea_temp_c": 23.5,
-   "time_utc": "2026-11-22T01:30"
+   "time_utc": "2026-11-22T01:45"
   },
   "air": {
    "temp_c": 20.3,
-   "feels_c": 22.4,
-   "wind_ms": 1.84,
+   "feels_c": 22.3,
+   "wind_ms": 1.77,
    "gust_ms": 3.6,
-   "wind_direction_deg": 311,
-   "pressure_hpa": 1023.5,
-   "cloud_pct": 54,
+   "wind_direction_deg": 313,
+   "pressure_hpa": 1023.4,
+   "cloud_pct": 49,
    "precip_mm": 0.0,
    "weather_code": 1,
-   "time_utc": "2026-11-22T01:30",
+   "time_utc": "2026-11-22T01:45",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-22T01:43:20Z"
+   "fetched_utc": "2026-11-22T01:47:54Z"
   }
  },
  "approach": {
@@ -58,7 +56,7 @@
  "sun": {
   "moon": {
    "age_days": 12.2,
-   "illumination": 0.92,
+   "illumination": 0.93,
    "phase": "waxing gibbous"
   },
   "civil_timezone": "Atlantic/Canary",
