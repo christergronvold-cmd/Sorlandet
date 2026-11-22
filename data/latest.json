@@ -2,22 +2,19 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-22T07:49:06Z",
+ "updated_utc": "2026-11-22T08:21:32Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14598,
-  "lon": -15.42766,
+  "lat": 28.14597,
+  "lon": -15.42767,
   "sog_kn": 0.0,
   "cog_deg": 349.9,
-  "heading_deg": 0,
+  "heading_deg": 1,
   "nav_status": 5,
-  "seen_utc": "2026-11-22T07:41:05Z",
+  "seen_utc": "2026-11-22T08:02:05Z",
   "source": "aisstream.io",
-  "destination": "ES LPA",
-  "draught_m": 4.1,
-  "eta_text": "18.11 10:00",
-  "nav_status_utc": "2026-11-22T07:41:05Z"
+  "nav_status_utc": "2026-11-22T08:02:05Z"
  },
  "voyage": {
   "destination": "ES LPA",
@@ -26,30 +23,30 @@
   "heard_utc": "2026-11-22T07:41:05Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-22T07:44:39Z",
+  "fetched_utc": "2026-11-22T08:18:31Z",
   "sea": {
-   "wave_height_m": 1.02,
+   "wave_height_m": 1.0,
    "wave_direction_deg": 352,
-   "wave_period_s": 8.15,
-   "swell_height_m": 0.84,
-   "swell_period_s": 8.4,
-   "wind_wave_height_m": 0.16,
-   "sea_temp_c": 23.4,
-   "time_utc": "2026-11-22T07:30"
+   "wave_period_s": 8.05,
+   "swell_height_m": 0.82,
+   "swell_period_s": 8.5,
+   "wind_wave_height_m": 0.14,
+   "sea_temp_c": 23.5,
+   "time_utc": "2026-11-22T08:15"
   },
   "air": {
-   "temp_c": 20.3,
-   "feels_c": null,
-   "wind_ms": 5.5,
-   "gust_ms": null,
-   "wind_direction_deg": 99,
-   "pressure_hpa": 1023.1,
-   "cloud_pct": 16.4,
+   "temp_c": 19.3,
+   "feels_c": 21.3,
+   "wind_ms": 1.77,
+   "gust_ms": 3.3,
+   "wind_direction_deg": 254,
+   "pressure_hpa": 1022.9,
+   "cloud_pct": 50,
    "precip_mm": 0.0,
-   "weather_code": 1,
-   "time_utc": "2026-11-22T07:00",
-   "source": "met.no",
-   "fetched_utc": "2026-11-22T07:45:10Z"
+   "weather_code": 2,
+   "time_utc": "2026-11-22T08:15",
+   "source": "open-meteo",
+   "fetched_utc": "2026-11-22T08:18:31Z"
   }
  },
  "approach": {
@@ -60,10 +57,16 @@
    "age_days": 12.4,
    "illumination": 0.94,
    "phase": "waxing gibbous"
-  }
+  },
+  "civil_timezone": "Atlantic/Canary",
+  "civil_place": "Las Palmas",
+  "civil_country": "Gran Canaria",
+  "sunrise_utc": "2026-11-22T07:28",
+  "sunset_utc": "2026-11-22T18:06",
+  "daylight_hours": 10.6
  },
  "stats": {
-  "points": 882,
+  "points": 884,
   "distance_nm": 4330.0,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
