@@ -2,52 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-22T01:14:54Z",
+ "updated_utc": "2026-11-22T01:46:21Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14598,
-  "lon": -15.42766,
+  "lat": 28.14597,
+  "lon": -15.42765,
   "sog_kn": 0.0,
-  "cog_deg": 172,
-  "heading_deg": null,
-  "seen_utc": "2026-11-22T00:53:01Z",
-  "source": "foundation",
-  "sog_derived": true,
+  "cog_deg": 171.6,
+  "heading_deg": 0,
   "nav_status": 5,
-  "nav_status_utc": "2026-11-22T00:53:01Z"
+  "seen_utc": "2026-11-22T01:41:06Z",
+  "source": "aisstream.io",
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "eta_text": "18.11 10:00",
+  "nav_status_utc": "2026-11-22T01:41:06Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-22T00:58:50Z"
+  "heard_utc": "2026-11-22T01:41:06Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-22T01:11:52Z",
+  "fetched_utc": "2026-11-22T01:43:20Z",
   "sea": {
    "wave_height_m": 1.12,
    "wave_direction_deg": 352,
    "wave_period_s": 8.55,
-   "swell_height_m": 0.96,
-   "swell_period_s": 8.55,
+   "swell_height_m": 0.94,
+   "swell_period_s": 8.6,
    "wind_wave_height_m": 0.22,
    "sea_temp_c": 23.5,
-   "time_utc": "2026-11-22T01:00"
+   "time_utc": "2026-11-22T01:30"
   },
   "air": {
    "temp_c": 20.3,
-   "feels_c": 22.3,
-   "wind_ms": 2.0,
-   "gust_ms": 4.0,
-   "wind_direction_deg": 307,
-   "pressure_hpa": 1023.8,
-   "cloud_pct": 63,
+   "feels_c": 22.4,
+   "wind_ms": 1.84,
+   "gust_ms": 3.6,
+   "wind_direction_deg": 311,
+   "pressure_hpa": 1023.5,
+   "cloud_pct": 54,
    "precip_mm": 0.0,
-   "weather_code": 2,
-   "time_utc": "2026-11-22T01:00",
+   "weather_code": 1,
+   "time_utc": "2026-11-22T01:30",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-22T01:11:52Z"
+   "fetched_utc": "2026-11-22T01:43:20Z"
   }
  },
  "approach": {
@@ -55,7 +57,7 @@
  },
  "sun": {
   "moon": {
-   "age_days": 12.1,
+   "age_days": 12.2,
    "illumination": 0.92,
    "phase": "waxing gibbous"
   },
@@ -67,7 +69,7 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 860,
+  "points": 862,
   "distance_nm": 4330.0,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
