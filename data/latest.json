@@ -2,54 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-22T10:33:00Z",
+ "updated_utc": "2026-11-22T11:05:32Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14596,
-  "lon": -15.42766,
+  "lat": 28.14599,
+  "lon": -15.42767,
   "sog_kn": 0.0,
-  "cog_deg": 349.9,
-  "heading_deg": 1,
+  "cog_deg": 349.8,
+  "heading_deg": 0,
   "nav_status": 5,
-  "seen_utc": "2026-11-22T10:20:06Z",
+  "seen_utc": "2026-11-22T10:53:04Z",
   "source": "aisstream.io",
   "destination": "ES LPA",
   "draught_m": 4.1,
   "eta_text": "18.11 10:00",
-  "nav_status_utc": "2026-11-22T10:20:06Z"
+  "nav_status_utc": "2026-11-22T10:53:04Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-22T10:20:06Z"
+  "heard_utc": "2026-11-22T10:53:04Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-22T10:29:57Z",
+  "fetched_utc": "2026-11-22T11:02:30Z",
   "sea": {
-   "wave_height_m": 0.98,
-   "wave_direction_deg": 352,
-   "wave_period_s": 7.9,
+   "wave_height_m": 0.96,
+   "wave_direction_deg": 353,
+   "wave_period_s": 7.85,
    "swell_height_m": 0.78,
-   "swell_period_s": 8.4,
+   "swell_period_s": 8.3,
    "wind_wave_height_m": 0.14,
    "sea_temp_c": 23.5,
-   "time_utc": "2026-11-22T10:15"
+   "time_utc": "2026-11-22T11:00"
   },
   "air": {
-   "temp_c": 23.6,
+   "temp_c": 24.0,
    "feels_c": 25.8,
-   "wind_ms": 1.98,
+   "wind_ms": 2.64,
    "gust_ms": 5.5,
-   "wind_direction_deg": 49,
+   "wind_direction_deg": 53,
    "pressure_hpa": 1023.8,
-   "cloud_pct": 47,
+   "cloud_pct": 44,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-11-22T10:15",
+   "time_utc": "2026-11-22T11:00",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-22T10:29:57Z"
+   "fetched_utc": "2026-11-22T11:02:30Z"
   }
  },
  "approach": {
@@ -58,7 +58,7 @@
  "sun": {
   "moon": {
    "age_days": 12.5,
-   "illumination": 0.94,
+   "illumination": 0.95,
    "phase": "waxing gibbous"
   },
   "civil_timezone": "Atlantic/Canary",
@@ -69,7 +69,7 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 889,
+  "points": 890,
   "distance_nm": 4330.0,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
