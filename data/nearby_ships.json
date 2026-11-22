@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-22T01:10:57Z",
+ "generated_utc": "2026-11-22T01:14:54Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "231888000",
+   "name": "GRETTIR STERKI",
+   "type": "tug",
+   "type_code": 52,
+   "lat": 28.14667,
+   "lon": -15.4275,
+   "cog": 160.7,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:13:19Z",
+   "nm": 0.0
+  },
   {
    "mmsi": "232044540",
    "name": "LYFE AT SEA",
@@ -86,6 +99,58 @@
    "nm": 0.2
   },
   {
+   "mmsi": "431099000",
+   "name": "RYOAN MARU NO87",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.14466,
+   "lon": -15.42126,
+   "cog": 146.2,
+   "sog": 0.0,
+   "heading": 1,
+   "t": "2026-11-22T01:13:52Z",
+   "nm": 0.3
+  },
+  {
+   "mmsi": "431038000",
+   "name": "SHOSHIN MARU NO.83",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.14407,
+   "lon": -15.42239,
+   "cog": 358.4,
+   "sog": 0.0,
+   "heading": 50,
+   "t": "2026-11-22T01:12:36Z",
+   "nm": 0.3
+  },
+  {
+   "mmsi": "224239000",
+   "name": "BARLOVENTO EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.14619,
+   "lon": -15.42131,
+   "cog": 0.0,
+   "sog": 0.0,
+   "heading": 181,
+   "t": "2026-11-22T01:14:15Z",
+   "nm": 0.3
+  },
+  {
+   "mmsi": "312676000",
+   "name": "FISHING FORCE",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.14329,
+   "lon": -15.42405,
+   "cog": 71.3,
+   "sog": 0.0,
+   "heading": 180,
+   "t": "2026-11-22T01:14:16Z",
+   "nm": 0.3
+  },
+  {
    "mmsi": "355794000",
    "name": "IRENE",
    "type": "other",
@@ -96,45 +161,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T01:09:12Z",
-   "nm": 0.3
-  },
-  {
-   "mmsi": "431038000",
-   "name": "SHOSHIN MARU NO.83",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.14405,
-   "lon": -15.4224,
-   "cog": 358.4,
-   "sog": 0.0,
-   "heading": 50,
-   "t": "2026-11-22T01:09:36Z",
-   "nm": 0.3
-  },
-  {
-   "mmsi": "224239000",
-   "name": "BARLOVENTO EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.14618,
-   "lon": -15.4213,
-   "cog": 0.0,
-   "sog": 0.0,
-   "heading": 181,
-   "t": "2026-11-22T01:10:15Z",
-   "nm": 0.3
-  },
-  {
-   "mmsi": "431099000",
-   "name": "RYOAN MARU NO87",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.14464,
-   "lon": -15.42127,
-   "cog": 146.2,
-   "sog": 0.0,
-   "heading": 1,
-   "t": "2026-11-22T00:04:13Z",
    "nm": 0.3
   },
   {
@@ -149,6 +175,58 @@
    "heading": 82,
    "t": "2026-11-22T00:03:25Z",
    "nm": 0.3
+  },
+  {
+   "mmsi": "341224001",
+   "name": "JOHN PAUL DE JORIA",
+   "type": null,
+   "type_code": 56,
+   "lat": 28.1429,
+   "lon": -15.42131,
+   "cog": 182.5,
+   "sog": 0.0,
+   "heading": 0,
+   "t": "2026-11-22T01:12:13Z",
+   "nm": 0.4
+  },
+  {
+   "mmsi": "461000160",
+   "name": "AL BARAKA",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.14166,
+   "lon": -15.42079,
+   "cog": 171.8,
+   "sog": 0.0,
+   "heading": 266,
+   "t": "2026-11-22T01:12:15Z",
+   "nm": 0.4
+  },
+  {
+   "mmsi": "332001000",
+   "name": "SANT YAGO TRES",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.14448,
+   "lon": -15.42016,
+   "cog": 298.2,
+   "sog": 0.0,
+   "heading": 359,
+   "t": "2026-11-22T01:12:31Z",
+   "nm": 0.4
+  },
+  {
+   "mmsi": "629009356",
+   "name": "ATLANTIC WHALE",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.14342,
+   "lon": -15.42016,
+   "cog": null,
+   "sog": 0.0,
+   "heading": 0,
+   "t": "2026-11-22T01:13:41Z",
+   "nm": 0.4
   },
   {
    "mmsi": "431799000",
@@ -177,45 +255,6 @@
    "nm": 0.4
   },
   {
-   "mmsi": "332001000",
-   "name": "SANT YAGO TRES",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.14447,
-   "lon": -15.42018,
-   "cog": 283.6,
-   "sog": 0.0,
-   "heading": 359,
-   "t": "2026-11-22T00:35:00Z",
-   "nm": 0.4
-  },
-  {
-   "mmsi": "461000160",
-   "name": "AL BARAKA",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.14165,
-   "lon": -15.42076,
-   "cog": 171.8,
-   "sog": 0.0,
-   "heading": 266,
-   "t": "2026-11-22T00:36:21Z",
-   "nm": 0.4
-  },
-  {
-   "mmsi": "629009356",
-   "name": "ATLANTIC WHALE",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.14341,
-   "lon": -15.42016,
-   "cog": null,
-   "sog": 0.0,
-   "heading": 0,
-   "t": "2026-11-22T00:01:41Z",
-   "nm": 0.4
-  },
-  {
    "mmsi": "224456789",
    "name": null,
    "type": null,
@@ -225,8 +264,21 @@
    "cog": 0.0,
    "sog": 0.0,
    "heading": null,
-   "t": "2026-11-22T00:03:37Z",
+   "t": "2026-11-22T01:12:08Z",
    "nm": 0.5
+  },
+  {
+   "mmsi": "224276650",
+   "name": "MOJITO OCHO",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.1337,
+   "lon": -15.42641,
+   "cog": 290.8,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:37Z",
+   "nm": 0.7
   },
   {
    "mmsi": "224205780",
@@ -298,12 +350,38 @@
    "name": "SIXTEEN",
    "type": "sailing",
    "type_code": 36,
-   "lat": 28.13325,
+   "lat": 28.13327,
    "lon": -15.42534,
    "cog": null,
    "sog": 0.0,
    "heading": null,
-   "t": "2026-11-22T01:08:13Z",
+   "t": "2026-11-22T01:14:11Z",
+   "nm": 0.8
+  },
+  {
+   "mmsi": "211466900",
+   "name": "EMOTION",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.13247,
+   "lon": -15.42382,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:36Z",
+   "nm": 0.8
+  },
+  {
+   "mmsi": "225991585",
+   "name": "HAIKU",
+   "type": "pleasure craft",
+   "type_code": 37,
+   "lat": 28.13342,
+   "lon": -15.42594,
+   "cog": 170.8,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:47Z",
    "nm": 0.8
   },
   {
@@ -346,32 +424,6 @@
    "nm": 0.8
   },
   {
-   "mmsi": "225991585",
-   "name": "HAIKU",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.1334,
-   "lon": -15.42594,
-   "cog": 170.8,
-   "sog": 0.1,
-   "heading": null,
-   "t": "2026-11-22T00:35:48Z",
-   "nm": 0.8
-  },
-  {
-   "mmsi": "211466900",
-   "name": "EMOTION",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.13236,
-   "lon": -15.42389,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:02:36Z",
-   "nm": 0.8
-  },
-  {
    "mmsi": "261007183",
    "name": "ROBIN B",
    "type": "sailing",
@@ -402,25 +454,77 @@
    "name": "VB DORAMAS",
    "type": "tug",
    "type_code": 52,
-   "lat": 28.14068,
-   "lon": -15.41285,
-   "cog": 309.2,
-   "sog": 0.7,
-   "heading": 212,
-   "t": "2026-11-21T23:31:11Z",
-   "nm": 0.8
+   "lat": 28.13797,
+   "lon": -15.41325,
+   "cog": 290.0,
+   "sog": 0.0,
+   "heading": 130,
+   "t": "2026-11-22T01:14:00Z",
+   "nm": 0.9
+  },
+  {
+   "mmsi": "236538000",
+   "name": "SANCO SPIRIT",
+   "type": "other",
+   "type_code": 90,
+   "lat": 28.15165,
+   "lon": -15.41123,
+   "cog": 303.4,
+   "sog": 0.0,
+   "heading": 180,
+   "t": "2026-11-22T01:14:13Z",
+   "nm": 0.9
   },
   {
    "mmsi": "224302000",
    "name": "ROCKFISH",
    "type": "tanker",
    "type_code": 89,
-   "lat": 28.13751,
-   "lon": -15.41267,
+   "lat": 28.1375,
+   "lon": -15.41266,
    "cog": null,
    "sog": 0.0,
    "heading": null,
-   "t": "2026-11-22T01:10:22Z",
+   "t": "2026-11-22T01:14:22Z",
+   "nm": 0.9
+  },
+  {
+   "mmsi": "261012022",
+   "name": "BABY BLUE",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.13041,
+   "lon": -15.42453,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:38Z",
+   "nm": 0.9
+  },
+  {
+   "mmsi": "311001586",
+   "name": "CALLISTO",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.1522,
+   "lon": -15.41162,
+   "cog": 0.0,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:47Z",
+   "nm": 0.9
+  },
+  {
+   "mmsi": "339000388",
+   "name": "DINORA",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.13085,
+   "lon": -15.42394,
+   "cog": 162.1,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:50Z",
    "nm": 0.9
   },
   {
@@ -450,58 +554,6 @@
    "nm": 0.9
   },
   {
-   "mmsi": "224870000",
-   "name": "V.B. ADRIATICO",
-   "type": "tug",
-   "type_code": 52,
-   "lat": 28.13823,
-   "lon": -15.41363,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:35:19Z",
-   "nm": 0.9
-  },
-  {
-   "mmsi": "311001586",
-   "name": "CALLISTO",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.15224,
-   "lon": -15.4116,
-   "cog": 0.0,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:35:46Z",
-   "nm": 0.9
-  },
-  {
-   "mmsi": "339000388",
-   "name": "DINORA",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.13083,
-   "lon": -15.42398,
-   "cog": 12.8,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:03:09Z",
-   "nm": 0.9
-  },
-  {
-   "mmsi": "224533000",
-   "name": "VB MEDITERRANEO",
-   "type": "tug",
-   "type_code": 52,
-   "lat": 28.13851,
-   "lon": -15.41399,
-   "cog": null,
-   "sog": 0.1,
-   "heading": null,
-   "t": "2026-11-22T00:03:44Z",
-   "nm": 0.9
-  },
-  {
    "mmsi": "211888060",
    "name": "SUNSHINELIVE",
    "type": "pleasure craft",
@@ -528,6 +580,71 @@
    "nm": 0.9
   },
   {
+   "mmsi": "563176300",
+   "name": "LOWLANDS FREEDOM",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.14426,
+   "lon": -15.40798,
+   "cog": 3.0,
+   "sog": 0.0,
+   "heading": 181,
+   "t": "2026-11-22T01:14:07Z",
+   "nm": 1.0
+  },
+  {
+   "mmsi": "232064905",
+   "name": "NIKAN 4",
+   "type": "pleasure craft",
+   "type_code": 37,
+   "lat": 28.12883,
+   "lon": -15.42509,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:21Z",
+   "nm": 1.0
+  },
+  {
+   "mmsi": "316061084",
+   "name": "PROMESSA",
+   "type": "pleasure craft",
+   "type_code": 37,
+   "lat": 28.12883,
+   "lon": -15.42492,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:26Z",
+   "nm": 1.0
+  },
+  {
+   "mmsi": "224255540",
+   "name": "PILOT N",
+   "type": "pilot",
+   "type_code": 50,
+   "lat": 28.14044,
+   "lon": -15.41019,
+   "cog": 352.0,
+   "sog": 8.9,
+   "heading": null,
+   "t": "2026-11-22T01:13:38Z",
+   "nm": 1.0
+  },
+  {
+   "mmsi": "257433550",
+   "name": "ERVIKA",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12892,
+   "lon": -15.42636,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:39Z",
+   "nm": 1.0
+  },
+  {
    "mmsi": "235009170",
    "name": "HUMMINGBIRD",
    "type": "sailing",
@@ -538,19 +655,6 @@
    "sog": 0.1,
    "heading": null,
    "t": "2026-11-22T01:08:27Z",
-   "nm": 1.0
-  },
-  {
-   "mmsi": "563176300",
-   "name": "LOWLANDS FREEDOM",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.14427,
-   "lon": -15.40799,
-   "cog": 3.0,
-   "sog": 0.0,
-   "heading": 181,
-   "t": "2026-11-22T01:09:57Z",
    "nm": 1.0
   },
   {
@@ -577,32 +681,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T01:09:19Z",
-   "nm": 1.0
-  },
-  {
-   "mmsi": "316061084",
-   "name": "PROMESSA",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.12885,
-   "lon": -15.42492,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T01:09:28Z",
-   "nm": 1.0
-  },
-  {
-   "mmsi": "257433550",
-   "name": "ERVIKA",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.12891,
-   "lon": -15.42638,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T01:09:41Z",
    "nm": 1.0
   },
   {
@@ -658,19 +736,6 @@
    "nm": 1.0
   },
   {
-   "mmsi": "232064905",
-   "name": "NIKAN 4",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.12878,
-   "lon": -15.42507,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:03:19Z",
-   "nm": 1.0
-  },
-  {
    "mmsi": "203702300",
    "name": "ALU BABA",
    "type": "sailing",
@@ -684,16 +749,120 @@
    "nm": 1.0
   },
   {
+   "mmsi": "259041660",
+   "name": "LEIA",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.1286,
+   "lon": -15.42554,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:10:39Z",
+   "nm": 1.0
+  },
+  {
+   "mmsi": "255806256",
+   "name": "MSC VALDIVIA II",
+   "type": "cargo",
+   "type_code": 79,
+   "lat": 28.1298,
+   "lon": -15.41764,
+   "cog": 304.0,
+   "sog": 0.0,
+   "heading": 0,
+   "t": "2026-11-22T01:12:05Z",
+   "nm": 1.1
+  },
+  {
+   "mmsi": "265515360",
+   "name": "ROYAL SALUTE",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12737,
+   "lon": -15.42693,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:07Z",
+   "nm": 1.1
+  },
+  {
+   "mmsi": "235056878",
+   "name": "AMARYLLIS",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12728,
+   "lon": -15.42517,
+   "cog": 242.7,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:33Z",
+   "nm": 1.1
+  },
+  {
+   "mmsi": "265527970",
+   "name": "PADDINGTON",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12739,
+   "lon": -15.42691,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:44Z",
+   "nm": 1.1
+  },
+  {
+   "mmsi": "227059110",
+   "name": "YAKAMOZ",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12858,
+   "lon": -15.42471,
+   "cog": 306.3,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:46Z",
+   "nm": 1.1
+  },
+  {
+   "mmsi": "244030398",
+   "name": "MAD SCIENCE",
+   "type": "pleasure craft",
+   "type_code": 37,
+   "lat": 28.12746,
+   "lon": -15.42512,
+   "cog": null,
+   "sog": 0.0,
+   "heading": 275,
+   "t": "2026-11-22T01:13:30Z",
+   "nm": 1.1
+  },
+  {
    "mmsi": "310802000",
    "name": "BORGLAND DOLPHIN",
    "type": "other",
    "type_code": 90,
    "lat": 28.15103,
-   "lon": -15.4078,
+   "lon": -15.40781,
    "cog": 247.0,
    "sog": 0.0,
    "heading": 0,
-   "t": "2026-11-22T01:08:29Z",
+   "t": "2026-11-22T01:14:29Z",
+   "nm": 1.1
+  },
+  {
+   "mmsi": "316051185",
+   "name": "BLISS III",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12724,
+   "lon": -15.42612,
+   "cog": 268.5,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:43Z",
    "nm": 1.1
   },
   {
@@ -736,19 +905,6 @@
    "nm": 1.1
   },
   {
-   "mmsi": "227059110",
-   "name": "YAKAMOZ",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.12856,
-   "lon": -15.42474,
-   "cog": 306.3,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T01:09:43Z",
-   "nm": 1.1
-  },
-  {
    "mmsi": "261005598",
    "name": "BLUE DREAM CUARTO",
    "type": "sailing",
@@ -759,19 +915,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T01:09:54Z",
-   "nm": 1.1
-  },
-  {
-   "mmsi": "259041660",
-   "name": "LEIA",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.1286,
-   "lon": -15.42554,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T01:10:39Z",
    "nm": 1.1
   },
   {
@@ -827,19 +970,6 @@
    "nm": 1.1
   },
   {
-   "mmsi": "235056878",
-   "name": "AMARYLLIS",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.12728,
-   "lon": -15.42518,
-   "cog": 242.7,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:36:30Z",
-   "nm": 1.1
-  },
-  {
    "mmsi": "261004720",
    "name": "VENUS",
    "type": "sailing",
@@ -863,19 +993,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T00:03:37Z",
-   "nm": 1.1
-  },
-  {
-   "mmsi": "265527970",
-   "name": "PADDINGTON",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.1274,
-   "lon": -15.42692,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:03:44Z",
    "nm": 1.1
   },
   {
@@ -918,17 +1035,69 @@
    "nm": 1.1
   },
   {
-   "mmsi": "244030398",
-   "name": "MAD SCIENCE",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.12749,
-   "lon": -15.42514,
+   "mmsi": "232006113",
+   "name": "KALI",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12683,
+   "lon": -15.42667,
    "cog": null,
    "sog": 0.0,
-   "heading": 274,
-   "t": "2026-11-21T23:31:29Z",
-   "nm": 1.1
+   "heading": null,
+   "t": "2026-11-22T01:12:43Z",
+   "nm": 1.2
+  },
+  {
+   "mmsi": "224322240",
+   "name": "SPABUNKER 51",
+   "type": "tanker",
+   "type_code": 80,
+   "lat": 28.15471,
+   "lon": -15.40724,
+   "cog": 233.6,
+   "sog": 0.0,
+   "heading": 183,
+   "t": "2026-11-22T01:13:14Z",
+   "nm": 1.2
+  },
+  {
+   "mmsi": "224870000",
+   "name": "V.B. ADRIATICO",
+   "type": "tug",
+   "type_code": 52,
+   "lat": 28.13223,
+   "lon": -15.41012,
+   "cog": 356.8,
+   "sog": 7.0,
+   "heading": null,
+   "t": "2026-11-22T01:13:39Z",
+   "nm": 1.2
+  },
+  {
+   "mmsi": "224031240",
+   "name": "DRAGON",
+   "type": "pleasure craft",
+   "type_code": 37,
+   "lat": 28.12561,
+   "lon": -15.42651,
+   "cog": 149.7,
+   "sog": 0.1,
+   "heading": null,
+   "t": "2026-11-22T01:13:53Z",
+   "nm": 1.2
+  },
+  {
+   "mmsi": "261004502",
+   "name": "AMA DABLAM",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12584,
+   "lon": -15.42577,
+   "cog": 0.0,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:05Z",
+   "nm": 1.2
   },
   {
    "mmsi": "538071210",
@@ -944,19 +1113,6 @@
    "nm": 1.2
   },
   {
-   "mmsi": "261004502",
-   "name": "AMA DABLAM",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.12585,
-   "lon": -15.42577,
-   "cog": 0.0,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T01:08:05Z",
-   "nm": 1.2
-  },
-  {
    "mmsi": "228177320",
    "name": "PEGASUS",
    "type": "sailing",
@@ -967,19 +1123,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T01:08:22Z",
-   "nm": 1.2
-  },
-  {
-   "mmsi": "224322240",
-   "name": "SPABUNKER 51",
-   "type": "tanker",
-   "type_code": 80,
-   "lat": 28.15472,
-   "lon": -15.40724,
-   "cog": 224.3,
-   "sog": 0.0,
-   "heading": 183,
-   "t": "2026-11-22T01:08:53Z",
    "nm": 1.2
   },
   {
@@ -1074,6 +1217,58 @@
    "nm": 1.2
   },
   {
+   "mmsi": "654048710",
+   "name": "ALPHA PECHE 2",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.15924,
+   "lon": -15.40721,
+   "cog": null,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:21Z",
+   "nm": 1.3
+  },
+  {
+   "mmsi": "235099477",
+   "name": "TALULAH RUBY III",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12527,
+   "lon": -15.42475,
+   "cog": 354.7,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:12:42Z",
+   "nm": 1.3
+  },
+  {
+   "mmsi": "636021994",
+   "name": "MSC MICHIGAN VII",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.13031,
+   "lon": -15.41174,
+   "cog": 128.5,
+   "sog": 0.0,
+   "heading": 0,
+   "t": "2026-11-22T01:12:57Z",
+   "nm": 1.3
+  },
+  {
+   "mmsi": "261007244",
+   "name": "TXINIJO SOLOSAILOR",
+   "type": "sailing",
+   "type_code": 36,
+   "lat": 28.12438,
+   "lon": -15.42578,
+   "cog": 0.0,
+   "sog": 0.0,
+   "heading": null,
+   "t": "2026-11-22T01:14:17Z",
+   "nm": 1.3
+  },
+  {
    "mmsi": "225320000",
    "name": "COSTA ATLANTICA",
    "type": "dredging",
@@ -1100,19 +1295,6 @@
    "nm": 1.3
   },
   {
-   "mmsi": "654048710",
-   "name": "ALPHA PECHE 2",
-   "type": "fishing",
-   "type_code": 30,
-   "lat": 28.15921,
-   "lon": -15.40721,
-   "cog": null,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T01:09:19Z",
-   "nm": 1.3
-  },
-  {
    "mmsi": "265654160",
    "name": "EN MER",
    "type": "sailing",
@@ -1123,19 +1305,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-22T01:09:26Z",
-   "nm": 1.3
-  },
-  {
-   "mmsi": "224255540",
-   "name": "PILOT N",
-   "type": "pilot",
-   "type_code": 50,
-   "lat": 28.13224,
-   "lon": -15.40952,
-   "cog": 359.5,
-   "sog": 8.9,
-   "heading": null,
-   "t": "2026-11-22T01:10:18Z",
    "nm": 1.3
   },
   {
@@ -1152,43 +1321,17 @@
    "nm": 1.3
   },
   {
-   "mmsi": "235099477",
-   "name": "TALULAH RUBY III",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.12525,
-   "lon": -15.42475,
-   "cog": 359.3,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:36:40Z",
-   "nm": 1.3
-  },
-  {
-   "mmsi": "636021994",
-   "name": "MSC MICHIGAN VII",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.13031,
-   "lon": -15.41171,
-   "cog": 128.5,
-   "sog": 0.0,
-   "heading": 0,
-   "t": "2026-11-22T00:36:57Z",
-   "nm": 1.3
-  },
-  {
-   "mmsi": "261007244",
-   "name": "TXINIJO SOLOSAILOR",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.1244,
-   "lon": -15.42577,
-   "cog": 0.0,
-   "sog": 0.0,
-   "heading": null,
-   "t": "2026-11-22T00:02:39Z",
-   "nm": 1.3
+   "mmsi": "255806261",
+   "name": "LOLA B",
+   "type": null,
+   "type_code": null,
+   "lat": 28.12998,
+   "lon": -15.4097,
+   "cog": 356.5,
+   "sog": 7.0,
+   "heading": 355,
+   "t": "2026-11-22T01:12:38Z",
+   "nm": 1.4
   },
   {
    "mmsi": "219036059",
@@ -1217,43 +1360,30 @@
    "nm": 1.5
   },
   {
+   "mmsi": "212859000",
+   "name": "MERCEDES PINTO",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.16036,
+   "lon": -15.40159,
+   "cog": 315.0,
+   "sog": 0.0,
+   "heading": 179,
+   "t": "2026-11-22T01:14:39Z",
+   "nm": 1.6
+  },
+  {
    "mmsi": "224984000",
    "name": "VOLCAN DE TAIDIA",
    "type": "high-speed craft",
    "type_code": 40,
    "lat": 28.16065,
-   "lon": -15.40211,
+   "lon": -15.40212,
    "cog": 82.6,
    "sog": 0.0,
    "heading": 180,
-   "t": "2026-11-22T01:10:29Z",
+   "t": "2026-11-22T01:14:49Z",
    "nm": 1.6
-  },
-  {
-   "mmsi": "636022061",
-   "name": "ORIS SYNERGY",
-   "type": "tanker",
-   "type_code": 80,
-   "lat": 28.12526,
-   "lon": -15.40739,
-   "cog": 182.7,
-   "sog": 6.1,
-   "heading": null,
-   "t": "2026-11-22T01:10:08Z",
-   "nm": 1.6
-  },
-  {
-   "mmsi": "255806261",
-   "name": "LOLA B",
-   "type": null,
-   "type_code": null,
-   "lat": 28.1238,
-   "lon": -15.40928,
-   "cog": 356.2,
-   "sog": 6.7,
-   "heading": 354,
-   "t": "2026-11-22T01:09:29Z",
-   "nm": 1.7
   },
   {
    "mmsi": "538010335",
@@ -1269,16 +1399,42 @@
    "nm": 1.7
   },
   {
+   "mmsi": "636022061",
+   "name": "ORIS SYNERGY",
+   "type": "tanker",
+   "type_code": 80,
+   "lat": 28.12208,
+   "lon": -15.40751,
+   "cog": 182.5,
+   "sog": 5.5,
+   "heading": null,
+   "t": "2026-11-22T01:12:08Z",
+   "nm": 1.8
+  },
+  {
+   "mmsi": "538005087",
+   "name": "ATWOOD ADMIRAL",
+   "type": "other",
+   "type_code": 90,
+   "lat": 28.12371,
+   "lon": -15.40556,
+   "cog": 36.5,
+   "sog": 0.0,
+   "heading": 181,
+   "t": "2026-11-22T01:14:09Z",
+   "nm": 1.8
+  },
+  {
    "mmsi": "225423000",
    "name": "VOLCAN DE TINAMAR",
    "type": null,
    "type_code": null,
-   "lat": 28.15977,
-   "lon": -15.39852,
+   "lat": 28.15978,
+   "lon": -15.39853,
    "cog": 222.3,
    "sog": 0.0,
    "heading": 181,
-   "t": "2026-11-22T01:09:28Z",
+   "t": "2026-11-22T01:14:38Z",
    "nm": 1.8
   },
   {
@@ -1292,19 +1448,6 @@
    "sog": 0.1,
    "heading": 276,
    "t": "2026-11-22T00:34:49Z",
-   "nm": 1.8
-  },
-  {
-   "mmsi": "538005087",
-   "name": "ATWOOD ADMIRAL",
-   "type": "other",
-   "type_code": 90,
-   "lat": 28.12369,
-   "lon": -15.40554,
-   "cog": 36.5,
-   "sog": 0.0,
-   "heading": 181,
-   "t": "2026-11-22T00:02:07Z",
    "nm": 1.8
   },
   {
@@ -1325,13 +1468,26 @@
    "name": "PILOT W",
    "type": "other",
    "type_code": 99,
-   "lat": 28.11893,
-   "lon": -15.40616,
-   "cog": 170.7,
+   "lat": 28.11923,
+   "lon": -15.40347,
+   "cog": 20.7,
    "sog": 4.6,
    "heading": null,
-   "t": "2026-11-22T01:08:59Z",
-   "nm": 2.0
+   "t": "2026-11-22T01:13:19Z",
+   "nm": 2.1
+  },
+  {
+   "mmsi": "224533000",
+   "name": "VB MEDITERRANEO",
+   "type": "tug",
+   "type_code": 52,
+   "lat": 28.1171,
+   "lon": -15.40641,
+   "cog": 142.6,
+   "sog": 4.8,
+   "heading": null,
+   "t": "2026-11-22T01:14:34Z",
+   "nm": 2.1
   },
   {
    "mmsi": "311031900",
@@ -1455,13 +1611,13 @@
    "name": "PANAMA 100",
    "type": "tanker",
    "type_code": 80,
-   "lat": 28.0648,
-   "lon": -15.39192,
-   "cog": 276.0,
+   "lat": 28.06472,
+   "lon": -15.39078,
+   "cog": 47.0,
    "sog": 0.0,
-   "heading": 12,
-   "t": "2026-11-22T00:35:57Z",
-   "nm": 5.2
+   "heading": 336,
+   "t": "2026-11-22T01:12:26Z",
+   "nm": 5.3
   },
   {
    "mmsi": "477021900",
@@ -1559,50 +1715,417 @@
    "name": "GLOVIS SUPREME",
    "type": "cargo",
    "type_code": 70,
-   "lat": 28.50913,
-   "lon": -15.25406,
-   "cog": 197.7,
+   "lat": 28.49608,
+   "lon": -15.25748,
+   "cog": 194.4,
    "sog": 1.3,
    "heading": 304,
-   "t": "2026-11-22T00:35:26Z",
-   "nm": 23.7
+   "t": "2026-11-22T01:12:47Z",
+   "nm": 22.9
   }
  ],
  "known": {
   "211399160": {
    "name": "MADLA",
    "type_code": 36,
-   "t": "2026-11-22T01:10:57Z"
+   "t": "2026-11-22T01:14:54Z"
   },
   "224227570": {
    "name": "PILOT W",
-   "t": "2026-11-22T01:10:57Z",
+   "t": "2026-11-22T01:14:54Z",
    "type_code": 99
   },
   "431038000": {
    "name": "SHOSHIN MARU NO.83",
-   "t": "2026-11-22T01:10:57Z",
+   "t": "2026-11-22T01:14:54Z",
    "type_code": 30
+  },
+  "227939430": {
+   "type_code": 37,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "ANEMIS"
+  },
+  "257433550": {
+   "name": "ERVIKA",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "224239000": {
+   "name": "BARLOVENTO EXPRESS",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 40
+  },
+  "224322240": {
+   "name": "SPABUNKER 51",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 80
+  },
+  "227059110": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "YAKAMOZ"
+  },
+  "225423000": {
+   "name": "VOLCAN DE TINAMAR",
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "255806261": {
+   "name": "LOLA B",
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "432045000": {
+   "name": "KORYO MARU NO.81",
+   "type_code": 0,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "224074840": {
+   "name": "SIXTEEN",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "629009356": {
+   "name": "ATLANTIC WHALE",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 30
+  },
+  "224302000": {
+   "name": "ROCKFISH",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 89
+  },
+  "261004502": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "AMA DABLAM"
+  },
+  "654048710": {
+   "type_code": 30,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "ALPHA PECHE 2"
+  },
+  "310802000": {
+   "name": "BORGLAND DOLPHIN",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 90
+  },
+  "238065340": {
+   "type_code": 37,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "TWIN ELLI"
+  },
+  "224271630": {
+   "name": "VB DORAMAS",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 52
+  },
+  "224984000": {
+   "name": "VOLCAN DE TAIDIA",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 40
+  },
+  "563176300": {
+   "name": "LOWLANDS FREEDOM",
+   "type_code": 70,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "316061084": {
+   "name": "PROMESSA",
+   "type_code": 37,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "636022061": {
+   "name": "ORIS SYNERGY",
+   "type_code": 80,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "203245928": {
+   "name": "EHMI",
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "225994676": {
+   "name": "AQUILON",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "224255540": {
+   "name": "PILOT N",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 50
+  },
+  "355794000": {
+   "name": "IRENE",
+   "type_code": 99,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "212859000": {
+   "name": "MERCEDES PINTO",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 40
+  },
+  "332001000": {
+   "name": "SANT YAGO TRES",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 30
+  },
+  "232064905": {
+   "name": "NIKAN 4",
+   "type_code": 37,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "261007244": {
+   "name": "TXINIJO SOLOSAILOR",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "235056878": {
+   "name": "AMARYLLIS",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "224870000": {
+   "name": "V.B. ADRIATICO",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 52
+  },
+  "256751000": {
+   "name": "BERENICE CUBE",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "368398270": {
+   "name": "SV ABILITY",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "441133000": {
+   "name": "GLOVIS SUPREME",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 70
+  },
+  "538072527": {
+   "name": "SV SERENITY",
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "461000160": {
+   "name": "AL BARAKA",
+   "type_code": 30,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "248637000": {
+   "name": "PANAMA 100",
+   "type_code": 80,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "311001586": {
+   "name": "CALLISTO",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 70
+  },
+  "232006113": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "KALI"
+  },
+  "636021994": {
+   "name": "MSC MICHIGAN VII",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 70
+  },
+  "225991585": {
+   "type_code": 37,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "HAIKU"
+  },
+  "224205780": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "LADY PAO"
+  },
+  "235099477": {
+   "name": "TALULAH RUBY III",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "224533000": {
+   "name": "VB MEDITERRANEO",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 52
+  },
+  "224456789": {
+   "type_code": 0,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "431099000": {
+   "name": "RYOAN MARU NO87",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 30
+  },
+  "261012022": {
+   "name": "BABY BLUE",
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "538005087": {
+   "name": "ATWOOD ADMIRAL",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 90
+  },
+  "538010623": {
+   "name": "NOBLE  VALIANT",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 99
+  },
+  "261007183": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "ROBIN B"
+  },
+  "341224001": {
+   "name": "JOHN PAUL DE JORIA",
+   "type_code": 56,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "211466900": {
+   "name": "EMOTION",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "224224940": {
+   "name": "PERENQUEN CUATRO",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "339000388": {
+   "name": "DINORA",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "265515360": {
+   "name": "ROYAL SALUTE",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "261004720": {
+   "name": "VENUS",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "255806256": {
+   "name": "MSC VALDIVIA II",
+   "type_code": 79,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "265527970": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "PADDINGTON"
+  },
+  "636026320": {
+   "name": "XANTHI",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 70
+  },
+  "368442620": {
+   "name": "LUCKY 13",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 37
+  },
+  "244030398": {
+   "name": "MAD SCIENCE",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 37
+  },
+  "620819000": {
+   "type_code": 52,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "SURVIVAL"
+  },
+  "265068670": {
+   "name": "HEART OF GOLD",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "236538000": {
+   "name": "SANCO SPIRIT",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 90
+  },
+  "312884000": {
+   "name": "FISHING KORAL",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 30
+  },
+  "249800000": {
+   "name": "IMLADRIS",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "244020374": {
+   "name": "BREUGHEL",
+   "type_code": 33,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "235002203": {
+   "name": "MAUI 4",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "224031240": {
+   "type_code": 37,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "DRAGON"
+  },
+  "677030500": {
+   "name": "LADY MINA",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 70
+  },
+  "231888000": {
+   "name": "GRETTIR STERKI",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 52
+  },
+  "255805967": {
+   "name": "MSC LENA F",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 70
+  },
+  "225922990": {
+   "name": "KING EDWARD",
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z"
+  },
+  "235113403": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "GAVIOTA"
+  },
+  "312676000": {
+   "name": "FISHING FORCE",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 30
+  },
+  "224276650": {
+   "name": "MOJITO OCHO",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 36
+  },
+  "316051185": {
+   "type_code": 36,
+   "t": "2026-11-22T01:14:54Z",
+   "name": "BLISS III"
+  },
+  "577275000": {
+   "name": "R/V GYRE",
+   "t": "2026-11-22T01:14:54Z",
+   "type_code": 0
   },
   "225320000": {
    "name": "COSTA ATLANTICA",
    "t": "2026-11-22T01:10:57Z",
    "type_code": 33
-  },
-  "227939430": {
-   "type_code": 37,
-   "t": "2026-11-22T01:10:57Z",
-   "name": "ANEMIS"
-  },
-  "257433550": {
-   "name": "ERVIKA",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 36
-  },
-  "224239000": {
-   "name": "BARLOVENTO EXPRESS",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 40
   },
   "225345000": {
    "name": "ESPS TOFINO A-32",
@@ -1644,53 +2167,15 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 36
   },
-  "224322240": {
-   "name": "SPABUNKER 51",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 80
-  },
-  "227059110": {
-   "type_code": 36,
-   "t": "2026-11-22T01:10:57Z",
-   "name": "YAKAMOZ"
-  },
-  "225423000": {
-   "name": "VOLCAN DE TINAMAR",
-   "t": "2026-11-22T01:10:57Z"
-  },
   "477021900": {
    "name": "HUA XING HAI",
    "t": "2026-11-22T01:10:57Z",
    "type_code": 70
   },
-  "255806261": {
-   "name": "LOLA B",
-   "t": "2026-11-22T01:10:57Z"
-  },
-  "432045000": {
-   "name": "KORYO MARU NO.81",
-   "type_code": 0,
-   "t": "2026-11-22T01:10:57Z"
-  },
-  "224074840": {
-   "name": "SIXTEEN",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 36
-  },
   "224292160": {
    "name": "V.B. TAMARAN",
    "t": "2026-11-22T01:10:57Z",
    "type_code": 52
-  },
-  "629009356": {
-   "name": "ATLANTIC WHALE",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 30
-  },
-  "224302000": {
-   "name": "ROCKFISH",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 89
   },
   "235009170": {
    "name": "HUMMINGBIRD",
@@ -1712,20 +2197,10 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 40
   },
-  "261004502": {
-   "type_code": 36,
-   "t": "2026-11-22T01:10:57Z",
-   "name": "AMA DABLAM"
-  },
   "265749150": {
    "name": "MAGDA",
    "t": "2026-11-22T01:10:57Z",
    "type_code": 36
-  },
-  "654048710": {
-   "type_code": 30,
-   "t": "2026-11-22T01:10:57Z",
-   "name": "ALPHA PECHE 2"
   },
   "512222620": {
    "name": "KORIMAKO 1",
@@ -1742,25 +2217,10 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 37
   },
-  "310802000": {
-   "name": "BORGLAND DOLPHIN",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 90
-  },
   "224115370": {
    "name": "ARVIK SOLO SAILOR",
    "type_code": 36,
    "t": "2026-11-22T01:10:57Z"
-  },
-  "238065340": {
-   "type_code": 37,
-   "t": "2026-11-22T01:10:57Z",
-   "name": "TWIN ELLI"
-  },
-  "224271630": {
-   "name": "VB DORAMAS",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 52
   },
   "203702300": {
    "type_code": 36,
@@ -1771,11 +2231,6 @@
    "name": "NICOBAR",
    "type_code": 52,
    "t": "2026-11-22T01:10:57Z"
-  },
-  "224984000": {
-   "name": "VOLCAN DE TAIDIA",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 40
   },
   "353123000": {
    "name": "MINNEAPOLIS MIYO",
@@ -1792,16 +2247,6 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 36
   },
-  "563176300": {
-   "name": "LOWLANDS FREEDOM",
-   "type_code": 70,
-   "t": "2026-11-22T01:10:57Z"
-  },
-  "316061084": {
-   "name": "PROMESSA",
-   "type_code": 37,
-   "t": "2026-11-22T01:10:57Z"
-  },
   "265721060": {
    "name": "SANDVITA",
    "t": "2026-11-22T01:10:57Z"
@@ -1816,18 +2261,8 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 37
   },
-  "636022061": {
-   "name": "ORIS SYNERGY",
-   "type_code": 80,
-   "t": "2026-11-22T01:10:57Z"
-  },
   "227381430": {
    "name": "ENJOY",
-   "type_code": 36,
-   "t": "2026-11-22T01:10:57Z"
-  },
-  "203245928": {
-   "name": "EHMI",
    "type_code": 36,
    "t": "2026-11-22T01:10:57Z"
   },
@@ -1841,20 +2276,10 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 36
   },
-  "225994676": {
-   "name": "AQUILON",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 36
-  },
   "228177320": {
    "type_code": 36,
    "t": "2026-11-22T01:10:57Z",
    "name": "PEGASUS"
-  },
-  "224255540": {
-   "name": "PILOT N",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 50
   },
   "431600000": {
    "name": "SHOEI MARU NO.127",
@@ -1865,16 +2290,6 @@
    "name": "DEEPSEA",
    "t": "2026-11-22T01:10:57Z",
    "type_code": 36
-  },
-  "355794000": {
-   "name": "IRENE",
-   "type_code": 99,
-   "t": "2026-11-22T01:10:57Z"
-  },
-  "212859000": {
-   "name": "MERCEDES PINTO",
-   "t": "2026-11-22T01:10:57Z",
-   "type_code": 40
   },
   "538012124": {
    "name": "TOPAZ CAPTAIN",
@@ -1895,11 +2310,6 @@
    "t": "2026-11-22T01:10:57Z",
    "type_code": 36
   },
-  "332001000": {
-   "name": "SANT YAGO TRES",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 30
-  },
   "266263000": {
    "name": "ELIDA V",
    "t": "2026-11-22T00:37:01Z",
@@ -1914,16 +2324,6 @@
    "name": "CHARADA",
    "t": "2026-11-22T00:37:01Z",
    "type_code": 37
-  },
-  "232064905": {
-   "name": "NIKAN 4",
-   "type_code": 37,
-   "t": "2026-11-22T00:37:01Z"
-  },
-  "261007244": {
-   "name": "TXINIJO SOLOSAILOR",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 36
   },
   "219019216": {
    "name": "HAPPILY",
@@ -1950,38 +2350,8 @@
    "t": "2026-11-22T00:37:01Z",
    "type_code": 37
   },
-  "235056878": {
-   "name": "AMARYLLIS",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 36
-  },
-  "224870000": {
-   "name": "V.B. ADRIATICO",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 52
-  },
-  "256751000": {
-   "name": "BERENICE CUBE",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 36
-  },
   "224307270": {
    "name": "XILVIA",
-   "type_code": 36,
-   "t": "2026-11-22T00:37:01Z"
-  },
-  "368398270": {
-   "name": "SV ABILITY",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 36
-  },
-  "441133000": {
-   "name": "GLOVIS SUPREME",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 70
-  },
-  "538072527": {
-   "name": "SV SERENITY",
    "type_code": 36,
    "t": "2026-11-22T00:37:01Z"
   },
@@ -1990,20 +2360,10 @@
    "type_code": 0,
    "t": "2026-11-22T00:37:01Z"
   },
-  "461000160": {
-   "name": "AL BARAKA",
-   "type_code": 30,
-   "t": "2026-11-22T00:37:01Z"
-  },
   "654017500": {
    "name": "AL AWAM",
    "t": "2026-11-22T00:37:01Z",
    "type_code": 0
-  },
-  "248637000": {
-   "name": "PANAMA 100",
-   "type_code": 80,
-   "t": "2026-11-22T00:37:01Z"
   },
   "224098360": {
    "name": "MENENES DOS",
@@ -2030,11 +2390,6 @@
    "type_code": 37,
    "t": "2026-11-22T00:37:01Z"
   },
-  "311001586": {
-   "name": "CALLISTO",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 70
-  },
   "538012843": {
    "name": "ACE ARISTOTELIS",
    "t": "2026-11-22T00:37:01Z",
@@ -2045,30 +2400,15 @@
    "t": "2026-11-22T00:37:01Z",
    "type_code": 36
   },
-  "232006113": {
-   "type_code": 36,
-   "t": "2026-11-22T00:37:01Z",
-   "name": "KALI"
-  },
   "225993983": {
    "name": "MAXIMUS",
    "t": "2026-11-22T00:37:01Z",
    "type_code": 36
   },
-  "636021994": {
-   "name": "MSC MICHIGAN VII",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 70
-  },
   "244170792": {
    "name": "MASARAP",
    "t": "2026-11-22T00:37:01Z",
    "type_code": 36
-  },
-  "225991585": {
-   "type_code": 37,
-   "t": "2026-11-22T00:37:01Z",
-   "name": "HAIKU"
   },
   "367456340": {
    "type_code": 36,
@@ -2085,18 +2425,8 @@
    "t": "2026-11-22T00:37:01Z",
    "type_code": 51
   },
-  "224205780": {
-   "type_code": 36,
-   "t": "2026-11-22T00:37:01Z",
-   "name": "LADY PAO"
-  },
   "225994849": {
    "name": "HASTA LA VISTA",
-   "t": "2026-11-22T00:37:01Z",
-   "type_code": 36
-  },
-  "235099477": {
-   "name": "TALULAH RUBY III",
    "t": "2026-11-22T00:37:01Z",
    "type_code": 36
   },
@@ -2115,15 +2445,6 @@
    "t": "2026-11-22T00:04:33Z",
    "name": "ATALAYA"
   },
-  "224533000": {
-   "name": "VB MEDITERRANEO",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 52
-  },
-  "224456789": {
-   "type_code": 0,
-   "t": "2026-11-22T00:04:33Z"
-  },
   "311378000": {
    "name": "MARELLA DISCOVERY 2",
    "t": "2026-11-22T00:04:33Z",
@@ -2133,16 +2454,6 @@
    "name": "OUZEL",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 36
-  },
-  "431099000": {
-   "name": "RYOAN MARU NO87",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 30
-  },
-  "261012022": {
-   "name": "BABY BLUE",
-   "type_code": 36,
-   "t": "2026-11-22T00:04:33Z"
   },
   "636015498": {
    "name": "NIREAS",
@@ -2154,11 +2465,6 @@
    "t": "2026-11-22T00:04:33Z",
    "name": "SUNSHINELIVE"
   },
-  "538005087": {
-   "name": "ATWOOD ADMIRAL",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 90
-  },
   "229873000": {
    "name": "MARIA IMMACULATA",
    "t": "2026-11-22T00:04:33Z",
@@ -2168,16 +2474,6 @@
    "name": "UHL FORTUNE",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 70
-  },
-  "538010623": {
-   "name": "NOBLE  VALIANT",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 99
-  },
-  "261007183": {
-   "type_code": 36,
-   "t": "2026-11-22T00:04:33Z",
-   "name": "ROBIN B"
   },
   "225993385": {
    "name": "VB BANDAMA",
@@ -2194,18 +2490,8 @@
    "t": "2026-11-22T00:04:33Z",
    "name": "SEVILLA"
   },
-  "341224001": {
-   "name": "JOHN PAUL DE JORIA",
-   "type_code": 56,
-   "t": "2026-11-22T00:04:33Z"
-  },
   "211222860": {
    "name": "PETER VON SEESTERMUE",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 36
-  },
-  "211466900": {
-   "name": "EMOTION",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 36
   },
@@ -2219,35 +2505,15 @@
    "t": "2026-11-22T00:04:33Z",
    "type_code": 52
   },
-  "224224940": {
-   "name": "PERENQUEN CUATRO",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 36
-  },
   "228317970": {
    "name": "AGUAMENTI II",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 37
   },
-  "339000388": {
-   "name": "DINORA",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 36
-  },
-  "265515360": {
-   "name": "ROYAL SALUTE",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 36
-  },
   "636017875": {
    "name": "SEA BAZOU",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 80
-  },
-  "261004720": {
-   "name": "VENUS",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 36
   },
   "224853830": {
    "type_code": 36,
@@ -2269,16 +2535,6 @@
    "t": "2026-11-22T00:04:33Z",
    "type_code": 36
   },
-  "255806256": {
-   "name": "MSC VALDIVIA II",
-   "type_code": 79,
-   "t": "2026-11-22T00:04:33Z"
-  },
-  "265527970": {
-   "type_code": 36,
-   "t": "2026-11-22T00:04:33Z",
-   "name": "PADDINGTON"
-  },
   "232058300": {
    "name": "RISING STAR",
    "t": "2026-11-22T00:04:33Z",
@@ -2288,11 +2544,6 @@
    "name": "IO",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 36
-  },
-  "636026320": {
-   "name": "XANTHI",
-   "t": "2026-11-21T23:32:05Z",
-   "type_code": 70
   },
   "265654100": {
    "name": "SHADDOCK SWE",
@@ -2304,39 +2555,19 @@
    "t": "2026-11-21T23:32:05Z",
    "type_code": 80
   },
-  "368442620": {
-   "name": "LUCKY 13",
-   "t": "2026-11-21T23:32:05Z",
-   "type_code": 37
-  },
   "225933570": {
    "type_code": 36,
    "t": "2026-11-21T23:32:05Z",
    "name": "CARPE VENTUM"
-  },
-  "244030398": {
-   "name": "MAD SCIENCE",
-   "t": "2026-11-21T23:32:05Z",
-   "type_code": 37
   },
   "636021944": {
    "name": "KRITI ENERGY",
    "t": "2026-11-21T23:32:05Z",
    "type_code": 80
   },
-  "620819000": {
-   "type_code": 52,
-   "t": "2026-11-21T23:32:05Z",
-   "name": "SURVIVAL"
-  },
   "563160600": {
    "name": "FABIA SCHULTE",
    "t": "2026-11-21T23:32:05Z"
-  },
-  "265068670": {
-   "name": "HEART OF GOLD",
-   "t": "2026-11-21T23:32:05Z",
-   "type_code": 36
   },
   "256001578": {
    "type_code": 36,
@@ -2423,11 +2654,6 @@
    "t": "2026-11-21T22:59:36Z",
    "type_code": 36
   },
-  "236538000": {
-   "name": "SANCO SPIRIT",
-   "t": "2026-11-21T22:59:36Z",
-   "type_code": 90
-  },
   "203246171": {
    "name": "NELLY",
    "t": "2026-11-21T22:59:36Z",
@@ -2442,10 +2668,6 @@
    "name": "RENATA II",
    "t": "2026-11-21T22:59:36Z",
    "type_code": 36
-  },
-  "312884000": {
-   "name": "FISHING KORAL",
-   "t": "2026-11-21T22:59:36Z"
   },
   "224160680": {
    "name": "CANTAMANANA",
@@ -2466,26 +2688,6 @@
    "type_code": 36,
    "t": "2026-11-21T22:59:36Z",
    "name": "MIGHTY KING"
-  },
-  "249800000": {
-   "name": "IMLADRIS",
-   "t": "2026-11-21T22:59:36Z",
-   "type_code": 36
-  },
-  "244020374": {
-   "name": "BREUGHEL",
-   "type_code": 33,
-   "t": "2026-11-21T22:59:36Z"
-  },
-  "235002203": {
-   "name": "MAUI 4",
-   "t": "2026-11-21T22:59:36Z",
-   "type_code": 36
-  },
-  "224031240": {
-   "type_code": 37,
-   "t": "2026-11-21T22:27:03Z",
-   "name": "DRAGON"
   },
   "636093289": {
    "name": "ROSTRUM SOLAR",
@@ -2522,11 +2724,6 @@
    "t": "2026-11-21T22:27:03Z",
    "type_code": 36
   },
-  "677030500": {
-   "name": "LADY MINA",
-   "t": "2026-11-21T22:27:03Z",
-   "type_code": 70
-  },
   "257830570": {
    "name": "BLUENOTE",
    "t": "2026-11-21T22:27:03Z",
@@ -2537,40 +2734,20 @@
    "t": "2026-11-21T22:27:03Z",
    "type_code": 90
   },
-  "231888000": {
-   "name": "GRETTIR STERKI",
-   "t": "2026-11-21T22:27:03Z",
-   "type_code": 52
-  },
   "636024562": {
    "name": "MSC ARAINA III",
    "t": "2026-11-21T22:27:03Z",
    "type_code": 79
-  },
-  "255805967": {
-   "name": "MSC LENA F",
-   "t": "2026-11-21T22:27:03Z",
-   "type_code": 70
   },
   "355576000": {
    "name": "SCARLET EAGLE",
    "t": "2026-11-21T21:54:38Z",
    "type_code": 70
   },
-  "225922990": {
-   "name": "KING EDWARD",
-   "type_code": 36,
-   "t": "2026-11-21T21:54:38Z"
-  },
   "240728700": {
    "name": "ATHENA BLU",
    "t": "2026-11-21T21:54:38Z",
    "type_code": 36
-  },
-  "235113403": {
-   "type_code": 36,
-   "t": "2026-11-21T21:54:38Z",
-   "name": "GAVIOTA"
   },
   "249912000": {
    "name": "PETROMAR",
@@ -2591,11 +2768,6 @@
    "type_code": 37,
    "t": "2026-11-21T21:54:38Z"
   },
-  "312676000": {
-   "name": "FISHING FORCE",
-   "t": "2026-11-21T21:22:11Z",
-   "type_code": 30
-  },
   "209345000": {
    "name": "CONTSHIP NEW",
    "t": "2026-11-21T21:22:11Z",
@@ -2612,11 +2784,6 @@
   },
   "225992299": {
    "name": "LATITUD28",
-   "t": "2026-11-21T21:22:11Z",
-   "type_code": 36
-  },
-  "224276650": {
-   "name": "MOJITO OCHO",
    "t": "2026-11-21T21:22:11Z",
    "type_code": 36
   },
@@ -2644,11 +2811,6 @@
    "type_code": 36,
    "t": "2026-11-21T20:49:08Z",
    "name": "DON  QUIJOTE"
-  },
-  "316051185": {
-   "type_code": 36,
-   "t": "2026-11-21T20:49:08Z",
-   "name": "BLISS III"
   },
   "265680850": {
    "name": "SINE CURA II",
@@ -2906,11 +3068,6 @@
    "name": "NQ FREESIA",
    "t": "2026-11-21T10:52:17Z",
    "type_code": 82
-  },
-  "577275000": {
-   "name": "R/V GYRE",
-   "t": "2026-11-21T10:52:17Z",
-   "type_code": 0
   },
   "538013276": {
    "name": "YASA BLUEBIRD",
