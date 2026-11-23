@@ -661,6 +661,19 @@ VF_NEAR_NM = float(os.environ.get("VF_NEAR_NM", "50"))
 # the gate below never asks while anything fresher already exists, so a leg where the
 # free sources keep arriving is a leg that pays nothing.
 VF_SEA_H = float(os.environ.get("VF_SEA_H", "4"))
+# ...but four hours was a guess made when the account held a few hundred credits. On 22
+# November it was topped up to 9,572, to last until she is home on 29 May - and there is
+# no prize for arriving in Kristiansand with three thousand of them unspent. So out at sea
+# the spacing is worked out from the balance instead (vf_sea_spacing_h): what is left,
+# less a reserve and what the port days will cost, spread over the sea days left in the
+# plan. Asked again every round, from a balance the status check renews daily, so it
+# steers itself: a leg where the free sources kept arriving spends less, and the spacing
+# closes up; a leg that cost more opens it out.
+VF_SEA_MIN_H = float(os.environ.get("VF_SEA_MIN_H", "2"))
+VF_SEA_MAX_H = float(os.environ.get("VF_SEA_MAX_H", "6"))
+VF_RESERVE = float(os.environ.get("VF_RESERVE", "300"))      # never planned to be spent
+VF_ASK_COST = float(os.environ.get("VF_ASK_COST", "11"))     # shore (1) then satellite (10)
+VF_PORT_DAY_COST = float(os.environ.get("VF_PORT_DAY_COST", "10"))
 # What counts as lying still, on the days the ship herself does not say: every fix we
 # have from the last VF_STILL_BACK_H hours inside a VF_STILL_NM circle, and those fixes
 # spanning at least VF_STILL_H of real time. The look-back is deliberately wider than
@@ -930,6 +943,79 @@ def _vf_balance(receipt: dict) -> dict:
     return out
 
 
+def _voyage_days_left(plan_ports: list, until) -> tuple[float, float]:
+    """(sea days, port days) between now and `until`, from the plan's arrive/depart dates.
+
+    A day is at sea when it falls between leaving one port and arriving at the next,
+    and in port between arriving and leaving. The plan is tentative, but its shape - three
+    weeks across to the Azores, a fortnight in New York - is what decides the budget.
+    """
+    start = now_utc()
+    sea = port = 0.0
+
+    def span(a, b):
+        a, b = max(a, start), min(b, until)
+        return max(0.0, (b - a).total_seconds() / 86400)
+
+    def day(s):
+        return datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+    prev_depart = None
+    for q in plan_ports or []:
+        try:
+            arrive = day(q["arrive"]) if q.get("arrive") else None
+            depart = day(q["depart"]) + timedelta(days=1) if q.get("depart") else None
+        except (TypeError, ValueError):
+            continue
+        if prev_depart and arrive and arrive > prev_depart:
+            sea += span(prev_depart, arrive)
+        if arrive and depart and depart > arrive:
+            port += span(arrive, depart)
+        prev_depart = depart or arrive or prev_depart
+    return sea, port
+
+
+def vf_sea_spacing_h(receipt: dict, plan_ports: list) -> tuple[float, str]:
+    """How many hours apart to ask at sea, so the credits last to the end and no longer.
+
+    Returns (hours, a line for the log). Falls back to VF_SEA_H when the balance or the
+    plan cannot be read - a budget worked out from nothing is not a budget.
+    """
+    try:
+        credits = float(receipt.get("credits"))
+    except (TypeError, ValueError):
+        return VF_SEA_H, f"no balance on record - every {VF_SEA_H:.1f} h"
+    ends = []
+    for q in plan_ports or []:
+        for k in ("arrive", "depart"):
+            if q.get(k):
+                try:
+                    ends.append(datetime.strptime(q[k], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                                + timedelta(days=1))
+                except ValueError:
+                    pass
+    if not ends:
+        return VF_SEA_H, f"no plan to budget against - every {VF_SEA_H:.1f} h"
+    until = max(ends)
+    exp = _vf_time(str(receipt["expires"])) if receipt.get("expires") else None
+    try:
+        if exp and parse_iso(exp) < until:
+            until = parse_iso(exp)          # nothing is worth saving past the day they lapse
+    except Exception:
+        pass
+    sea, port = _voyage_days_left(plan_ports, until)
+    if sea <= 0.25:
+        return VF_SEA_MIN_H, f"{credits:.0f} credits and no sea days left in the plan"
+    spare = credits - VF_RESERVE - port * VF_PORT_DAY_COST
+    if spare <= 0:
+        return VF_SEA_MAX_H, (f"{credits:.0f} credits, all needed for {port:.0f} port days"
+                              f" and the reserve - every {VF_SEA_MAX_H:.1f} h")
+    per_day = spare / VF_ASK_COST / sea
+    hours = min(VF_SEA_MAX_H, max(VF_SEA_MIN_H, 24 / per_day))
+    return hours, (f"{credits:.0f} credits for {sea:.0f} sea days and {port:.0f} port days"
+                   f" left - every {hours:.1f} h at sea")
+
+
 def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) -> list:
     """A paid position, but only when the free ones have left the page unable to do its job."""
     if not VF_KEY:
@@ -1003,7 +1089,9 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
             port, off = q, d
     at_sea = off is None or off > VF_NEAR_NM
     if at_sea:
-        wait_min, state = VF_SEA_H * 60, "at sea"
+        sea_h, budget_line = vf_sea_spacing_h(receipt, plan_ports)
+        wait_min, state = sea_h * 60, "at sea"
+        print(f"  * VesselFinder budget: {budget_line}")
     elif _going_somewhere(track_points):
         wait_min, state = VF_MOVING_MIN, "under way"
     elif _move_expected_today(reach):
@@ -1043,7 +1131,13 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is {state}"
           f" near {port['name'] if port else 'a port'} - asking")
 
-    interval = f"&interval={int(VF_INTERVAL)}" if VF_INTERVAL.isdigit() and int(VF_INTERVAL) > 0 else ""
+    # At sea the interval follows the spacing: asked every three hours with interval=240,
+    # a position bought last time (three hours old) is still inside it and would be sold
+    # to us again. VF_INTERVAL stays the ceiling; near a port it is used as it stands.
+    iv = int(VF_INTERVAL) if VF_INTERVAL.isdigit() else 0
+    if iv > 0 and at_sea:
+        iv = max(30, min(iv, int(wait_min)))
+    interval = f"&interval={iv}" if iv > 0 else ""
     NOTHING_NEW = "nothing newer than the interval"
 
     def _try(sat: bool):
@@ -1087,7 +1181,7 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         # again at its usual spacing.
         write_json(VF_STATE, dict(read_json(VF_STATE, {}) or {}, failing=0, last_error=None,
                                   nothing_new_utc=iso(now_utc())))
-        print(f"  -> VesselFinder: no position newer than {int(VF_INTERVAL)} min"
+        print(f"  -> VesselFinder: no position newer than {iv} min"
               f" (interval) - nothing new to buy, carrying on")
         return []
     if not pt:
