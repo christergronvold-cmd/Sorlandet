@@ -2,22 +2,19 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-23T06:22:22Z",
+ "updated_utc": "2026-11-23T06:56:16Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
   "lat": 28.14598,
-  "lon": -15.42765,
+  "lon": -15.42764,
   "sog_kn": 0.0,
   "cog_deg": 174,
-  "heading_deg": 0,
+  "heading_deg": 1,
   "nav_status": 5,
-  "seen_utc": "2026-11-23T06:17:12Z",
+  "seen_utc": "2026-11-23T06:50:16Z",
   "source": "aisstream.io",
-  "destination": "ES LPA",
-  "draught_m": 4.1,
-  "eta_text": "18.11 10:00",
-  "nav_status_utc": "2026-11-23T06:17:12Z"
+  "nav_status_utc": "2026-11-23T06:50:16Z"
  },
  "voyage": {
   "destination": "ES LPA",
@@ -26,30 +23,30 @@
   "heard_utc": "2026-11-23T06:17:12Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-23T06:19:20Z",
+  "fetched_utc": "2026-11-23T06:51:48Z",
   "sea": {
    "wave_height_m": 1.14,
    "wave_direction_deg": 358,
    "wave_period_s": 7.8,
-   "swell_height_m": 0.84,
-   "swell_period_s": 7.5,
-   "wind_wave_height_m": 0.14,
+   "swell_height_m": 0.86,
+   "swell_period_s": 7.55,
+   "wind_wave_height_m": 0.12,
    "sea_temp_c": 23.4,
-   "time_utc": "2026-11-23T06:15"
+   "time_utc": "2026-11-23T06:45"
   },
   "air": {
-   "temp_c": 18.7,
-   "feels_c": 20.6,
-   "wind_ms": 1.81,
-   "gust_ms": 3.3,
-   "wind_direction_deg": 264,
-   "pressure_hpa": 1020.3,
-   "cloud_pct": 69,
+   "temp_c": 20.3,
+   "feels_c": null,
+   "wind_ms": 5.6,
+   "gust_ms": null,
+   "wind_direction_deg": 100,
+   "pressure_hpa": 1020.4,
+   "cloud_pct": 71.1,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-11-23T06:15",
-   "source": "open-meteo",
-   "fetched_utc": "2026-11-23T06:19:20Z"
+   "time_utc": "2026-11-23T06:00",
+   "source": "met.no",
+   "fetched_utc": "2026-11-23T06:52:20Z"
   }
  },
  "approach": {
@@ -57,19 +54,13 @@
  },
  "sun": {
   "moon": {
-   "age_days": 13.3,
+   "age_days": 13.4,
    "illumination": 0.98,
    "phase": "full moon"
-  },
-  "civil_timezone": "Atlantic/Canary",
-  "civil_place": "Las Palmas",
-  "civil_country": "Gran Canaria",
-  "sunrise_utc": "2026-11-23T07:29",
-  "sunset_utc": "2026-11-23T18:06",
-  "daylight_hours": 10.6
+  }
  },
  "stats": {
-  "points": 950,
+  "points": 952,
   "distance_nm": 4329.8,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
