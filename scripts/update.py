@@ -590,6 +590,15 @@ VF_URL = os.environ.get("VF_URL", "https://api.vesselfinder.com/vessels")
 # shore stations are asked first, and the satellites only when the shore has nothing
 # recent enough to be worth having.
 VF_SAT = os.environ.get("VF_SAT", "1").strip()
+# interval: "The maximum age of the returned positions (in minutes)" - their documentation,
+# api.vesselfinder.com/docs/vessels.html. VesselFinder recommended it, 23 November, so we
+# do not pay twice for the same satellite position: at sea the gate asks every four
+# hours, and without it the answer to the second question can be the very position that
+# was bought on the first. With interval=240 a position older than four hours is simply
+# not returned. That is an answer, not a failure - nothing new has been heard - and the
+# job goes on without counting it against the account (see _vf_nothing_new).
+# Empty or 0 leaves the parameter off.
+VF_INTERVAL = os.environ.get("VF_INTERVAL", "240").strip()
 # What is left in the account, and until when.
 #
 # Nothing asked this before, and on 27 October it cost forty-one hours. The credits ran
@@ -682,6 +691,29 @@ def _vf_time(raw: str) -> str | None:
         return iso(parse_iso(raw))
     except Exception:
         return None
+
+
+def _vf_nothing_new(body) -> bool:
+    """True when the reply says, in effect, "no position younger than the interval".
+
+    Their documentation does not say what that reply looks like, so this takes the shapes
+    it can reasonably be - an empty list, an empty object, or rows for the ship with no
+    AIS record in them - and nothing that carries an error. An error is an account or a
+    request gone wrong, and that must still be counted and shouted about.
+    """
+    if body in ([], {}, None, ""):
+        return body is not None
+    rows = body if isinstance(body, list) else [body]
+    for row in rows:
+        if not isinstance(row, dict):
+            return False
+        low = {str(k).lower(): v for k, v in row.items()}
+        if low.get("error") or low.get("errors") or low.get("message"):
+            return False
+        ais = row.get("AIS") if "AIS" in row else (row if "latitude" in low else None)
+        if ais:                                  # a real record: not "nothing new"
+            return False
+    return True
 
 
 def _vf_point(body) -> dict | None:
@@ -1011,8 +1043,11 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     print(f"  * VesselFinder: nothing newer than {quiet_min:.0f} min and she is {state}"
           f" near {port['name'] if port else 'a port'} - asking")
 
+    interval = f"&interval={int(VF_INTERVAL)}" if VF_INTERVAL.isdigit() and int(VF_INTERVAL) > 0 else ""
+    NOTHING_NEW = "nothing newer than the interval"
+
     def _try(sat: bool):
-        tail = who + ("&sat=1" if sat else "")
+        tail = who + ("&sat=1" if sat else "") + interval
         try:
             body = get_json(f"{VF_URL}?userkey={urllib.parse.quote(VF_KEY)}{tail}",
                             timeout=30)
@@ -1021,7 +1056,11 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
         if body is None:
             return None, "no reply body"
         got = _vf_point(body)
-        return (got, None) if got else (None, str(body)[:200])
+        if got:
+            return got, None
+        if interval and _vf_nothing_new(body):
+            return None, NOTHING_NEW
+        return None, str(body)[:200]
 
     # The shore stations first, at one credit.
     pt, why = _try(False)
@@ -1030,7 +1069,9 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
     if VF_SAT not in ("", "0"):
         too_old = pt is not None and _age_min(pt.get("seen_utc")) >= wait_min
         if pt is None or too_old:
-            print("  * terrestrial gave " + ("nothing usable" if pt is None
+            print("  * terrestrial gave " + (
+                  "nothing newer than the interval" if pt is None and why == NOTHING_NEW
+                  else "nothing usable" if pt is None
                   else f"a fix {_age_min(pt['seen_utc']):.0f} min old") + " - asking the"
                   " satellites, which is ten credits if they have something newer")
             sat_pt, sat_why = _try(True)
@@ -1039,6 +1080,16 @@ def fetch_from_vesselfinder(have: list, plan_ports: list, track_points: list) ->
             elif pt is None:
                 why = sat_why or why
 
+    if not pt and why == NOTHING_NEW:
+        # Nothing heard of her inside the interval, by shore or satellite. Not a fault:
+        # the account answered, it simply had nothing we have not already got, and the
+        # interval is what stopped us being charged for it again. Carry on; the gate asks
+        # again at its usual spacing.
+        write_json(VF_STATE, dict(read_json(VF_STATE, {}) or {}, failing=0, last_error=None,
+                                  nothing_new_utc=iso(now_utc())))
+        print(f"  -> VesselFinder: no position newer than {int(VF_INTERVAL)} min"
+              f" (interval) - nothing new to buy, carrying on")
+        return []
     if not pt:
         # An expired key, a spent balance, a changed shape: all land here. They used to
         # land here QUIETLY - the receipt kept the last good fix, nothing recorded that
