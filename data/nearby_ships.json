@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-24T03:10:24Z",
+ "generated_utc": "2026-11-24T03:15:16Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -294,6 +294,19 @@
    "nm": 0.6
   },
   {
+   "mmsi": "224322230",
+   "name": "SPABUNKER SESENTA",
+   "type": "tanker",
+   "type_code": 80,
+   "lat": 28.14188,
+   "lon": -15.41511,
+   "cog": 279.7,
+   "sog": 0.1,
+   "heading": 1,
+   "t": "2026-11-24T03:15:07Z",
+   "nm": 0.7
+  },
+  {
    "mmsi": "225902390",
    "name": "CHARADA",
    "type": "pleasure craft",
@@ -304,19 +317,6 @@
    "sog": 0.0,
    "heading": null,
    "t": "2026-11-24T03:07:49Z",
-   "nm": 0.7
-  },
-  {
-   "mmsi": "224322230",
-   "name": "SPABUNKER SESENTA",
-   "type": "tanker",
-   "type_code": 80,
-   "lat": 28.14189,
-   "lon": -15.4151,
-   "cog": 279.7,
-   "sog": 0.1,
-   "heading": 1,
-   "t": "2026-11-24T03:09:56Z",
    "nm": 0.7
   },
   {
@@ -1530,6 +1530,21 @@
   }
  ],
  "known": {
+  "224322230": {
+   "name": "SPABUNKER SESENTA",
+   "t": "2026-11-24T03:15:16Z",
+   "type_code": 80
+  },
+  "432045000": {
+   "name": "KORYO MARU NO.81",
+   "type_code": 0,
+   "t": "2026-11-24T03:15:16Z"
+  },
+  "461000160": {
+   "name": "AL BARAKA",
+   "type_code": 30,
+   "t": "2026-11-24T03:15:16Z"
+  },
   "211399160": {
    "name": "MADLA",
    "type_code": 36,
@@ -1544,11 +1559,6 @@
    "name": "PILOT W",
    "t": "2026-11-24T03:10:24Z",
    "type_code": 99
-  },
-  "224322230": {
-   "name": "SPABUNKER SESENTA",
-   "t": "2026-11-24T03:10:24Z",
-   "type_code": 80
   },
   "224139770": {
    "name": "ESP RAYO P42",
@@ -1903,11 +1913,6 @@
    "t": "2026-11-24T02:38:00Z",
    "type_code": 90
   },
-  "432045000": {
-   "name": "KORYO MARU NO.81",
-   "type_code": 0,
-   "t": "2026-11-24T02:38:00Z"
-  },
   "205788000": {
    "name": "LA BELLE DES OCEANS",
    "t": "2026-11-24T02:38:00Z"
@@ -2010,11 +2015,6 @@
    "name": "GRETTIR STERKI",
    "t": "2026-11-24T02:38:00Z",
    "type_code": 52
-  },
-  "461000160": {
-   "name": "AL BARAKA",
-   "type_code": 30,
-   "t": "2026-11-24T02:38:00Z"
   },
   "224290740": {
    "name": "HOODWINK VEGA",
