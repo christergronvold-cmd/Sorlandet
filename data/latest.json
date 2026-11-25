@@ -2,21 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-25T03:39:05Z",
+ "updated_utc": "2026-11-25T03:40:23Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
   "lat": 28.14598,
   "lon": -15.42766,
   "sog_kn": 0.0,
-  "cog_deg": 256.3,
-  "heading_deg": 0,
-  "nav_status": 5,
+  "cog_deg": 256,
+  "heading_deg": null,
   "seen_utc": "2026-11-25T03:31:54Z",
-  "source": "aisstream.io",
-  "destination": "ES LPA",
-  "draught_m": 4.1,
-  "eta_text": "18.11 10:00",
+  "source": "foundation",
+  "nav_status": 5,
   "nav_status_utc": "2026-11-25T03:31:54Z"
  },
  "voyage": {
@@ -26,7 +23,7 @@
   "heard_utc": "2026-11-25T03:31:54Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-25T03:36:02Z",
+  "fetched_utc": "2026-11-25T03:40:03Z",
   "sea": {
    "wave_height_m": 1.36,
    "wave_direction_deg": 13,
@@ -49,7 +46,7 @@
    "weather_code": 3,
    "time_utc": "2026-11-25T03:30",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-25T03:36:02Z"
+   "fetched_utc": "2026-11-25T03:40:03Z"
   }
  },
  "approach": {
@@ -69,7 +66,7 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 1082,
+  "points": 1080,
   "distance_nm": 4335.1,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
