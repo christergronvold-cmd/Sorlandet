@@ -2,51 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-25T04:46:34Z",
+ "updated_utc": "2026-11-25T05:16:24Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14598,
+  "lat": 28.14599,
   "lon": -15.42766,
   "sog_kn": 0.0,
   "cog_deg": 256.3,
-  "heading_deg": 1,
+  "heading_deg": 0,
   "nav_status": 5,
-  "seen_utc": "2026-11-25T04:22:56Z",
+  "seen_utc": "2026-11-25T05:13:51Z",
   "source": "aisstream.io",
-  "nav_status_utc": "2026-11-25T04:22:56Z"
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "eta_text": "18.11 10:00",
+  "nav_status_utc": "2026-11-25T05:13:51Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-25T03:31:54Z"
+  "heard_utc": "2026-11-25T05:13:51Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-25T04:46:13Z",
+  "fetched_utc": "2026-11-25T05:16:02Z",
   "sea": {
    "wave_height_m": 1.38,
-   "wave_direction_deg": 12,
-   "wave_period_s": 7.3,
-   "swell_height_m": 0.92,
+   "wave_direction_deg": 11,
+   "wave_period_s": 7.35,
+   "swell_height_m": 0.94,
    "swell_period_s": 4.9,
-   "wind_wave_height_m": 0.54,
+   "wind_wave_height_m": 0.56,
    "sea_temp_c": 23.3,
-   "time_utc": "2026-11-25T04:45"
+   "time_utc": "2026-11-25T05:15"
   },
   "air": {
-   "temp_c": 22.0,
-   "feels_c": 24.0,
-   "wind_ms": 3.01,
-   "gust_ms": 5.6,
-   "wind_direction_deg": 6,
-   "pressure_hpa": 1023.3,
+   "temp_c": 21.9,
+   "feels_c": 23.8,
+   "wind_ms": 3.22,
+   "gust_ms": 6.7,
+   "wind_direction_deg": 7,
+   "pressure_hpa": 1023.2,
    "cloud_pct": 100,
    "precip_mm": 0.0,
    "weather_code": 3,
-   "time_utc": "2026-11-25T04:45",
+   "time_utc": "2026-11-25T05:15",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-25T04:46:13Z"
+   "fetched_utc": "2026-11-25T05:16:02Z"
   }
  },
  "approach": {
@@ -66,7 +69,7 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 1081,
+  "points": 1083,
   "distance_nm": 4335.1,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
