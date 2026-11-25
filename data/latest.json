@@ -2,51 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-25T10:51:30Z",
+ "updated_utc": "2026-11-25T11:22:41Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14599,
-  "lon": -15.42767,
-  "sog_kn": null,
-  "cog_deg": null,
-  "heading_deg": null,
-  "seen_utc": "2026-11-25T10:34:50Z",
-  "source": "foundation",
+  "lat": 28.14598,
+  "lon": -15.42766,
+  "sog_kn": 0.0,
+  "cog_deg": 256.3,
+  "heading_deg": 1,
   "nav_status": 5,
-  "nav_status_utc": "2026-11-25T10:04:52Z"
+  "seen_utc": "2026-11-25T11:19:57Z",
+  "source": "aisstream.io",
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "eta_text": "18.11 10:00",
+  "nav_status_utc": "2026-11-25T11:19:57Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-25T10:40:50Z"
+  "heard_utc": "2026-11-25T11:19:57Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-25T10:48:28Z",
+  "fetched_utc": "2026-11-25T11:20:54Z",
   "sea": {
-   "wave_height_m": 1.66,
+   "wave_height_m": 1.68,
    "wave_direction_deg": 11,
-   "wave_period_s": 7.3,
-   "swell_height_m": 1.02,
-   "swell_period_s": 9.1,
-   "wind_wave_height_m": 0.82,
+   "wave_period_s": 7.35,
+   "swell_height_m": 1.04,
+   "swell_period_s": 8.9,
+   "wind_wave_height_m": 0.78,
    "sea_temp_c": 23.3,
-   "time_utc": "2026-11-25T10:45"
+   "time_utc": "2026-11-25T11:15"
   },
   "air": {
-   "temp_c": 22.3,
-   "feels_c": 22.7,
-   "wind_ms": 5.0,
-   "gust_ms": 9.5,
-   "wind_direction_deg": 37,
-   "pressure_hpa": 1025.4,
-   "cloud_pct": 89,
-   "precip_mm": 0.1,
-   "weather_code": 80,
-   "time_utc": "2026-11-25T10:45",
-   "source": "open-meteo",
-   "fetched_utc": "2026-11-25T10:48:28Z"
+   "temp_c": 21.7,
+   "feels_c": null,
+   "wind_ms": 9.0,
+   "gust_ms": null,
+   "wind_direction_deg": 55,
+   "pressure_hpa": 1025.6,
+   "cloud_pct": 71.1,
+   "precip_mm": 0.5,
+   "weather_code": 81,
+   "time_utc": "2026-11-25T11:00",
+   "source": "met.no",
+   "fetched_utc": "2026-11-25T11:21:26Z"
   }
  },
  "approach": {
@@ -54,20 +57,14 @@
  },
  "sun": {
   "moon": {
-   "age_days": 15.5,
+   "age_days": 15.6,
    "illumination": 0.99,
    "phase": "full moon"
-  },
-  "civil_timezone": "Atlantic/Canary",
-  "civil_place": "Las Palmas",
-  "civil_country": "Gran Canaria",
-  "sunrise_utc": "2026-11-25T07:31",
-  "sunset_utc": "2026-11-25T18:06",
-  "daylight_hours": 10.6
+  }
  },
  "stats": {
-  "points": 1082,
-  "distance_nm": 4334.7,
+  "points": 1084,
+  "distance_nm": 4334.5,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
 }
