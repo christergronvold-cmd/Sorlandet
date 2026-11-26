@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-26T10:32:22Z",
+ "updated_utc": "2026-11-26T10:34:24Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -24,7 +24,7 @@
   "heard_utc": "2026-11-26T10:05:01Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-26T10:29:30Z",
+  "fetched_utc": "2026-11-26T10:34:02Z",
   "sea": {
    "wave_height_m": 1.88,
    "wave_direction_deg": 16,
@@ -33,21 +33,21 @@
    "swell_period_s": 5.75,
    "wind_wave_height_m": 0.84,
    "sea_temp_c": 23.2,
-   "time_utc": "2026-11-26T10:15"
+   "time_utc": "2026-11-26T10:30"
   },
   "air": {
-   "temp_c": 19.8,
-   "feels_c": null,
-   "wind_ms": 6.8,
-   "gust_ms": null,
-   "wind_direction_deg": 36,
-   "pressure_hpa": 1023.3,
-   "cloud_pct": 75.8,
-   "precip_mm": 0.1,
-   "weather_code": 80,
-   "time_utc": "2026-11-26T10:00",
-   "source": "met.no",
-   "fetched_utc": "2026-11-26T10:30:00Z"
+   "temp_c": 22.1,
+   "feels_c": 20.2,
+   "wind_ms": 5.58,
+   "gust_ms": 10.3,
+   "wind_direction_deg": 15,
+   "pressure_hpa": 1022.9,
+   "cloud_pct": 48,
+   "precip_mm": 0.0,
+   "weather_code": 2,
+   "time_utc": "2026-11-26T10:30",
+   "source": "open-meteo",
+   "fetched_utc": "2026-11-26T10:34:02Z"
   }
  },
  "approach": {
@@ -58,7 +58,13 @@
    "age_days": 16.5,
    "illumination": 0.97,
    "phase": "full moon"
-  }
+  },
+  "civil_timezone": "Atlantic/Canary",
+  "civil_place": "Las Palmas",
+  "civil_country": "Gran Canaria",
+  "sunrise_utc": "2026-11-26T07:31",
+  "sunset_utc": "2026-11-26T18:05",
+  "daylight_hours": 10.6
  },
  "stats": {
   "points": 1137,
