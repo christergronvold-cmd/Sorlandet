@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T22:06:44Z",
+ "generated_utc": "2026-11-26T22:11:59Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "224098930",
+   "name": "BERRIZ SAN FRANCISCO",
+   "type": null,
+   "type_code": null,
+   "lat": 28.1464,
+   "lon": -15.42405,
+   "cog": null,
+   "sog": 0.0,
+   "heading": 356,
+   "t": "2026-11-26T22:09:55Z",
+   "nm": 0.2
+  },
   {
    "mmsi": "256750000",
    "name": "MEIN SCHIFF 7",
@@ -19,19 +32,6 @@
    "heading": 136,
    "t": "2026-11-26T22:04:11Z",
    "nm": 0.5
-  },
-  {
-   "mmsi": "224098930",
-   "name": "BERRIZ SAN FRANCISCO",
-   "type": null,
-   "type_code": null,
-   "lat": 28.13356,
-   "lon": -15.418,
-   "cog": 24.6,
-   "sog": 2.9,
-   "heading": 21,
-   "t": "2026-11-26T21:15:53Z",
-   "nm": 0.9
   },
   {
    "mmsi": "224302000",
@@ -141,8 +141,12 @@
  "known": {
   "212460000": {
    "name": "KYPROS SPIRIT",
-   "t": "2026-11-26T22:06:44Z",
+   "t": "2026-11-26T22:11:59Z",
    "type_code": 70
+  },
+  "224098930": {
+   "name": "BERRIZ SAN FRANCISCO",
+   "t": "2026-11-26T22:11:59Z"
   },
   "256750000": {
    "name": "MEIN SCHIFF 7",
@@ -161,10 +165,6 @@
   "247391900": {
    "name": "COSTA SMERALDA",
    "t": "2026-11-26T21:32:29Z"
-  },
-  "224098930": {
-   "name": "BERRIZ SAN FRANCISCO",
-   "t": "2026-11-26T21:16:18Z"
   },
   "224302000": {
    "name": "ROCKFISH",
