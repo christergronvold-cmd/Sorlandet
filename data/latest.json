@@ -2,7 +2,7 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-26T20:26:25Z",
+ "updated_utc": "2026-11-26T20:59:00Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
@@ -24,30 +24,30 @@
   "heard_utc": "2026-11-26T12:16:53Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-26T20:26:04Z",
+  "fetched_utc": "2026-11-26T20:55:58Z",
   "sea": {
-   "wave_height_m": 1.76,
+   "wave_height_m": 1.74,
    "wave_direction_deg": 16,
    "wave_period_s": 7.0,
    "swell_height_m": 1.42,
-   "swell_period_s": 5.55,
+   "swell_period_s": 5.5,
    "wind_wave_height_m": 0.66,
    "sea_temp_c": 23.3,
-   "time_utc": "2026-11-26T20:15"
+   "time_utc": "2026-11-26T20:45"
   },
   "air": {
-   "temp_c": 20.4,
+   "temp_c": 20.3,
    "feels_c": 19.8,
-   "wind_ms": 4.3,
+   "wind_ms": 4.4,
    "gust_ms": 8.3,
-   "wind_direction_deg": 359,
-   "pressure_hpa": 1020.3,
-   "cloud_pct": 86,
+   "wind_direction_deg": 360,
+   "pressure_hpa": 1020.4,
+   "cloud_pct": 79,
    "precip_mm": 0.0,
    "weather_code": 2,
-   "time_utc": "2026-11-26T20:15",
+   "time_utc": "2026-11-26T20:45",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-26T20:26:04Z"
+   "fetched_utc": "2026-11-26T20:55:58Z"
   }
  },
  "approach": {
@@ -55,7 +55,7 @@
  },
  "sun": {
   "moon": {
-   "age_days": 16.9,
+   "age_days": 17.0,
    "illumination": 0.95,
    "phase": "waning gibbous"
   },
@@ -67,7 +67,7 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 1134,
+  "points": 1133,
   "distance_nm": 4334.9,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }

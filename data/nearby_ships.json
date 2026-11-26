@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T18:24:40Z",
+ "generated_utc": "2026-11-26T20:59:00Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -8,98 +8,64 @@
  "radius_nm": 30.0,
  "ships": [
   {
-   "mmsi": "247391900",
-   "name": "COSTA SMERALDA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.13879,
-   "lon": -15.4231,
-   "cog": 0.0,
-   "sog": 0.0,
-   "heading": 136,
-   "t": "2026-11-26T18:18:09Z",
-   "nm": 0.4
-  },
-  {
-   "mmsi": "224271630",
-   "name": "VB DORAMAS",
-   "type": "tug",
-   "type_code": 52,
-   "lat": 28.14547,
-   "lon": -15.40827,
-   "cog": 39.2,
-   "sog": 0.0,
-   "heading": 250,
-   "t": "2026-11-26T17:44:11Z",
-   "nm": 1.0
-  },
-  {
-   "mmsi": "636022166",
-   "name": "CL TONI MORRISON",
-   "type": "tanker",
-   "type_code": 80,
-   "lat": 28.20026,
-   "lon": -15.3115,
-   "cog": 14.6,
-   "sog": 2.9,
-   "heading": 356,
-   "t": "2026-11-26T17:46:33Z",
-   "nm": 6.9
-  },
-  {
    "mmsi": "224781000",
    "name": "VOLCAN DE TAGORO",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.33317,
-   "lon": -15.74486,
-   "cog": 283.8,
+   "lat": 28.21993,
+   "lon": -15.43764,
+   "cog": 106.8,
    "sog": null,
-   "heading": 281,
-   "t": "2026-11-26T17:10:50Z",
-   "nm": 20.3
+   "heading": 101,
+   "t": "2026-11-26T20:56:23Z",
+   "nm": 4.5
+  },
+  {
+   "mmsi": "247391900",
+   "name": "COSTA SMERALDA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.16544,
+   "lon": -15.29923,
+   "cog": 12.8,
+   "sog": 17.2,
+   "heading": 13,
+   "t": "2026-11-26T20:58:22Z",
+   "nm": 6.9
   },
   {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.19306,
-   "lon": -15.85953,
-   "cog": 305.0,
+   "lat": 28.18557,
+   "lon": -15.87378,
+   "cog": 129.3,
    "sog": null,
-   "heading": 310,
-   "t": "2026-11-26T18:18:55Z",
-   "nm": 23.1
-  },
-  {
-   "mmsi": "209011000",
-   "name": "AL ANDALUS EXPRESS",
-   "type": "passenger",
-   "type_code": 60,
-   "lat": 28.36717,
-   "lon": -15.9285,
-   "cog": 107.3,
-   "sog": 14.8,
-   "heading": 102,
-   "t": "2026-11-26T18:24:25Z",
-   "nm": 29.7
+   "heading": 126,
+   "t": "2026-11-26T20:56:49Z",
+   "nm": 23.8
   }
  ],
  "known": {
+  "247391900": {
+   "name": "COSTA SMERALDA",
+   "t": "2026-11-26T20:59:00Z"
+  },
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-26T20:59:00Z",
+   "type_code": 40
+  },
+  "224781000": {
+   "name": "VOLCAN DE TAGORO",
+   "type_code": 40,
+   "t": "2026-11-26T20:59:00Z"
+  },
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
    "t": "2026-11-26T18:24:40Z",
    "type_code": 60
-  },
-  "247391900": {
-   "name": "COSTA SMERALDA",
-   "t": "2026-11-26T18:20:42Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T18:20:42Z",
-   "type_code": 40
   },
   "224271630": {
    "name": "VB DORAMAS",
@@ -115,11 +81,6 @@
    "name": "KARPATHOS",
    "t": "2026-11-26T17:46:53Z",
    "type_code": 81
-  },
-  "224781000": {
-   "name": "VOLCAN DE TAGORO",
-   "type_code": 40,
-   "t": "2026-11-26T17:11:50Z"
   },
   "211399160": {
    "name": "MADLA",
