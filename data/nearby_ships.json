@@ -1,144 +1,50 @@
 {
- "generated_utc": "2026-11-26T15:16:20Z",
+ "generated_utc": "2026-11-26T17:11:50Z",
  "source": "aisstream.io",
  "centre": [
-  28.146,
-  -15.4276
+  28.145,
+  -15.4267
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "356631000",
-   "name": "PEWEE",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.09671,
-   "lon": -15.39628,
-   "cog": 289.6,
-   "sog": 0.4,
-   "heading": 18,
-   "t": "2026-11-26T13:24:10Z",
-   "nm": 3.4
-  },
-  {
-   "mmsi": "224984000",
-   "name": "VOLCAN DE TAIDIA",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.15184,
-   "lon": -15.36191,
-   "cog": 74.5,
-   "sog": null,
-   "heading": 71,
-   "t": "2026-11-26T13:23:08Z",
-   "nm": 3.5
-  },
-  {
-   "mmsi": "224550000",
-   "name": "VB ALBORAN",
-   "type": "tug",
-   "type_code": 52,
-   "lat": 28.23474,
-   "lon": -15.48757,
-   "cog": 289.6,
-   "sog": 10.5,
-   "heading": null,
-   "t": "2026-11-26T15:00:56Z",
-   "nm": 6.2
-  },
   {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.09876,
-   "lon": -15.71141,
-   "cog": 316.3,
-   "sog": 5.3,
-   "heading": 138,
-   "t": "2026-11-26T13:23:25Z",
-   "nm": 15.3
+   "lat": 28.10605,
+   "lon": -15.7468,
+   "cog": 119.5,
+   "sog": null,
+   "heading": 117,
+   "t": "2026-11-26T17:10:29Z",
+   "nm": 17.1
   },
   {
-   "mmsi": "224823000",
-   "name": "BRENAS CARGO",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.29319,
-   "lon": -15.69667,
-   "cog": 111.0,
-   "sog": 18.4,
-   "heading": 107,
-   "t": "2026-11-26T13:57:22Z",
-   "nm": 16.8
-  },
-  {
-   "mmsi": "227939430",
-   "name": "ANEMIS",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.27607,
-   "lon": -15.7365,
-   "cog": 293.8,
-   "sog": 7.3,
-   "heading": 315,
-   "t": "2026-11-26T13:57:24Z",
-   "nm": 18.1
-  },
-  {
-   "mmsi": "236724000",
-   "name": "POWER OF 2",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.22261,
-   "lon": -15.7873,
-   "cog": 279.4,
-   "sog": 11.4,
-   "heading": null,
-   "t": "2026-11-26T15:03:10Z",
-   "nm": 19.6
-  },
-  {
-   "mmsi": "211399160",
-   "name": "MADLA",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.31515,
-   "lon": -15.78556,
-   "cog": 279.8,
-   "sog": 6.3,
-   "heading": 279,
-   "t": "2026-11-26T13:25:17Z",
-   "nm": 21.5
-  },
-  {
-   "mmsi": "211268410",
-   "name": "ALMA",
-   "type": "sailing",
-   "type_code": 36,
-   "lat": 28.33061,
-   "lon": -15.856,
-   "cog": 288.5,
-   "sog": 6.5,
-   "heading": null,
-   "t": "2026-11-26T13:56:01Z",
-   "nm": 25.2
-  },
-  {
-   "mmsi": "477538800",
-   "name": "FRONT SILKEBORG",
-   "type": null,
-   "type_code": null,
-   "lat": 28.39099,
-   "lon": -15.85713,
-   "cog": 39.3,
-   "sog": 13.0,
-   "heading": 38,
-   "t": "2026-11-26T15:11:27Z",
-   "nm": 27.1
+   "mmsi": "224781000",
+   "name": "VOLCAN DE TAGORO",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.33317,
+   "lon": -15.74486,
+   "cog": 283.8,
+   "sog": null,
+   "heading": 281,
+   "t": "2026-11-26T17:10:50Z",
+   "nm": 20.3
   }
  ],
  "known": {
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-26T17:11:50Z",
+   "type_code": 40
+  },
+  "224781000": {
+   "name": "VOLCAN DE TAGORO",
+   "type_code": 40,
+   "t": "2026-11-26T17:11:50Z"
+  },
   "211399160": {
    "name": "MADLA",
    "type_code": 36,
@@ -184,11 +90,6 @@
   },
   "224984000": {
    "name": "VOLCAN DE TAIDIA",
-   "t": "2026-11-26T13:25:54Z",
-   "type_code": 40
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
    "t": "2026-11-26T13:25:54Z",
    "type_code": 40
   },
@@ -751,11 +652,6 @@
    "name": "R/V PROTEUS",
    "t": "2026-11-26T09:06:21Z",
    "type_code": 99
-  },
-  "224781000": {
-   "name": "VOLCAN DE TAGORO",
-   "type_code": 40,
-   "t": "2026-11-26T09:06:21Z"
   },
   "636014475": {
    "name": "NOBLE GLOBETROTTER I",
