@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T21:07:04Z",
+ "generated_utc": "2026-11-26T21:12:18Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -77,19 +77,32 @@
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.1631,
-   "lon": -15.84236,
-   "cog": 128.4,
+   "lat": 28.11668,
+   "lon": -15.77604,
+   "cog": 128.5,
    "sog": null,
-   "heading": 125,
-   "t": "2026-11-26T21:01:03Z",
-   "nm": 22.0
+   "heading": 124,
+   "t": "2026-11-26T21:09:52Z",
+   "nm": 18.6
+  },
+  {
+   "mmsi": "261007224",
+   "name": null,
+   "type": null,
+   "type_code": null,
+   "lat": 28.10471,
+   "lon": -15.94709,
+   "cog": 236.0,
+   "sog": 6.6,
+   "heading": null,
+   "t": "2026-11-26T21:11:28Z",
+   "nm": 27.7
   },
   {
    "mmsi": "538011325",
    "name": "ST MICHAEL",
-   "type": null,
-   "type_code": null,
+   "type": "cargo",
+   "type_code": 70,
    "lat": 28.27493,
    "lon": -15.97095,
    "cog": 38.9,
@@ -100,6 +113,16 @@
   }
  ],
  "known": {
+  "538011325": {
+   "name": "ST MICHAEL",
+   "t": "2026-11-26T21:12:18Z",
+   "type_code": 70
+  },
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-26T21:12:18Z",
+   "type_code": 40
+  },
   "256750000": {
    "name": "MEIN SCHIFF 7",
    "t": "2026-11-26T21:07:04Z"
@@ -112,15 +135,6 @@
   "305375000": {
    "name": "ONEGO NEVA",
    "t": "2026-11-26T21:07:04Z"
-  },
-  "538011325": {
-   "name": "ST MICHAEL",
-   "t": "2026-11-26T21:07:04Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T21:02:58Z",
-   "type_code": 40
   },
   "247391900": {
    "name": "COSTA SMERALDA",
