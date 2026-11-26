@@ -2,52 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-26T09:07:39Z",
+ "updated_utc": "2026-11-26T09:40:03Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14597,
+  "lat": 28.14599,
   "lon": -15.42765,
-  "sog_kn": 0.0,
-  "cog_deg": 172,
+  "sog_kn": null,
+  "cog_deg": null,
   "heading_deg": null,
-  "seen_utc": "2026-11-26T08:23:03Z",
-  "source": "foundation",
-  "sog_derived": true,
   "nav_status": 5,
-  "nav_status_utc": "2026-11-26T08:23:03Z"
+  "seen_utc": "2026-11-26T09:28:52Z",
+  "source": "aisstream.io",
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "eta_text": "18.11 10:00",
+  "nav_status_utc": "2026-11-26T09:08:01Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-26T08:28:52Z"
+  "heard_utc": "2026-11-26T09:28:52Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-26T09:07:16Z",
+  "fetched_utc": "2026-11-26T09:37:01Z",
   "sea": {
    "wave_height_m": 1.9,
    "wave_direction_deg": 16,
    "wave_period_s": 7.05,
    "swell_height_m": 1.52,
    "swell_period_s": 5.8,
-   "wind_wave_height_m": 0.88,
+   "wind_wave_height_m": 0.86,
    "sea_temp_c": 23.2,
-   "time_utc": "2026-11-26T09:00"
+   "time_utc": "2026-11-26T09:30"
   },
   "air": {
-   "temp_c": 21.1,
-   "feels_c": 20.1,
-   "wind_ms": 4.69,
-   "gust_ms": 8.7,
-   "wind_direction_deg": 11,
-   "pressure_hpa": 1022.3,
-   "cloud_pct": 70,
+   "temp_c": 21.3,
+   "feels_c": 20.0,
+   "wind_ms": 5.1,
+   "gust_ms": 9.5,
+   "wind_direction_deg": 16,
+   "pressure_hpa": 1022.7,
+   "cloud_pct": 57,
    "precip_mm": 0.0,
-   "weather_code": 2,
-   "time_utc": "2026-11-26T09:00",
+   "weather_code": 1,
+   "time_utc": "2026-11-26T09:30",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-26T09:07:16Z"
+   "fetched_utc": "2026-11-26T09:37:01Z"
   }
  },
  "approach": {
@@ -67,7 +69,7 @@
   "daylight_hours": 10.6
  },
  "stats": {
-  "points": 1133,
+  "points": 1135,
   "distance_nm": 4334.5,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
