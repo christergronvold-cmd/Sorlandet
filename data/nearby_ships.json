@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T15:01:56Z",
+ "generated_utc": "2026-11-26T15:05:53Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -90,13 +90,13 @@
    "name": "POWER OF 2",
    "type": "pleasure craft",
    "type_code": 37,
-   "lat": 28.22096,
-   "lon": -15.77611,
-   "cog": 264.8,
-   "sog": 10.4,
+   "lat": 28.22261,
+   "lon": -15.7873,
+   "cog": 279.4,
+   "sog": 11.4,
    "heading": null,
-   "t": "2026-11-26T14:59:54Z",
-   "nm": 19.0
+   "t": "2026-11-26T15:03:10Z",
+   "nm": 19.6
   },
   {
    "mmsi": "211399160",
@@ -123,13 +123,30 @@
    "heading": null,
    "t": "2026-11-26T13:56:01Z",
    "nm": 25.2
+  },
+  {
+   "mmsi": "477538800",
+   "name": "FRONT SILKEBORG",
+   "type": null,
+   "type_code": null,
+   "lat": 28.37018,
+   "lon": -15.877,
+   "cog": 39.3,
+   "sog": 13.0,
+   "heading": 39,
+   "t": "2026-11-26T15:04:00Z",
+   "nm": 27.3
   }
  ],
  "known": {
   "236724000": {
    "name": "POWER OF 2",
-   "t": "2026-11-26T15:01:56Z",
+   "t": "2026-11-26T15:05:53Z",
    "type_code": 37
+  },
+  "477538800": {
+   "name": "FRONT SILKEBORG",
+   "t": "2026-11-26T15:05:53Z"
   },
   "224550000": {
    "name": "VB ALBORAN",
@@ -2989,11 +3006,6 @@
    "name": "CONTSHIP NEW",
    "t": "2026-11-21T21:22:11Z",
    "type_code": 71
-  },
-  "356555000": {
-   "name": "HANDY  PERTH",
-   "t": "2026-11-21T19:42:07Z",
-   "type_code": 70
   }
  }
 }
