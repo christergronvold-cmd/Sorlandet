@@ -1,9 +1,9 @@
 {
- "generated_utc": "2026-11-26T21:12:18Z",
+ "generated_utc": "2026-11-26T21:16:18Z",
  "source": "aisstream.io",
  "centre": [
-  28.145,
-  -15.4267
+  28.146,
+  -15.4277
  ],
  "radius_nm": 30.0,
  "ships": [
@@ -18,7 +18,20 @@
    "sog": 0.0,
    "heading": 136,
    "t": "2026-11-26T21:05:59Z",
-   "nm": 0.4
+   "nm": 0.5
+  },
+  {
+   "mmsi": "224098930",
+   "name": "BERRIZ SAN FRANCISCO",
+   "type": null,
+   "type_code": null,
+   "lat": 28.13356,
+   "lon": -15.418,
+   "cog": 24.6,
+   "sog": 2.9,
+   "heading": 21,
+   "t": "2026-11-26T21:15:53Z",
+   "nm": 0.9
   },
   {
    "mmsi": "224302000",
@@ -60,6 +73,19 @@
    "nm": 6.9
   },
   {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.10219,
+   "lon": -15.73249,
+   "cog": 108.4,
+   "sog": null,
+   "heading": 105,
+   "t": "2026-11-26T21:15:01Z",
+   "nm": 16.4
+  },
+  {
    "mmsi": "305375000",
    "name": "ONEGO NEVA",
    "type": null,
@@ -70,20 +96,7 @@
    "sog": 10.8,
    "heading": 6,
    "t": "2026-11-26T21:05:09Z",
-   "nm": 18.2
-  },
-  {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.11668,
-   "lon": -15.77604,
-   "cog": 128.5,
-   "sog": null,
-   "heading": 124,
-   "t": "2026-11-26T21:09:52Z",
-   "nm": 18.6
+   "nm": 18.3
   },
   {
    "mmsi": "261007224",
@@ -96,7 +109,7 @@
    "sog": 6.6,
    "heading": null,
    "t": "2026-11-26T21:11:28Z",
-   "nm": 27.7
+   "nm": 27.6
   },
   {
    "mmsi": "538011325",
@@ -113,15 +126,19 @@
   }
  ],
  "known": {
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-26T21:16:18Z",
+   "type_code": 40
+  },
+  "224098930": {
+   "name": "BERRIZ SAN FRANCISCO",
+   "t": "2026-11-26T21:16:18Z"
+  },
   "538011325": {
    "name": "ST MICHAEL",
    "t": "2026-11-26T21:12:18Z",
    "type_code": 70
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T21:12:18Z",
-   "type_code": 40
   },
   "256750000": {
    "name": "MEIN SCHIFF 7",
@@ -2973,11 +2990,6 @@
   "636093289": {
    "name": "ROSTRUM SOLAR",
    "t": "2026-11-21T22:27:03Z",
-   "type_code": 70
-  },
-  "355576000": {
-   "name": "SCARLET EAGLE",
-   "t": "2026-11-21T21:54:38Z",
    "type_code": 70
   }
  }
