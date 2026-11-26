@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T22:51:00Z",
+ "generated_utc": "2026-11-26T23:55:54Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -34,43 +34,17 @@
    "nm": 0.5
   },
   {
-   "mmsi": "224302000",
-   "name": "ROCKFISH",
-   "type": "tanker",
-   "type_code": 89,
-   "lat": 28.14996,
-   "lon": -15.39986,
-   "cog": 24.2,
-   "sog": 2.9,
-   "heading": 31,
-   "t": "2026-11-26T21:05:45Z",
-   "nm": 1.5
-  },
-  {
-   "mmsi": "224781000",
-   "name": "VOLCAN DE TAGORO",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.21993,
-   "lon": -15.43764,
-   "cog": 106.8,
-   "sog": null,
-   "heading": 101,
-   "t": "2026-11-26T20:56:23Z",
-   "nm": 4.5
-  },
-  {
-   "mmsi": "247391900",
-   "name": "COSTA SMERALDA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.31839,
-   "lon": -15.30644,
-   "cog": 348.9,
-   "sog": 17.8,
-   "heading": 353,
-   "t": "2026-11-26T21:29:48Z",
-   "nm": 12.2
+   "mmsi": "431486000",
+   "name": "GOEI MARU NO.88",
+   "type": "fishing",
+   "type_code": 30,
+   "lat": 28.13871,
+   "lon": -15.41752,
+   "cog": 5.8,
+   "sog": 0.0,
+   "heading": 2,
+   "t": "2026-11-26T23:54:24Z",
+   "nm": 0.7
   },
   {
    "mmsi": "224388000",
@@ -79,37 +53,11 @@
    "type_code": 40,
    "lat": 28.09918,
    "lon": -15.71191,
-   "cog": 339.2,
+   "cog": 257.2,
    "sog": 0.0,
    "heading": 142,
-   "t": "2026-11-26T22:50:22Z",
+   "t": "2026-11-26T23:53:03Z",
    "nm": 15.3
-  },
-  {
-   "mmsi": "305375000",
-   "name": "ONEGO NEVA",
-   "type": null,
-   "type_code": null,
-   "lat": 27.88377,
-   "lon": -15.25195,
-   "cog": 0.5,
-   "sog": 10.8,
-   "heading": 6,
-   "t": "2026-11-26T21:05:09Z",
-   "nm": 18.3
-  },
-  {
-   "mmsi": "261007224",
-   "name": null,
-   "type": null,
-   "type_code": null,
-   "lat": 28.10471,
-   "lon": -15.94709,
-   "cog": 236.0,
-   "sog": 6.6,
-   "heading": null,
-   "t": "2026-11-26T21:11:28Z",
-   "nm": 27.6
   },
   {
    "mmsi": "225996952",
@@ -125,37 +73,33 @@
    "nm": 28.7
   },
   {
-   "mmsi": "212460000",
-   "name": "KYPROS SPIRIT",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.28499,
-   "lon": -15.94972,
-   "cog": 35.7,
-   "sog": 11.5,
-   "heading": 28,
-   "t": "2026-11-26T21:30:40Z",
-   "nm": 28.9
-  },
-  {
-   "mmsi": "538011325",
-   "name": "ST MICHAEL",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.32696,
-   "lon": -15.9341,
-   "cog": 12.0,
-   "sog": 8.9,
-   "heading": 10,
-   "t": "2026-11-26T21:30:53Z",
-   "nm": 28.9
+   "mmsi": "310857000",
+   "name": "IONA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.31976,
+   "lon": -15.95722,
+   "cog": 118.5,
+   "sog": 9.9,
+   "heading": 110,
+   "t": "2026-11-26T23:55:17Z",
+   "nm": 29.9
   }
  ],
  "known": {
   "224388000": {
    "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T22:51:00Z",
+   "t": "2026-11-26T23:55:54Z",
    "type_code": 40
+  },
+  "431486000": {
+   "name": "GOEI MARU NO.88",
+   "type_code": 30,
+   "t": "2026-11-26T23:55:54Z"
+  },
+  "310857000": {
+   "name": "IONA",
+   "t": "2026-11-26T23:55:54Z"
   },
   "224292160": {
    "name": "V.B. TAMARAN",
@@ -338,11 +282,6 @@
    "name": "MAERSK CYPRUS",
    "t": "2026-11-26T12:11:53Z",
    "type_code": 80
-  },
-  "431486000": {
-   "name": "GOEI MARU NO.88",
-   "type_code": 30,
-   "t": "2026-11-26T12:11:53Z"
   },
   "563176300": {
    "name": "LOWLANDS FREEDOM",
@@ -3012,11 +2951,6 @@
    "name": "AIDAPRIMA",
    "type_code": 60,
    "t": "2026-11-21T23:32:05Z"
-  },
-  "215610000": {
-   "name": "MSC VIRTUOSA",
-   "t": "2026-11-21T22:59:36Z",
-   "type_code": 60
   }
  }
 }
