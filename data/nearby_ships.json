@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T22:15:57Z",
+ "generated_utc": "2026-11-26T22:51:00Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -79,10 +79,10 @@
    "type_code": 40,
    "lat": 28.09918,
    "lon": -15.71191,
-   "cog": 193.9,
+   "cog": 339.2,
    "sog": 0.0,
-   "heading": 141,
-   "t": "2026-11-26T21:31:26Z",
+   "heading": 142,
+   "t": "2026-11-26T22:50:22Z",
    "nm": 15.3
   },
   {
@@ -112,6 +112,19 @@
    "nm": 27.6
   },
   {
+   "mmsi": "225996952",
+   "name": "GUARDAMAR URANIA",
+   "type": null,
+   "type_code": null,
+   "lat": 27.72799,
+   "lon": -15.68883,
+   "cog": 351.0,
+   "sog": null,
+   "heading": 353,
+   "t": "2026-11-26T22:49:13Z",
+   "nm": 28.7
+  },
+  {
    "mmsi": "212460000",
    "name": "KYPROS SPIRIT",
    "type": "cargo",
@@ -139,6 +152,20 @@
   }
  ],
  "known": {
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-26T22:51:00Z",
+   "type_code": 40
+  },
+  "224292160": {
+   "name": "V.B. TAMARAN",
+   "t": "2026-11-26T22:51:00Z",
+   "type_code": 52
+  },
+  "225996952": {
+   "name": "GUARDAMAR URANIA",
+   "t": "2026-11-26T22:51:00Z"
+  },
   "256750000": {
    "name": "MEIN SCHIFF 7",
    "t": "2026-11-26T22:15:57Z",
@@ -152,11 +179,6 @@
   "224098930": {
    "name": "BERRIZ SAN FRANCISCO",
    "t": "2026-11-26T22:11:59Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T21:32:29Z",
-   "type_code": 40
   },
   "538011325": {
    "name": "ST MICHAEL",
@@ -248,11 +270,6 @@
    "name": "VOLCAN DE TAIDIA",
    "t": "2026-11-26T13:25:54Z",
    "type_code": 40
-  },
-  "224292160": {
-   "name": "V.B. TAMARAN",
-   "t": "2026-11-26T12:48:18Z",
-   "type_code": 52
   },
   "636025449": {
    "name": "MSC ANNABELLA",
@@ -3000,11 +3017,6 @@
    "name": "MSC VIRTUOSA",
    "t": "2026-11-21T22:59:36Z",
    "type_code": 60
-  },
-  "563218100": {
-   "name": "VICTORIA BAY",
-   "t": "2026-11-21T22:59:36Z",
-   "type_code": 80
   }
  }
 }
