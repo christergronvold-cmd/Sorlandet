@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T21:02:58Z",
+ "generated_utc": "2026-11-26T21:07:04Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,6 +7,32 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "256750000",
+   "name": "MEIN SCHIFF 7",
+   "type": null,
+   "type_code": null,
+   "lat": 28.13945,
+   "lon": -15.42141,
+   "cog": 356.6,
+   "sog": 0.0,
+   "heading": 136,
+   "t": "2026-11-26T21:05:59Z",
+   "nm": 0.4
+  },
+  {
+   "mmsi": "224302000",
+   "name": "ROCKFISH",
+   "type": "tanker",
+   "type_code": 89,
+   "lat": 28.14996,
+   "lon": -15.39986,
+   "cog": 24.2,
+   "sog": 2.9,
+   "heading": 31,
+   "t": "2026-11-26T21:05:45Z",
+   "nm": 1.5
+  },
   {
    "mmsi": "224781000",
    "name": "VOLCAN DE TAGORO",
@@ -34,6 +60,19 @@
    "nm": 6.9
   },
   {
+   "mmsi": "305375000",
+   "name": "ONEGO NEVA",
+   "type": null,
+   "type_code": null,
+   "lat": 27.88377,
+   "lon": -15.25195,
+   "cog": 0.5,
+   "sog": 10.8,
+   "heading": 6,
+   "t": "2026-11-26T21:05:09Z",
+   "nm": 18.2
+  },
+  {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
@@ -45,9 +84,39 @@
    "heading": 125,
    "t": "2026-11-26T21:01:03Z",
    "nm": 22.0
+  },
+  {
+   "mmsi": "538011325",
+   "name": "ST MICHAEL",
+   "type": null,
+   "type_code": null,
+   "lat": 28.27493,
+   "lon": -15.97095,
+   "cog": 38.9,
+   "sog": 9.0,
+   "heading": 35,
+   "t": "2026-11-26T21:05:45Z",
+   "nm": 29.8
   }
  ],
  "known": {
+  "256750000": {
+   "name": "MEIN SCHIFF 7",
+   "t": "2026-11-26T21:07:04Z"
+  },
+  "224302000": {
+   "name": "ROCKFISH",
+   "t": "2026-11-26T21:07:04Z",
+   "type_code": 89
+  },
+  "305375000": {
+   "name": "ONEGO NEVA",
+   "t": "2026-11-26T21:07:04Z"
+  },
+  "538011325": {
+   "name": "ST MICHAEL",
+   "t": "2026-11-26T21:07:04Z"
+  },
   "224388000": {
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-26T21:02:58Z",
@@ -139,10 +208,6 @@
    "name": "MSC ANNABELLA",
    "t": "2026-11-26T12:48:18Z",
    "type_code": 71
-  },
-  "256750000": {
-   "name": "MEIN SCHIFF 7",
-   "t": "2026-11-26T12:48:18Z"
   },
   "371313000": {
    "name": "DESPINA V",
@@ -255,11 +320,6 @@
    "name": "UAL HOUSTON",
    "t": "2026-11-26T11:39:22Z",
    "type_code": 79
-  },
-  "224302000": {
-   "name": "ROCKFISH",
-   "t": "2026-11-26T11:39:22Z",
-   "type_code": 89
   },
   "432448000": {
    "name": "SHOEIMARU NO.1",
@@ -2905,16 +2965,6 @@
    "name": "SCARLET EAGLE",
    "t": "2026-11-21T21:54:38Z",
    "type_code": 70
-  },
-  "248953000": {
-   "name": "SEA CLOUD II",
-   "type_code": 60,
-   "t": "2026-11-21T21:54:38Z"
-  },
-  "209345000": {
-   "name": "CONTSHIP NEW",
-   "t": "2026-11-21T21:22:11Z",
-   "type_code": 71
   }
  }
 }
