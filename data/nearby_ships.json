@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T17:11:50Z",
+ "generated_utc": "2026-11-26T17:46:53Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,6 +7,45 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "247391900",
+   "name": "COSTA SMERALDA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.1388,
+   "lon": -15.4231,
+   "cog": 0.0,
+   "sog": 0.0,
+   "heading": 136,
+   "t": "2026-11-26T17:45:04Z",
+   "nm": 0.4
+  },
+  {
+   "mmsi": "224271630",
+   "name": "VB DORAMAS",
+   "type": "tug",
+   "type_code": 52,
+   "lat": 28.14547,
+   "lon": -15.40827,
+   "cog": 39.2,
+   "sog": 0.0,
+   "heading": 250,
+   "t": "2026-11-26T17:44:11Z",
+   "nm": 1.0
+  },
+  {
+   "mmsi": "636022166",
+   "name": "CL TONI MORRISON",
+   "type": "tanker",
+   "type_code": 80,
+   "lat": 28.20026,
+   "lon": -15.3115,
+   "cog": 14.6,
+   "sog": 2.9,
+   "heading": 356,
+   "t": "2026-11-26T17:46:33Z",
+   "nm": 6.9
+  },
   {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
@@ -35,6 +74,25 @@
   }
  ],
  "known": {
+  "224271630": {
+   "name": "VB DORAMAS",
+   "t": "2026-11-26T17:46:53Z",
+   "type_code": 52
+  },
+  "636022166": {
+   "name": "CL TONI MORRISON",
+   "type_code": 80,
+   "t": "2026-11-26T17:46:53Z"
+  },
+  "209987000": {
+   "name": "KARPATHOS",
+   "t": "2026-11-26T17:46:53Z",
+   "type_code": 81
+  },
+  "247391900": {
+   "name": "COSTA SMERALDA",
+   "t": "2026-11-26T17:46:53Z"
+  },
   "224388000": {
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-26T17:11:50Z",
@@ -117,11 +175,6 @@
    "type_code": 70,
    "t": "2026-11-26T12:48:18Z"
   },
-  "224271630": {
-   "name": "VB DORAMAS",
-   "t": "2026-11-26T12:48:18Z",
-   "type_code": 52
-  },
   "309841000": {
    "name": "BALTIC PEARL",
    "t": "2026-11-26T12:48:18Z"
@@ -145,11 +198,6 @@
    "name": "CHOKYU MARU NO.7",
    "t": "2026-11-26T12:15:53Z",
    "type_code": 30
-  },
-  "636022166": {
-   "name": "CL TONI MORRISON",
-   "type_code": 80,
-   "t": "2026-11-26T12:15:53Z"
   },
   "339000402": {
    "type_code": 36,
@@ -424,11 +472,6 @@
    "name": "ENDORFINA",
    "t": "2026-11-26T09:40:03Z",
    "type_code": 36
-  },
-  "209987000": {
-   "name": "KARPATHOS",
-   "t": "2026-11-26T09:40:03Z",
-   "type_code": 81
   },
   "636022061": {
    "name": "ORIS SYNERGY",
@@ -940,10 +983,6 @@
    "name": "EL KENTUCKY",
    "t": "2026-11-26T08:57:12Z",
    "type_code": 36
-  },
-  "247391900": {
-   "name": "COSTA SMERALDA",
-   "t": "2026-11-26T08:57:12Z"
   },
   "636017875": {
    "name": "SEA BAZOU",
