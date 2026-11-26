@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-26T17:46:53Z",
+ "generated_utc": "2026-11-26T18:20:42Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -12,12 +12,12 @@
    "name": "COSTA SMERALDA",
    "type": null,
    "type_code": null,
-   "lat": 28.1388,
+   "lat": 28.13879,
    "lon": -15.4231,
    "cog": 0.0,
    "sog": 0.0,
    "heading": 136,
-   "t": "2026-11-26T17:45:04Z",
+   "t": "2026-11-26T18:18:09Z",
    "nm": 0.4
   },
   {
@@ -47,19 +47,6 @@
    "nm": 6.9
   },
   {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.10605,
-   "lon": -15.7468,
-   "cog": 119.5,
-   "sog": null,
-   "heading": 117,
-   "t": "2026-11-26T17:10:29Z",
-   "nm": 17.1
-  },
-  {
    "mmsi": "224781000",
    "name": "VOLCAN DE TAGORO",
    "type": "high-speed craft",
@@ -71,9 +58,31 @@
    "heading": 281,
    "t": "2026-11-26T17:10:50Z",
    "nm": 20.3
+  },
+  {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.19306,
+   "lon": -15.85953,
+   "cog": 305.0,
+   "sog": null,
+   "heading": 310,
+   "t": "2026-11-26T18:18:55Z",
+   "nm": 23.1
   }
  ],
  "known": {
+  "247391900": {
+   "name": "COSTA SMERALDA",
+   "t": "2026-11-26T18:20:42Z"
+  },
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-26T18:20:42Z",
+   "type_code": 40
+  },
   "224271630": {
    "name": "VB DORAMAS",
    "t": "2026-11-26T17:46:53Z",
@@ -88,15 +97,6 @@
    "name": "KARPATHOS",
    "t": "2026-11-26T17:46:53Z",
    "type_code": 81
-  },
-  "247391900": {
-   "name": "COSTA SMERALDA",
-   "t": "2026-11-26T17:46:53Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T17:11:50Z",
-   "type_code": 40
   },
   "224781000": {
    "name": "VOLCAN DE TAGORO",
