@@ -2,54 +2,54 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-26T09:40:03Z",
+ "updated_utc": "2026-11-26T10:11:15Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14599,
-  "lon": -15.42765,
-  "sog_kn": null,
-  "cog_deg": null,
-  "heading_deg": null,
+  "lat": 28.14598,
+  "lon": -15.42764,
+  "sog_kn": 0.0,
+  "cog_deg": 171.9,
+  "heading_deg": 1,
   "nav_status": 5,
-  "seen_utc": "2026-11-26T09:28:52Z",
+  "seen_utc": "2026-11-26T10:05:01Z",
   "source": "aisstream.io",
   "destination": "ES LPA",
   "draught_m": 4.1,
   "eta_text": "18.11 10:00",
-  "nav_status_utc": "2026-11-26T09:08:01Z"
+  "nav_status_utc": "2026-11-26T10:05:01Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-26T09:28:52Z"
+  "heard_utc": "2026-11-26T10:05:01Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-26T09:37:01Z",
+  "fetched_utc": "2026-11-26T10:09:28Z",
   "sea": {
-   "wave_height_m": 1.9,
+   "wave_height_m": 1.88,
    "wave_direction_deg": 16,
    "wave_period_s": 7.05,
    "swell_height_m": 1.52,
    "swell_period_s": 5.8,
    "wind_wave_height_m": 0.86,
    "sea_temp_c": 23.2,
-   "time_utc": "2026-11-26T09:30"
+   "time_utc": "2026-11-26T10:00"
   },
   "air": {
-   "temp_c": 21.3,
-   "feels_c": 20.0,
-   "wind_ms": 5.1,
-   "gust_ms": 9.5,
-   "wind_direction_deg": 16,
-   "pressure_hpa": 1022.7,
-   "cloud_pct": 57,
-   "precip_mm": 0.0,
-   "weather_code": 1,
-   "time_utc": "2026-11-26T09:30",
-   "source": "open-meteo",
-   "fetched_utc": "2026-11-26T09:37:01Z"
+   "temp_c": 19.8,
+   "feels_c": null,
+   "wind_ms": 6.8,
+   "gust_ms": null,
+   "wind_direction_deg": 36,
+   "pressure_hpa": 1023.3,
+   "cloud_pct": 75.8,
+   "precip_mm": 0.1,
+   "weather_code": 80,
+   "time_utc": "2026-11-26T10:00",
+   "source": "met.no",
+   "fetched_utc": "2026-11-26T10:10:00Z"
   }
  },
  "approach": {
@@ -60,16 +60,10 @@
    "age_days": 16.5,
    "illumination": 0.97,
    "phase": "full moon"
-  },
-  "civil_timezone": "Atlantic/Canary",
-  "civil_place": "Las Palmas",
-  "civil_country": "Gran Canaria",
-  "sunrise_utc": "2026-11-26T07:31",
-  "sunset_utc": "2026-11-26T18:05",
-  "daylight_hours": 10.6
+  }
  },
  "stats": {
-  "points": 1135,
+  "points": 1137,
   "distance_nm": 4334.5,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
