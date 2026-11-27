@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T18:02:36Z",
+ "generated_utc": "2026-11-27T18:36:21Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -47,6 +47,32 @@
    "nm": 26.0
   },
   {
+   "mmsi": "209011000",
+   "name": "AL ANDALUS EXPRESS",
+   "type": "passenger",
+   "type_code": 60,
+   "lat": 28.35189,
+   "lon": -15.86458,
+   "cog": 109.1,
+   "sog": 15.3,
+   "heading": 107,
+   "t": "2026-11-27T18:33:48Z",
+   "nm": 26.3
+  },
+  {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.24601,
+   "lon": -15.91292,
+   "cog": 313.0,
+   "sog": null,
+   "heading": 314,
+   "t": "2026-11-27T18:34:54Z",
+   "nm": 26.4
+  },
+  {
    "mmsi": "255806503",
    "name": "MANISA CAMILLA",
    "type": null,
@@ -74,6 +100,20 @@
   }
  ],
  "known": {
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-27T18:36:21Z",
+   "type_code": 40
+  },
+  "209011000": {
+   "name": "AL ANDALUS EXPRESS",
+   "t": "2026-11-27T18:36:21Z",
+   "type_code": 60
+  },
+  "311002499": {
+   "name": "MARPESSA",
+   "t": "2026-11-27T18:36:21Z"
+  },
   "563270700": {
    "name": "ONE STRENGTH",
    "t": "2026-11-27T18:02:36Z"
@@ -127,11 +167,6 @@
    "name": "SANTORINI",
    "t": "2026-11-27T14:11:51Z",
    "type_code": 90
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-27T14:11:51Z",
-   "type_code": 40
   },
   "563239400": {
    "name": "ULTRA LYNX",
@@ -190,11 +225,6 @@
   "255803640": {
    "name": "ARIES J",
    "t": "2026-11-27T05:51:12Z"
-  },
-  "209011000": {
-   "name": "AL ANDALUS EXPRESS",
-   "t": "2026-11-27T04:44:52Z",
-   "type_code": 60
   },
   "255806525": {
    "name": "KATHARINA",
@@ -2924,11 +2954,6 @@
   "218037490": {
    "name": "TOPAS",
    "t": "2026-11-22T08:54:03Z"
-  },
-  "636026320": {
-   "name": "XANTHI",
-   "t": "2026-11-22T08:21:32Z",
-   "type_code": 70
   }
  }
 }
