@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T19:37:21Z",
+ "generated_utc": "2026-11-27T20:11:05Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -34,17 +34,30 @@
    "nm": 0.8
   },
   {
+   "mmsi": "219412000",
+   "name": "TORM AGNES",
+   "type": null,
+   "type_code": null,
+   "lat": 28.15581,
+   "lon": -15.37873,
+   "cog": 250.9,
+   "sog": 4.1,
+   "heading": 245,
+   "t": "2026-11-27T20:10:00Z",
+   "nm": 2.6
+  },
+  {
    "mmsi": "224131000",
    "name": "BAJAMAR EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.09694,
-   "lon": -15.71357,
-   "cog": 96.3,
-   "sog": 7.0,
-   "heading": 101,
-   "t": "2026-11-27T19:15:52Z",
-   "nm": 15.5
+   "lat": 28.10794,
+   "lon": -15.73286,
+   "cog": 307.1,
+   "sog": null,
+   "heading": 308,
+   "t": "2026-11-27T20:10:35Z",
+   "nm": 16.4
   },
   {
    "mmsi": "209011000",
@@ -73,42 +86,38 @@
    "nm": 26.4
   },
   {
-   "mmsi": "255806503",
-   "name": "MANISA CAMILLA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.49627,
-   "lon": -15.74268,
-   "cog": 39.5,
-   "sog": 8.7,
-   "heading": 40,
-   "t": "2026-11-27T18:02:22Z",
-   "nm": 26.9
-  },
-  {
-   "mmsi": "563270700",
-   "name": "ONE STRENGTH",
-   "type": null,
-   "type_code": null,
-   "lat": 28.47166,
-   "lon": -15.79587,
-   "cog": 37.1,
-   "sog": 10.0,
-   "heading": 36,
-   "t": "2026-11-27T18:01:00Z",
-   "nm": 27.7
+   "mmsi": "212859000",
+   "name": "MERCEDES PINTO",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.36051,
+   "lon": -15.89911,
+   "cog": 108.9,
+   "sog": null,
+   "heading": 107,
+   "t": "2026-11-27T20:10:29Z",
+   "nm": 28.1
   }
  ],
  "known": {
+  "224131000": {
+   "name": "BAJAMAR EXPRESS",
+   "t": "2026-11-27T20:11:05Z",
+   "type_code": 40
+  },
+  "212859000": {
+   "name": "MERCEDES PINTO",
+   "t": "2026-11-27T20:11:05Z",
+   "type_code": 40
+  },
+  "219412000": {
+   "name": "TORM AGNES",
+   "t": "2026-11-27T20:11:05Z"
+  },
   "205023000": {
    "name": "CL ATLAS",
    "type_code": 70,
    "t": "2026-11-27T19:37:21Z"
-  },
-  "224131000": {
-   "name": "BAJAMAR EXPRESS",
-   "t": "2026-11-27T19:16:38Z",
-   "type_code": 40
   },
   "255806525": {
    "name": "KATHARINA",
@@ -154,15 +163,6 @@
    "name": "HARENGUS",
    "t": "2026-11-27T16:50:04Z",
    "type_code": 79
-  },
-  "212859000": {
-   "name": "MERCEDES PINTO",
-   "t": "2026-11-27T16:50:04Z",
-   "type_code": 40
-  },
-  "219412000": {
-   "name": "TORM AGNES",
-   "t": "2026-11-27T15:14:10Z"
   },
   "255806143": {
    "name": "AVILA",
