@@ -2,21 +2,18 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-27T06:21:03Z",
+ "updated_utc": "2026-11-27T06:22:21Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "ais_src": "TER",
   "lat": 28.14597,
   "lon": -15.42762,
   "sog_kn": 0.0,
-  "cog_deg": 238.9,
-  "heading_deg": 0,
-  "nav_status": 5,
-  "destination": "ES LPA",
-  "draught_m": 4.1,
+  "cog_deg": 239,
+  "heading_deg": null,
   "seen_utc": "2026-11-27T06:20:09Z",
-  "source": "vesselfinder",
+  "source": "foundation",
+  "nav_status": 5,
   "nav_status_utc": "2026-11-27T06:20:09Z"
  },
  "voyage": {
@@ -26,7 +23,7 @@
   "heard_utc": "2026-11-27T06:20:09Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-27T06:20:42Z",
+  "fetched_utc": "2026-11-27T06:22:00Z",
   "sea": {
    "wave_height_m": 1.54,
    "wave_direction_deg": 11,
@@ -49,7 +46,7 @@
    "weather_code": 3,
    "time_utc": "2026-11-27T06:15",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-27T06:20:42Z"
+   "fetched_utc": "2026-11-27T06:22:00Z"
   }
  },
  "approach": {
@@ -57,7 +54,7 @@
  },
  "sun": {
   "moon": {
-   "age_days": 17.3,
+   "age_days": 17.4,
    "illumination": 0.93,
    "phase": "waning gibbous"
   },
