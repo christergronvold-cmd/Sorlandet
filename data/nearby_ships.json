@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T10:46:17Z",
+ "generated_utc": "2026-11-27T11:21:38Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,19 +7,6 @@
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "224787000",
-   "name": "BAHIA CARGO",
-   "type": "cargo",
-   "type_code": 79,
-   "lat": 28.21391,
-   "lon": -15.44214,
-   "cog": 106.2,
-   "sog": 19.5,
-   "heading": 106,
-   "t": "2026-11-27T09:08:42Z",
-   "nm": 4.2
-  },
   {
    "mmsi": "311001096",
    "name": "SANTORINI",
@@ -45,9 +32,27 @@
    "heading": 130,
    "t": "2026-11-27T10:45:45Z",
    "nm": 26.3
+  },
+  {
+   "mmsi": "224984000",
+   "name": "VOLCAN DE TAIDIA",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.36099,
+   "lon": -15.87735,
+   "cog": 289.4,
+   "sog": null,
+   "heading": 287,
+   "t": "2026-11-27T11:21:29Z",
+   "nm": 27.1
   }
  ],
  "known": {
+  "224984000": {
+   "name": "VOLCAN DE TAIDIA",
+   "t": "2026-11-27T11:21:38Z",
+   "type_code": 40
+  },
   "224131000": {
    "name": "BAJAMAR EXPRESS",
    "t": "2026-11-27T10:46:17Z",
@@ -84,11 +89,6 @@
    "name": "VOLCAN DE TAGORO",
    "type_code": 40,
    "t": "2026-11-27T08:14:09Z"
-  },
-  "224984000": {
-   "name": "VOLCAN DE TAIDIA",
-   "t": "2026-11-27T08:14:09Z",
-   "type_code": 40
   },
   "319297900": {
    "name": "DOKINHA",
