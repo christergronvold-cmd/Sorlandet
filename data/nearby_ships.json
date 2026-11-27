@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T05:47:15Z",
+ "generated_utc": "2026-11-27T05:51:12Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "255803640",
+   "name": "ARIES J",
+   "type": null,
+   "type_code": null,
+   "lat": 28.18775,
+   "lon": -15.38623,
+   "cog": 345.9,
+   "sog": 16.2,
+   "heading": 347,
+   "t": "2026-11-27T05:50:37Z",
+   "nm": 3.3
+  },
   {
    "mmsi": "255806525",
    "name": "KATHARINA",
@@ -36,8 +49,8 @@
   {
    "mmsi": "657281600",
    "name": "SHERLOCK",
-   "type": null,
-   "type_code": null,
+   "type": "tanker",
+   "type_code": 80,
    "lat": 27.80798,
    "lon": -15.14219,
    "cog": 196.3,
@@ -63,7 +76,12 @@
  "known": {
   "657281600": {
    "name": "SHERLOCK",
-   "t": "2026-11-27T05:47:15Z"
+   "t": "2026-11-27T05:51:12Z",
+   "type_code": 80
+  },
+  "255803640": {
+   "name": "ARIES J",
+   "t": "2026-11-27T05:51:12Z"
   },
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
@@ -356,10 +374,6 @@
   "244020374": {
    "name": "BREUGHEL",
    "type_code": 33,
-   "t": "2026-11-26T11:39:22Z"
-  },
-  "255803640": {
-   "name": "ARIES J",
    "t": "2026-11-26T11:39:22Z"
   },
   "538010664": {
