@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T08:14:09Z",
+ "generated_utc": "2026-11-27T08:36:38Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -21,6 +21,19 @@
    "nm": 0.7
   },
   {
+   "mmsi": "563176300",
+   "name": "LOWLANDS FREEDOM",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.14426,
+   "lon": -15.40799,
+   "cog": 207.4,
+   "sog": 0.0,
+   "heading": 181,
+   "t": "2026-11-27T08:34:14Z",
+   "nm": 1.0
+  },
+  {
    "mmsi": "256902000",
    "name": "CIELO DI ULSAN",
    "type": "tanker",
@@ -34,6 +47,19 @@
    "nm": 1.0
   },
   {
+   "mmsi": "255915596",
+   "name": "RS LISA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.12833,
+   "lon": -15.38415,
+   "cog": 169.4,
+   "sog": 5.1,
+   "heading": 171,
+   "t": "2026-11-27T08:34:38Z",
+   "nm": 2.5
+  },
+  {
    "mmsi": "636015790",
    "name": "TRITON",
    "type": null,
@@ -45,32 +71,6 @@
    "heading": 235,
    "t": "2026-11-27T07:35:47Z",
    "nm": 4.4
-  },
-  {
-   "mmsi": "311001096",
-   "name": "SANTORINI",
-   "type": "other",
-   "type_code": 90,
-   "lat": 28.3,
-   "lon": -15.32305,
-   "cog": 267.5,
-   "sog": 0.8,
-   "heading": 178,
-   "t": "2026-11-27T06:23:34Z",
-   "nm": 10.8
-  },
-  {
-   "mmsi": "255915596",
-   "name": "RS LISA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.27707,
-   "lon": -15.58132,
-   "cog": 114.2,
-   "sog": 15.3,
-   "heading": 110,
-   "t": "2026-11-27T07:35:21Z",
-   "nm": 11.3
   },
   {
    "mmsi": "224787000",
@@ -125,19 +125,6 @@
    "nm": 24.0
   },
   {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.22332,
-   "lon": -15.88087,
-   "cog": 310.9,
-   "sog": null,
-   "heading": 312,
-   "t": "2026-11-27T06:25:32Z",
-   "nm": 24.4
-  },
-  {
    "mmsi": "538012500",
    "name": "STAITHES",
    "type": null,
@@ -154,8 +141,21 @@
  "known": {
   "224131000": {
    "name": "BAJAMAR EXPRESS",
-   "t": "2026-11-27T08:14:09Z",
+   "t": "2026-11-27T08:36:38Z",
    "type_code": 40
+  },
+  "255915596": {
+   "name": "RS LISA",
+   "t": "2026-11-27T08:36:38Z"
+  },
+  "563176300": {
+   "name": "LOWLANDS FREEDOM",
+   "type_code": 70,
+   "t": "2026-11-27T08:36:38Z"
+  },
+  "256519000": {
+   "name": "FLORETTE",
+   "t": "2026-11-27T08:36:38Z"
   },
   "224781000": {
    "name": "VOLCAN DE TAGORO",
@@ -181,10 +181,6 @@
    "name": "BAHIA CARGO",
    "t": "2026-11-27T08:14:09Z",
    "type_code": 79
-  },
-  "255915596": {
-   "name": "RS LISA",
-   "t": "2026-11-27T07:36:19Z"
   },
   "538012500": {
    "name": "STAITHES",
@@ -406,11 +402,6 @@
    "name": "MAERSK CYPRUS",
    "t": "2026-11-26T12:11:53Z",
    "type_code": 80
-  },
-  "563176300": {
-   "name": "LOWLANDS FREEDOM",
-   "type_code": 70,
-   "t": "2026-11-26T12:11:53Z"
   },
   "636018671": {
    "name": "LEVANTINE SEA",
@@ -3007,10 +2998,6 @@
    "name": "NANOQ",
    "t": "2026-11-22T03:25:48Z",
    "type_code": 97
-  },
-  "205229000": {
-   "name": "ORION",
-   "t": "2026-11-22T03:25:48Z"
   }
  }
 }
