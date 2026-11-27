@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T03:36:15Z",
+ "generated_utc": "2026-11-27T04:44:52Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -34,17 +34,17 @@
    "nm": 3.1
   },
   {
-   "mmsi": "209011000",
-   "name": "AL ANDALUS EXPRESS",
-   "type": "passenger",
-   "type_code": 60,
-   "lat": 28.23437,
-   "lon": -15.49142,
-   "cog": 290.1,
-   "sog": 14.0,
-   "heading": 294,
-   "t": "2026-11-27T03:34:17Z",
-   "nm": 6.4
+   "mmsi": "255806525",
+   "name": "KATHARINA",
+   "type": "cargo",
+   "type_code": 71,
+   "lat": 28.22921,
+   "lon": -15.50398,
+   "cog": 99.7,
+   "sog": 9.3,
+   "heading": 90,
+   "t": "2026-11-27T04:42:34Z",
+   "nm": 6.5
   },
   {
    "mmsi": "636021150",
@@ -73,17 +73,17 @@
    "nm": 15.4
   },
   {
-   "mmsi": "255806525",
-   "name": "KATHARINA",
-   "type": "cargo",
-   "type_code": 71,
-   "lat": 28.2405,
-   "lon": -15.71602,
-   "cog": 97.2,
-   "sog": 10.1,
-   "heading": 91,
-   "t": "2026-11-27T03:33:33Z",
-   "nm": 16.4
+   "mmsi": "209011000",
+   "name": "AL ANDALUS EXPRESS",
+   "type": "passenger",
+   "type_code": 60,
+   "lat": 28.30643,
+   "lon": -15.78409,
+   "cog": 284.6,
+   "sog": 14.0,
+   "heading": 286,
+   "t": "2026-11-27T04:43:49Z",
+   "nm": 21.2
   },
   {
    "mmsi": "538071196",
@@ -97,23 +97,41 @@
    "heading": 78,
    "t": "2026-11-27T03:00:41Z",
    "nm": 24.7
+  },
+  {
+   "mmsi": "212460000",
+   "name": "KYPROS SPIRIT",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.51432,
+   "lon": -15.75118,
+   "cog": 44.0,
+   "sog": 10.3,
+   "heading": 46,
+   "t": "2026-11-27T04:42:32Z",
+   "nm": 28.0
   }
  ],
  "known": {
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
-   "t": "2026-11-27T03:36:15Z",
+   "t": "2026-11-27T04:44:52Z",
    "type_code": 60
+  },
+  "255806525": {
+   "name": "KATHARINA",
+   "t": "2026-11-27T04:44:52Z",
+   "type_code": 71
+  },
+  "212460000": {
+   "name": "KYPROS SPIRIT",
+   "t": "2026-11-27T04:44:52Z",
+   "type_code": 70
   },
   "636021150": {
    "name": "MSC CORDELIA III",
    "t": "2026-11-27T03:36:15Z",
    "type_code": 70
-  },
-  "255806525": {
-   "name": "KATHARINA",
-   "t": "2026-11-27T03:36:15Z",
-   "type_code": 71
   },
   "636019992": {
    "name": "SOLAR LAI FONG",
@@ -127,11 +145,6 @@
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-27T03:01:58Z",
    "type_code": 40
-  },
-  "212460000": {
-   "name": "KYPROS SPIRIT",
-   "t": "2026-11-27T03:01:58Z",
-   "type_code": 70
   },
   "255806280": {
    "name": "WEC JAN STEEN",
