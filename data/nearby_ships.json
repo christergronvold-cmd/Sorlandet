@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T04:44:52Z",
+ "generated_utc": "2026-11-27T05:47:15Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,32 +7,6 @@
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "224098930",
-   "name": "BERRIZ SAN FRANCISCO",
-   "type": null,
-   "type_code": null,
-   "lat": 28.14636,
-   "lon": -15.42405,
-   "cog": null,
-   "sog": 0.0,
-   "heading": 358,
-   "t": "2026-11-27T02:59:19Z",
-   "nm": 0.2
-  },
-  {
-   "mmsi": "636019992",
-   "name": "SOLAR LAI FONG",
-   "type": null,
-   "type_code": null,
-   "lat": 28.12939,
-   "lon": -15.37108,
-   "cog": 293.4,
-   "sog": 4.7,
-   "heading": 295,
-   "t": "2026-11-27T03:36:00Z",
-   "nm": 3.1
-  },
   {
    "mmsi": "255806525",
    "name": "KATHARINA",
@@ -45,32 +19,6 @@
    "heading": 90,
    "t": "2026-11-27T04:42:34Z",
    "nm": 6.5
-  },
-  {
-   "mmsi": "636021150",
-   "name": "MSC CORDELIA III",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.22533,
-   "lon": -15.18681,
-   "cog": 40.8,
-   "sog": 5.5,
-   "heading": 39,
-   "t": "2026-11-27T03:33:53Z",
-   "nm": 13.6
-  },
-  {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.09918,
-   "lon": -15.71192,
-   "cog": 292.4,
-   "sog": 0.0,
-   "heading": 142,
-   "t": "2026-11-27T03:00:31Z",
-   "nm": 15.4
   },
   {
    "mmsi": "209011000",
@@ -86,17 +34,17 @@
    "nm": 21.2
   },
   {
-   "mmsi": "538071196",
-   "name": "HOME",
+   "mmsi": "657281600",
+   "name": "SHERLOCK",
    "type": null,
    "type_code": null,
-   "lat": 28.27155,
-   "lon": -15.87097,
-   "cog": 80.7,
-   "sog": 8.5,
-   "heading": 78,
-   "t": "2026-11-27T03:00:41Z",
-   "nm": 24.7
+   "lat": 27.80798,
+   "lon": -15.14219,
+   "cog": 196.3,
+   "sog": 12.3,
+   "heading": 194,
+   "t": "2026-11-27T05:45:14Z",
+   "nm": 25.2
   },
   {
    "mmsi": "212460000",
@@ -113,6 +61,10 @@
   }
  ],
  "known": {
+  "657281600": {
+   "name": "SHERLOCK",
+   "t": "2026-11-27T05:47:15Z"
+  },
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
    "t": "2026-11-27T04:44:52Z",
@@ -2968,11 +2920,6 @@
   },
   "636015498": {
    "name": "NIREAS",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 70
-  },
-  "255806221": {
-   "name": "UHL FORTUNE",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 70
   }
