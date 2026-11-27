@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T20:46:10Z",
+ "generated_utc": "2026-11-27T21:19:57Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,32 +7,6 @@
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "224271630",
-   "name": "VB DORAMAS",
-   "type": "tug",
-   "type_code": 52,
-   "lat": 28.13677,
-   "lon": -15.42063,
-   "cog": 337.4,
-   "sog": 0.0,
-   "heading": 314,
-   "t": "2026-11-27T19:07:57Z",
-   "nm": 0.6
-  },
-  {
-   "mmsi": "255806525",
-   "name": "KATHARINA",
-   "type": "cargo",
-   "type_code": 71,
-   "lat": 28.13324,
-   "lon": -15.418,
-   "cog": 35.1,
-   "sog": 0.9,
-   "heading": 323,
-   "t": "2026-11-27T19:13:57Z",
-   "nm": 0.8
-  },
   {
    "mmsi": "219412000",
    "name": "TORM AGNES",
@@ -45,6 +19,19 @@
    "heading": 245,
    "t": "2026-11-27T20:10:00Z",
    "nm": 2.6
+  },
+  {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.10089,
+   "lon": -15.72823,
+   "cog": 113.6,
+   "sog": null,
+   "heading": 110,
+   "t": "2026-11-27T21:19:31Z",
+   "nm": 16.2
   },
   {
    "mmsi": "224131000",
@@ -87,6 +74,11 @@
   }
  ],
  "known": {
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-27T21:19:57Z",
+   "type_code": 40
+  },
   "212641000": {
    "name": "WEC VAN GOGH",
    "t": "2026-11-27T20:46:10Z"
@@ -123,11 +115,6 @@
    "name": "VB DORAMAS",
    "t": "2026-11-27T19:10:09Z",
    "type_code": 52
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-27T18:36:21Z",
-   "type_code": 40
   },
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
