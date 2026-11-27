@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T18:36:21Z",
+ "generated_utc": "2026-11-27T19:10:09Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -8,30 +8,17 @@
  "radius_nm": 30.0,
  "ships": [
   {
-   "mmsi": "352005985",
-   "name": "HARENGUS",
-   "type": "cargo",
-   "type_code": 79,
-   "lat": 28.14289,
-   "lon": -15.41014,
-   "cog": 2.0,
-   "sog": 6.3,
-   "heading": 358,
-   "t": "2026-11-27T16:49:59Z",
-   "nm": 0.9
-  },
-  {
-   "mmsi": "212859000",
-   "name": "MERCEDES PINTO",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.23704,
-   "lon": -15.50082,
-   "cog": 291.7,
-   "sog": null,
-   "heading": 292,
-   "t": "2026-11-27T16:48:38Z",
-   "nm": 6.8
+   "mmsi": "224271630",
+   "name": "VB DORAMAS",
+   "type": "tug",
+   "type_code": 52,
+   "lat": 28.13677,
+   "lon": -15.42063,
+   "cog": 337.4,
+   "sog": 0.0,
+   "heading": 314,
+   "t": "2026-11-27T19:07:57Z",
+   "nm": 0.6
   },
   {
    "mmsi": "538009112",
@@ -100,6 +87,15 @@
   }
  ],
  "known": {
+  "563270700": {
+   "name": "ONE STRENGTH",
+   "t": "2026-11-27T19:10:09Z"
+  },
+  "224271630": {
+   "name": "VB DORAMAS",
+   "t": "2026-11-27T19:10:09Z",
+   "type_code": 52
+  },
   "224388000": {
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-27T18:36:21Z",
@@ -113,10 +109,6 @@
   "311002499": {
    "name": "MARPESSA",
    "t": "2026-11-27T18:36:21Z"
-  },
-  "563270700": {
-   "name": "ONE STRENGTH",
-   "t": "2026-11-27T18:02:36Z"
   },
   "255806503": {
    "name": "MANISA CAMILLA",
@@ -298,11 +290,6 @@
   "305375000": {
    "name": "ONEGO NEVA",
    "t": "2026-11-26T21:07:04Z"
-  },
-  "224271630": {
-   "name": "VB DORAMAS",
-   "t": "2026-11-26T17:46:53Z",
-   "type_code": 52
   },
   "636022166": {
    "name": "CL TONI MORRISON",
