@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T14:02:19Z",
+ "generated_utc": "2026-11-27T14:07:55Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "563239400",
+   "name": "ULTRA LYNX",
+   "type": null,
+   "type_code": null,
+   "lat": 28.12069,
+   "lon": -15.33423,
+   "cog": 260.1,
+   "sog": 8.9,
+   "heading": 263,
+   "t": "2026-11-27T14:07:34Z",
+   "nm": 5.1
+  },
   {
    "mmsi": "224781000",
    "name": "VOLCAN DE TAGORO",
@@ -23,8 +36,8 @@
   {
    "mmsi": "224836000",
    "name": "VOLCAN DE TIRAJANA",
-   "type": null,
-   "type_code": null,
+   "type": "high-speed craft",
+   "type_code": 40,
    "lat": 28.3933,
    "lon": -15.85963,
    "cog": 39.6,
@@ -35,13 +48,18 @@
   }
  ],
  "known": {
+  "224836000": {
+   "name": "VOLCAN DE TIRAJANA",
+   "t": "2026-11-27T14:07:55Z",
+   "type_code": 40
+  },
+  "563239400": {
+   "name": "ULTRA LYNX",
+   "t": "2026-11-27T14:07:55Z"
+  },
   "224781000": {
    "name": "VOLCAN DE TAGORO",
    "type_code": 40,
-   "t": "2026-11-27T14:02:19Z"
-  },
-  "224836000": {
-   "name": "VOLCAN DE TIRAJANA",
    "t": "2026-11-27T14:02:19Z"
   },
   "224984000": {
@@ -2888,11 +2906,6 @@
   "256070000": {
    "name": "MSC WORLD EUROPA",
    "t": "2026-11-22T05:35:53Z"
-  },
-  "211466900": {
-   "name": "EMOTION",
-   "t": "2026-11-22T05:03:23Z",
-   "type_code": 36
   }
  }
 }
