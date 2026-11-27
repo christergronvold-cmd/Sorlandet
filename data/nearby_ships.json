@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T03:01:58Z",
+ "generated_utc": "2026-11-27T03:36:15Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -21,6 +21,45 @@
    "nm": 0.2
   },
   {
+   "mmsi": "636019992",
+   "name": "SOLAR LAI FONG",
+   "type": null,
+   "type_code": null,
+   "lat": 28.12939,
+   "lon": -15.37108,
+   "cog": 293.4,
+   "sog": 4.7,
+   "heading": 295,
+   "t": "2026-11-27T03:36:00Z",
+   "nm": 3.1
+  },
+  {
+   "mmsi": "209011000",
+   "name": "AL ANDALUS EXPRESS",
+   "type": "passenger",
+   "type_code": 60,
+   "lat": 28.23437,
+   "lon": -15.49142,
+   "cog": 290.1,
+   "sog": 14.0,
+   "heading": 294,
+   "t": "2026-11-27T03:34:17Z",
+   "nm": 6.4
+  },
+  {
+   "mmsi": "636021150",
+   "name": "MSC CORDELIA III",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.22533,
+   "lon": -15.18681,
+   "cog": 40.8,
+   "sog": 5.5,
+   "heading": 39,
+   "t": "2026-11-27T03:33:53Z",
+   "nm": 13.6
+  },
+  {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
@@ -32,6 +71,19 @@
    "heading": 142,
    "t": "2026-11-27T03:00:31Z",
    "nm": 15.4
+  },
+  {
+   "mmsi": "255806525",
+   "name": "KATHARINA",
+   "type": "cargo",
+   "type_code": 71,
+   "lat": 28.2405,
+   "lon": -15.71602,
+   "cog": 97.2,
+   "sog": 10.1,
+   "heading": 91,
+   "t": "2026-11-27T03:33:33Z",
+   "nm": 16.4
   },
   {
    "mmsi": "538071196",
@@ -48,6 +100,25 @@
   }
  ],
  "known": {
+  "209011000": {
+   "name": "AL ANDALUS EXPRESS",
+   "t": "2026-11-27T03:36:15Z",
+   "type_code": 60
+  },
+  "636021150": {
+   "name": "MSC CORDELIA III",
+   "t": "2026-11-27T03:36:15Z",
+   "type_code": 70
+  },
+  "255806525": {
+   "name": "KATHARINA",
+   "t": "2026-11-27T03:36:15Z",
+   "type_code": 71
+  },
+  "636019992": {
+   "name": "SOLAR LAI FONG",
+   "t": "2026-11-27T03:36:15Z"
+  },
   "224098930": {
    "name": "BERRIZ SAN FRANCISCO",
    "t": "2026-11-27T03:01:58Z"
@@ -116,11 +187,6 @@
    "name": "VOLCAN DE TAGORO",
    "type_code": 40,
    "t": "2026-11-26T20:59:00Z"
-  },
-  "209011000": {
-   "name": "AL ANDALUS EXPRESS",
-   "t": "2026-11-26T18:24:40Z",
-   "type_code": 60
   },
   "224271630": {
    "name": "VB DORAMAS",
@@ -267,11 +333,6 @@
    "name": "TETHYS",
    "t": "2026-11-26T12:11:53Z",
    "type_code": 80
-  },
-  "636021150": {
-   "name": "MSC CORDELIA III",
-   "t": "2026-11-26T12:11:53Z",
-   "type_code": 70
   },
   "256153000": {
    "name": "OCCITAN LISTRAC",
@@ -1264,11 +1325,6 @@
   "249804000": {
    "name": "SUMMER LADY",
    "t": "2026-11-26T03:28:48Z"
-  },
-  "255806525": {
-   "name": "KATHARINA",
-   "t": "2026-11-26T02:56:18Z",
-   "type_code": 71
   },
   "225430000": {
    "name": "VILLA DE TAZACORTE",
@@ -2906,11 +2962,6 @@
    "name": "UHL FORTUNE",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 70
-  },
-  "636021944": {
-   "name": "KRITI ENERGY",
-   "t": "2026-11-21T23:32:05Z",
-   "type_code": 80
   }
  }
 }
