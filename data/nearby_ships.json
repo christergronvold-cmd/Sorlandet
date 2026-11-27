@@ -1,64 +1,12 @@
 {
- "generated_utc": "2026-11-27T09:09:06Z",
+ "generated_utc": "2026-11-27T10:46:17Z",
  "source": "aisstream.io",
  "centre": [
-  28.146,
-  -15.4276
+  28.145,
+  -15.4267
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "319297900",
-   "name": "DOKINHA",
-   "type": "pleasure craft",
-   "type_code": 37,
-   "lat": 28.13686,
-   "lon": -15.41966,
-   "cog": 170.7,
-   "sog": 4.9,
-   "heading": 176,
-   "t": "2026-11-27T08:11:23Z",
-   "nm": 0.7
-  },
-  {
-   "mmsi": "563176300",
-   "name": "LOWLANDS FREEDOM",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.14426,
-   "lon": -15.40799,
-   "cog": 207.4,
-   "sog": 0.0,
-   "heading": 181,
-   "t": "2026-11-27T08:34:14Z",
-   "nm": 1.0
-  },
-  {
-   "mmsi": "256902000",
-   "name": "CIELO DI ULSAN",
-   "type": "tanker",
-   "type_code": 80,
-   "lat": 28.13826,
-   "lon": -15.41094,
-   "cog": 331.7,
-   "sog": 1.5,
-   "heading": 310,
-   "t": "2026-11-27T08:13:34Z",
-   "nm": 1.0
-  },
-  {
-   "mmsi": "255915596",
-   "name": "RS LISA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.12833,
-   "lon": -15.38415,
-   "cog": 169.4,
-   "sog": 5.1,
-   "heading": 171,
-   "t": "2026-11-27T08:34:38Z",
-   "nm": 2.5
-  },
   {
    "mmsi": "224787000",
    "name": "BAHIA CARGO",
@@ -73,72 +21,43 @@
    "nm": 4.2
   },
   {
-   "mmsi": "636015790",
-   "name": "TRITON",
-   "type": null,
-   "type_code": null,
-   "lat": 28.12635,
-   "lon": -15.34662,
-   "cog": 236.5,
-   "sog": 3.5,
-   "heading": 235,
-   "t": "2026-11-27T07:35:47Z",
-   "nm": 4.4
+   "mmsi": "311001096",
+   "name": "SANTORINI",
+   "type": "other",
+   "type_code": 90,
+   "lat": 28.10205,
+   "lon": -15.35759,
+   "cog": 251.0,
+   "sog": 0.0,
+   "heading": 339,
+   "t": "2026-11-27T10:45:27Z",
+   "nm": 4.5
   },
   {
    "mmsi": "224131000",
    "name": "BAJAMAR EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.18319,
-   "lon": -15.83144,
-   "cog": 309.0,
+   "lat": 28.24149,
+   "lon": -15.91112,
+   "cog": 131.2,
    "sog": null,
-   "heading": 309,
-   "t": "2026-11-27T08:13:19Z",
-   "nm": 21.5
-  },
-  {
-   "mmsi": "224781000",
-   "name": "VOLCAN DE TAGORO",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.3514,
-   "lon": -15.78769,
-   "cog": 285.7,
-   "sog": null,
-   "heading": 282,
-   "t": "2026-11-27T08:13:29Z",
-   "nm": 22.7
-  },
-  {
-   "mmsi": "224984000",
-   "name": "VOLCAN DE TAIDIA",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.34504,
-   "lon": -15.8211,
-   "cog": 113.0,
-   "sog": null,
-   "heading": 110,
-   "t": "2026-11-27T08:11:55Z",
-   "nm": 24.0
-  },
-  {
-   "mmsi": "538012500",
-   "name": "STAITHES",
-   "type": null,
-   "type_code": null,
-   "lat": 27.7687,
-   "lon": -15.15556,
-   "cog": 198.0,
-   "sog": 13.5,
-   "heading": 200,
-   "t": "2026-11-27T07:33:42Z",
-   "nm": 26.9
+   "heading": 130,
+   "t": "2026-11-27T10:45:45Z",
+   "nm": 26.3
   }
  ],
  "known": {
+  "224131000": {
+   "name": "BAJAMAR EXPRESS",
+   "t": "2026-11-27T10:46:17Z",
+   "type_code": 40
+  },
+  "311001096": {
+   "name": "SANTORINI",
+   "t": "2026-11-27T10:46:17Z",
+   "type_code": 90
+  },
   "224787000": {
    "name": "BAHIA CARGO",
    "t": "2026-11-27T09:09:06Z",
@@ -147,11 +66,6 @@
   "636017424": {
    "name": "HOUYOSHI PARK",
    "t": "2026-11-27T09:09:06Z"
-  },
-  "224131000": {
-   "name": "BAJAMAR EXPRESS",
-   "t": "2026-11-27T08:36:38Z",
-   "type_code": 40
   },
   "255915596": {
    "name": "RS LISA",
@@ -198,11 +112,6 @@
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-27T06:26:18Z",
    "type_code": 40
-  },
-  "311001096": {
-   "name": "SANTORINI",
-   "t": "2026-11-27T06:26:18Z",
-   "type_code": 90
   },
   "657281600": {
    "name": "SHERLOCK",
