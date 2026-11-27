@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T15:14:10Z",
+ "generated_utc": "2026-11-27T16:50:04Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -8,30 +8,30 @@
  "radius_nm": 30.0,
  "ships": [
   {
-   "mmsi": "311001096",
-   "name": "SANTORINI",
-   "type": "other",
-   "type_code": 90,
-   "lat": 28.10215,
-   "lon": -15.35758,
-   "cog": 188.3,
-   "sog": 0.0,
-   "heading": 339,
-   "t": "2026-11-27T14:11:05Z",
-   "nm": 4.5
+   "mmsi": "352005985",
+   "name": "HARENGUS",
+   "type": "cargo",
+   "type_code": 79,
+   "lat": 28.14289,
+   "lon": -15.41014,
+   "cog": 2.0,
+   "sog": 6.3,
+   "heading": 358,
+   "t": "2026-11-27T16:49:59Z",
+   "nm": 0.9
   },
   {
-   "mmsi": "563239400",
-   "name": "ULTRA LYNX",
-   "type": null,
-   "type_code": null,
-   "lat": 28.12069,
-   "lon": -15.33423,
-   "cog": 260.1,
-   "sog": 8.9,
-   "heading": 263,
-   "t": "2026-11-27T14:07:34Z",
-   "nm": 5.1
+   "mmsi": "212859000",
+   "name": "MERCEDES PINTO",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.23704,
+   "lon": -15.50082,
+   "cog": 291.7,
+   "sog": null,
+   "heading": 292,
+   "t": "2026-11-27T16:48:38Z",
+   "nm": 6.8
   },
   {
    "mmsi": "219412000",
@@ -47,72 +47,38 @@
    "nm": 7.1
   },
   {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.09835,
-   "lon": -15.71791,
-   "cog": 305.8,
-   "sog": null,
-   "heading": 307,
-   "t": "2026-11-27T14:10:03Z",
-   "nm": 15.7
-  },
-  {
-   "mmsi": "230163060",
-   "name": null,
+   "mmsi": "563270700",
+   "name": "ONE STRENGTH",
    "type": null,
    "type_code": null,
-   "lat": 28.07011,
-   "lon": -15.78165,
-   "cog": 64.1,
-   "sog": 5.8,
-   "heading": null,
-   "t": "2026-11-27T14:10:13Z",
-   "nm": 19.3
-  },
-  {
-   "mmsi": "224984000",
-   "name": "VOLCAN DE TAIDIA",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.34295,
-   "lon": -15.76305,
-   "cog": 111.8,
-   "sog": null,
-   "heading": 112,
-   "t": "2026-11-27T14:11:25Z",
-   "nm": 21.4
-  },
-  {
-   "mmsi": "224781000",
-   "name": "VOLCAN DE TAGORO",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.37302,
-   "lon": -15.79799,
-   "cog": 280.9,
-   "sog": null,
-   "heading": 281,
-   "t": "2026-11-27T14:10:03Z",
-   "nm": 23.9
-  },
-  {
-   "mmsi": "224836000",
-   "name": "VOLCAN DE TIRAJANA",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.44696,
-   "lon": -15.81067,
-   "cog": 39.3,
-   "sog": null,
-   "heading": 41,
-   "t": "2026-11-27T14:11:25Z",
-   "nm": 27.2
+   "lat": 28.31011,
+   "lon": -15.9403,
+   "cog": 38.7,
+   "sog": 10.0,
+   "heading": 38,
+   "t": "2026-11-27T16:48:20Z",
+   "nm": 28.9
   }
  ],
  "known": {
+  "352005985": {
+   "name": "HARENGUS",
+   "t": "2026-11-27T16:50:04Z",
+   "type_code": 79
+  },
+  "212859000": {
+   "name": "MERCEDES PINTO",
+   "t": "2026-11-27T16:50:04Z",
+   "type_code": 40
+  },
+  "563270700": {
+   "name": "ONE STRENGTH",
+   "t": "2026-11-27T16:50:04Z"
+  },
+  "620800547": {
+   "name": "ANAKIN",
+   "t": "2026-11-27T16:50:04Z"
+  },
   "219412000": {
    "name": "TORM AGNES",
    "t": "2026-11-27T15:14:10Z"
@@ -505,11 +471,6 @@
    "name": "SHOSHIN MARU NO.83",
    "t": "2026-11-26T11:06:51Z",
    "type_code": 30
-  },
-  "352005985": {
-   "name": "HARENGUS",
-   "t": "2026-11-26T11:06:51Z",
-   "type_code": 79
   },
   "636017077": {
    "name": "SOPOT",
@@ -1207,11 +1168,6 @@
    "name": "CHARADA",
    "t": "2026-11-26T07:19:17Z",
    "type_code": 37
-  },
-  "212859000": {
-   "name": "MERCEDES PINTO",
-   "t": "2026-11-26T07:19:17Z",
-   "type_code": 40
   },
   "371884000": {
    "name": "ISUZU",
@@ -2961,16 +2917,6 @@
    "name": "LOLA B",
    "t": "2026-11-22T08:21:32Z",
    "type_code": 70
-  },
-  "227222950": {
-   "name": "FRAGOLA 2",
-   "t": "2026-11-22T07:49:06Z",
-   "type_code": 37
-  },
-  "228317970": {
-   "name": "AGUAMENTI II",
-   "t": "2026-11-22T06:40:50Z",
-   "type_code": 37
   }
  }
 }
