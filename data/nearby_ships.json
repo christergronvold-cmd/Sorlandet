@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T20:11:05Z",
+ "generated_utc": "2026-11-27T20:46:10Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -60,30 +60,17 @@
    "nm": 16.4
   },
   {
-   "mmsi": "209011000",
-   "name": "AL ANDALUS EXPRESS",
-   "type": "passenger",
-   "type_code": 60,
-   "lat": 28.35189,
-   "lon": -15.86458,
-   "cog": 109.1,
-   "sog": 15.3,
-   "heading": 107,
-   "t": "2026-11-27T18:33:48Z",
-   "nm": 26.3
-  },
-  {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.24601,
-   "lon": -15.91292,
-   "cog": 313.0,
-   "sog": null,
-   "heading": 314,
-   "t": "2026-11-27T18:34:54Z",
-   "nm": 26.4
+   "mmsi": "212641000",
+   "name": "WEC VAN GOGH",
+   "type": null,
+   "type_code": null,
+   "lat": 28.27156,
+   "lon": -15.91696,
+   "cog": 103.4,
+   "sog": 13.8,
+   "heading": 100,
+   "t": "2026-11-27T20:45:08Z",
+   "nm": 27.0
   },
   {
    "mmsi": "212859000",
@@ -100,6 +87,10 @@
   }
  ],
  "known": {
+  "212641000": {
+   "name": "WEC VAN GOGH",
+   "t": "2026-11-27T20:46:10Z"
+  },
   "224131000": {
    "name": "BAJAMAR EXPRESS",
    "t": "2026-11-27T20:11:05Z",
@@ -2951,10 +2942,6 @@
   "636016402": {
    "name": "TRISTAR JISHA",
    "t": "2026-11-22T10:33:00Z"
-  },
-  "265557990": {
-   "name": "HOKAHEY",
-   "t": "2026-11-22T10:00:26Z"
   }
  }
 }
