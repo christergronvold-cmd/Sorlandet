@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T19:10:09Z",
+ "generated_utc": "2026-11-27T19:16:38Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -19,6 +19,32 @@
    "heading": 314,
    "t": "2026-11-27T19:07:57Z",
    "nm": 0.6
+  },
+  {
+   "mmsi": "255806525",
+   "name": "KATHARINA",
+   "type": "cargo",
+   "type_code": 71,
+   "lat": 28.13324,
+   "lon": -15.418,
+   "cog": 35.1,
+   "sog": 0.9,
+   "heading": 323,
+   "t": "2026-11-27T19:13:57Z",
+   "nm": 0.8
+  },
+  {
+   "mmsi": "224131000",
+   "name": "BAJAMAR EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.09694,
+   "lon": -15.71357,
+   "cog": 96.3,
+   "sog": 7.0,
+   "heading": 101,
+   "t": "2026-11-27T19:15:52Z",
+   "nm": 15.5
   },
   {
    "mmsi": "538009112",
@@ -87,6 +113,16 @@
   }
  ],
  "known": {
+  "224131000": {
+   "name": "BAJAMAR EXPRESS",
+   "t": "2026-11-27T19:16:38Z",
+   "type_code": 40
+  },
+  "255806525": {
+   "name": "KATHARINA",
+   "t": "2026-11-27T19:16:38Z",
+   "type_code": 71
+  },
   "563270700": {
    "name": "ONE STRENGTH",
    "t": "2026-11-27T19:10:09Z"
@@ -164,11 +200,6 @@
    "name": "ULTRA LYNX",
    "t": "2026-11-27T14:07:55Z"
   },
-  "224131000": {
-   "name": "BAJAMAR EXPRESS",
-   "t": "2026-11-27T10:46:17Z",
-   "type_code": 40
-  },
   "224787000": {
    "name": "BAHIA CARGO",
    "t": "2026-11-27T09:09:06Z",
@@ -217,11 +248,6 @@
   "255803640": {
    "name": "ARIES J",
    "t": "2026-11-27T05:51:12Z"
-  },
-  "255806525": {
-   "name": "KATHARINA",
-   "t": "2026-11-27T04:44:52Z",
-   "type_code": 71
   },
   "212460000": {
    "name": "KYPROS SPIRIT",
