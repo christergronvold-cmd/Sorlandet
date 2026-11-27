@@ -1,9 +1,9 @@
 {
- "generated_utc": "2026-11-27T05:51:12Z",
+ "generated_utc": "2026-11-27T06:26:18Z",
  "source": "aisstream.io",
  "centre": [
-  28.145,
-  -15.4267
+  28.146,
+  -15.4276
  ],
  "radius_nm": 30.0,
  "ships": [
@@ -31,7 +31,20 @@
    "sog": 9.3,
    "heading": 90,
    "t": "2026-11-27T04:42:34Z",
-   "nm": 6.5
+   "nm": 6.4
+  },
+  {
+   "mmsi": "311001096",
+   "name": "SANTORINI",
+   "type": "other",
+   "type_code": 90,
+   "lat": 28.3,
+   "lon": -15.32305,
+   "cog": 267.5,
+   "sog": 0.8,
+   "heading": 178,
+   "t": "2026-11-27T06:23:34Z",
+   "nm": 10.8
   },
   {
    "mmsi": "209011000",
@@ -47,6 +60,19 @@
    "nm": 21.2
   },
   {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.22332,
+   "lon": -15.88087,
+   "cog": 310.9,
+   "sog": null,
+   "heading": 312,
+   "t": "2026-11-27T06:25:32Z",
+   "nm": 24.4
+  },
+  {
    "mmsi": "657281600",
    "name": "SHERLOCK",
    "type": "tanker",
@@ -57,7 +83,7 @@
    "sog": 12.3,
    "heading": 194,
    "t": "2026-11-27T05:45:14Z",
-   "nm": 25.2
+   "nm": 25.3
   },
   {
    "mmsi": "212460000",
@@ -71,9 +97,36 @@
    "heading": 46,
    "t": "2026-11-27T04:42:32Z",
    "nm": 28.0
+  },
+  {
+   "mmsi": "255915596",
+   "name": "RS LISA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.37364,
+   "lon": -15.89738,
+   "cog": 109.1,
+   "sog": 15.8,
+   "heading": 106,
+   "t": "2026-11-27T06:26:08Z",
+   "nm": 28.4
   }
  ],
  "known": {
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-27T06:26:18Z",
+   "type_code": 40
+  },
+  "311001096": {
+   "name": "SANTORINI",
+   "t": "2026-11-27T06:26:18Z",
+   "type_code": 90
+  },
+  "255915596": {
+   "name": "RS LISA",
+   "t": "2026-11-27T06:26:18Z"
+  },
   "657281600": {
    "name": "SHERLOCK",
    "t": "2026-11-27T05:51:12Z",
@@ -110,11 +163,6 @@
   "224098930": {
    "name": "BERRIZ SAN FRANCISCO",
    "t": "2026-11-27T03:01:58Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-27T03:01:58Z",
-   "type_code": 40
   },
   "255806280": {
    "name": "WEC JAN STEEN",
@@ -255,11 +303,6 @@
   },
   "538005087": {
    "name": "ATWOOD ADMIRAL",
-   "t": "2026-11-26T12:15:53Z",
-   "type_code": 90
-  },
-  "311001096": {
-   "name": "SANTORINI",
    "t": "2026-11-26T12:15:53Z",
    "type_code": 90
   },
@@ -2931,11 +2974,6 @@
    "name": "MARELLA DISCOVERY 2",
    "t": "2026-11-22T00:04:33Z",
    "type_code": 60
-  },
-  "636015498": {
-   "name": "NIREAS",
-   "t": "2026-11-22T00:04:33Z",
-   "type_code": 70
   }
  }
 }
