@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T01:59:33Z",
+ "generated_utc": "2026-11-27T03:01:58Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -12,24 +12,64 @@
    "name": "BERRIZ SAN FRANCISCO",
    "type": null,
    "type_code": null,
-   "lat": 28.14635,
+   "lat": 28.14636,
    "lon": -15.42405,
    "cog": null,
    "sog": 0.0,
    "heading": 358,
-   "t": "2026-11-27T01:58:59Z",
+   "t": "2026-11-27T02:59:19Z",
    "nm": 0.2
+  },
+  {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.09918,
+   "lon": -15.71192,
+   "cog": 292.4,
+   "sog": 0.0,
+   "heading": 142,
+   "t": "2026-11-27T03:00:31Z",
+   "nm": 15.4
+  },
+  {
+   "mmsi": "538071196",
+   "name": "HOME",
+   "type": null,
+   "type_code": null,
+   "lat": 28.27155,
+   "lon": -15.87097,
+   "cog": 80.7,
+   "sog": 8.5,
+   "heading": 78,
+   "t": "2026-11-27T03:00:41Z",
+   "nm": 24.7
   }
  ],
  "known": {
   "224098930": {
    "name": "BERRIZ SAN FRANCISCO",
-   "t": "2026-11-27T01:59:33Z"
+   "t": "2026-11-27T03:01:58Z"
   },
   "224388000": {
    "name": "BANADEROS EXPRESS",
-   "t": "2026-11-26T23:55:54Z",
+   "t": "2026-11-27T03:01:58Z",
    "type_code": 40
+  },
+  "212460000": {
+   "name": "KYPROS SPIRIT",
+   "t": "2026-11-27T03:01:58Z",
+   "type_code": 70
+  },
+  "255806280": {
+   "name": "WEC JAN STEEN",
+   "t": "2026-11-27T03:01:58Z",
+   "type_code": 71
+  },
+  "538071196": {
+   "name": "HOME",
+   "t": "2026-11-27T03:01:58Z"
   },
   "431486000": {
    "name": "GOEI MARU NO.88",
@@ -53,11 +93,6 @@
    "name": "MEIN SCHIFF 7",
    "t": "2026-11-26T22:15:57Z",
    "type_code": 60
-  },
-  "212460000": {
-   "name": "KYPROS SPIRIT",
-   "t": "2026-11-26T22:11:59Z",
-   "type_code": 70
   },
   "538011325": {
    "name": "ST MICHAEL",
@@ -818,11 +853,6 @@
    "name": "HASTA LA VISTA",
    "t": "2026-11-26T09:02:24Z",
    "type_code": 36
-  },
-  "255806280": {
-   "name": "WEC JAN STEEN",
-   "t": "2026-11-26T09:02:24Z",
-   "type_code": 71
   },
   "225966730": {
    "name": "FELIPEVA SEXTA",
@@ -2881,11 +2911,6 @@
    "name": "KRITI ENERGY",
    "t": "2026-11-21T23:32:05Z",
    "type_code": 80
-  },
-  "247353800": {
-   "name": "AIDAPRIMA",
-   "type_code": 60,
-   "t": "2026-11-21T23:32:05Z"
   }
  }
 }
