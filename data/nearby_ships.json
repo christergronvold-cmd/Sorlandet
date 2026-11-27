@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T07:36:19Z",
+ "generated_utc": "2026-11-27T08:14:09Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -8,17 +8,30 @@
  "radius_nm": 30.0,
  "ships": [
   {
-   "mmsi": "255803640",
-   "name": "ARIES J",
-   "type": null,
-   "type_code": null,
-   "lat": 28.18775,
-   "lon": -15.38623,
-   "cog": 345.9,
-   "sog": 16.2,
-   "heading": 347,
-   "t": "2026-11-27T05:50:37Z",
-   "nm": 3.3
+   "mmsi": "319297900",
+   "name": "DOKINHA",
+   "type": "pleasure craft",
+   "type_code": 37,
+   "lat": 28.13686,
+   "lon": -15.41966,
+   "cog": 170.7,
+   "sog": 4.9,
+   "heading": 176,
+   "t": "2026-11-27T08:11:23Z",
+   "nm": 0.7
+  },
+  {
+   "mmsi": "256902000",
+   "name": "CIELO DI ULSAN",
+   "type": "tanker",
+   "type_code": 80,
+   "lat": 28.13826,
+   "lon": -15.41094,
+   "cog": 331.7,
+   "sog": 1.5,
+   "heading": 310,
+   "t": "2026-11-27T08:13:34Z",
+   "nm": 1.0
   },
   {
    "mmsi": "636015790",
@@ -60,17 +73,56 @@
    "nm": 11.3
   },
   {
+   "mmsi": "224787000",
+   "name": "BAHIA CARGO",
+   "type": "cargo",
+   "type_code": 79,
+   "lat": 28.31069,
+   "lon": -15.7503,
+   "cog": 111.0,
+   "sog": 18.2,
+   "heading": 109,
+   "t": "2026-11-27T08:13:10Z",
+   "nm": 19.7
+  },
+  {
    "mmsi": "224131000",
    "name": "BAJAMAR EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.15843,
-   "lon": -15.80587,
-   "cog": 132.3,
+   "lat": 28.18319,
+   "lon": -15.83144,
+   "cog": 309.0,
    "sog": null,
-   "heading": 129,
-   "t": "2026-11-27T07:01:07Z",
-   "nm": 20.0
+   "heading": 309,
+   "t": "2026-11-27T08:13:19Z",
+   "nm": 21.5
+  },
+  {
+   "mmsi": "224781000",
+   "name": "VOLCAN DE TAGORO",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.3514,
+   "lon": -15.78769,
+   "cog": 285.7,
+   "sog": null,
+   "heading": 282,
+   "t": "2026-11-27T08:13:29Z",
+   "nm": 22.7
+  },
+  {
+   "mmsi": "224984000",
+   "name": "VOLCAN DE TAIDIA",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.34504,
+   "lon": -15.8211,
+   "cog": 113.0,
+   "sog": null,
+   "heading": 110,
+   "t": "2026-11-27T08:11:55Z",
+   "nm": 24.0
   },
   {
    "mmsi": "224388000",
@@ -84,19 +136,6 @@
    "heading": 312,
    "t": "2026-11-27T06:25:32Z",
    "nm": 24.4
-  },
-  {
-   "mmsi": "657281600",
-   "name": "SHERLOCK",
-   "type": "tanker",
-   "type_code": 80,
-   "lat": 27.80798,
-   "lon": -15.14219,
-   "cog": 196.3,
-   "sog": 12.3,
-   "heading": 194,
-   "t": "2026-11-27T05:45:14Z",
-   "nm": 25.3
   },
   {
    "mmsi": "538012500",
@@ -113,6 +152,36 @@
   }
  ],
  "known": {
+  "224131000": {
+   "name": "BAJAMAR EXPRESS",
+   "t": "2026-11-27T08:14:09Z",
+   "type_code": 40
+  },
+  "224781000": {
+   "name": "VOLCAN DE TAGORO",
+   "type_code": 40,
+   "t": "2026-11-27T08:14:09Z"
+  },
+  "224984000": {
+   "name": "VOLCAN DE TAIDIA",
+   "t": "2026-11-27T08:14:09Z",
+   "type_code": 40
+  },
+  "319297900": {
+   "name": "DOKINHA",
+   "t": "2026-11-27T08:14:09Z",
+   "type_code": 37
+  },
+  "256902000": {
+   "name": "CIELO DI ULSAN",
+   "t": "2026-11-27T08:14:09Z",
+   "type_code": 80
+  },
+  "224787000": {
+   "name": "BAHIA CARGO",
+   "t": "2026-11-27T08:14:09Z",
+   "type_code": 79
+  },
   "255915596": {
    "name": "RS LISA",
    "t": "2026-11-27T07:36:19Z"
@@ -124,11 +193,6 @@
   "636015790": {
    "name": "TRITON",
    "t": "2026-11-27T07:36:19Z"
-  },
-  "224131000": {
-   "name": "BAJAMAR EXPRESS",
-   "t": "2026-11-27T07:01:16Z",
-   "type_code": 40
   },
   "224388000": {
    "name": "BANADEROS EXPRESS",
@@ -227,11 +291,6 @@
    "name": "ONEGO NEVA",
    "t": "2026-11-26T21:07:04Z"
   },
-  "224781000": {
-   "name": "VOLCAN DE TAGORO",
-   "type_code": 40,
-   "t": "2026-11-26T20:59:00Z"
-  },
   "224271630": {
    "name": "VB DORAMAS",
    "t": "2026-11-26T17:46:53Z",
@@ -289,11 +348,6 @@
    "name": "PEWEE",
    "t": "2026-11-26T13:25:54Z",
    "type_code": 70
-  },
-  "224984000": {
-   "name": "VOLCAN DE TAIDIA",
-   "t": "2026-11-26T13:25:54Z",
-   "type_code": 40
   },
   "636025449": {
    "name": "MSC ANNABELLA",
@@ -1253,11 +1307,6 @@
    "t": "2026-11-26T06:42:56Z",
    "name": "PADDINGTON"
   },
-  "319297900": {
-   "name": "DOKINHA",
-   "t": "2026-11-26T06:42:56Z",
-   "type_code": 37
-  },
   "538010623": {
    "name": "NOBLE  VALIANT",
    "t": "2026-11-26T06:42:56Z",
@@ -1347,11 +1396,6 @@
    "t": "2026-11-26T03:28:48Z",
    "type_code": 36
   },
-  "256902000": {
-   "name": "CIELO DI ULSAN",
-   "t": "2026-11-26T03:28:48Z",
-   "type_code": 80
-  },
   "249804000": {
    "name": "SUMMER LADY",
    "t": "2026-11-26T03:28:48Z"
@@ -1433,11 +1477,6 @@
    "name": "OBORISHTE",
    "type_code": 70,
    "t": "2026-11-25T21:32:08Z"
-  },
-  "224787000": {
-   "name": "BAHIA CARGO",
-   "t": "2026-11-25T19:52:21Z",
-   "type_code": 79
   },
   "210101000": {
    "name": "EINSTEIN",
