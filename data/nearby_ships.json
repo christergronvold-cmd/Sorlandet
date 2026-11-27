@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T14:07:55Z",
+ "generated_utc": "2026-11-27T14:11:51Z",
  "source": "aisstream.io",
  "centre": [
   28.145,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "311001096",
+   "name": "SANTORINI",
+   "type": "other",
+   "type_code": 90,
+   "lat": 28.10215,
+   "lon": -15.35758,
+   "cog": 188.3,
+   "sog": 0.0,
+   "heading": 339,
+   "t": "2026-11-27T14:11:05Z",
+   "nm": 4.5
+  },
   {
    "mmsi": "563239400",
    "name": "ULTRA LYNX",
@@ -21,61 +34,105 @@
    "nm": 5.1
   },
   {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.09835,
+   "lon": -15.71791,
+   "cog": 305.8,
+   "sog": null,
+   "heading": 307,
+   "t": "2026-11-27T14:10:03Z",
+   "nm": 15.7
+  },
+  {
+   "mmsi": "230163060",
+   "name": null,
+   "type": null,
+   "type_code": null,
+   "lat": 28.07011,
+   "lon": -15.78165,
+   "cog": 64.1,
+   "sog": 5.8,
+   "heading": null,
+   "t": "2026-11-27T14:10:13Z",
+   "nm": 19.3
+  },
+  {
+   "mmsi": "224984000",
+   "name": "VOLCAN DE TAIDIA",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.34295,
+   "lon": -15.76305,
+   "cog": 111.8,
+   "sog": null,
+   "heading": 112,
+   "t": "2026-11-27T14:11:25Z",
+   "nm": 21.4
+  },
+  {
    "mmsi": "224781000",
    "name": "VOLCAN DE TAGORO",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.33445,
-   "lon": -15.71303,
-   "cog": 295.8,
+   "lat": 28.37302,
+   "lon": -15.79799,
+   "cog": 280.9,
    "sog": null,
-   "heading": 296,
-   "t": "2026-11-27T14:01:23Z",
-   "nm": 18.9
+   "heading": 281,
+   "t": "2026-11-27T14:10:03Z",
+   "nm": 23.9
   },
   {
    "mmsi": "224836000",
    "name": "VOLCAN DE TIRAJANA",
    "type": "high-speed craft",
    "type_code": 40,
-   "lat": 28.3933,
-   "lon": -15.85963,
-   "cog": 39.6,
+   "lat": 28.44696,
+   "lon": -15.81067,
+   "cog": 39.3,
    "sog": null,
    "heading": 41,
-   "t": "2026-11-27T14:01:49Z",
-   "nm": 27.3
+   "t": "2026-11-27T14:11:25Z",
+   "nm": 27.2
   }
  ],
  "known": {
   "224836000": {
    "name": "VOLCAN DE TIRAJANA",
-   "t": "2026-11-27T14:07:55Z",
+   "t": "2026-11-27T14:11:51Z",
+   "type_code": 40
+  },
+  "224781000": {
+   "name": "VOLCAN DE TAGORO",
+   "type_code": 40,
+   "t": "2026-11-27T14:11:51Z"
+  },
+  "224984000": {
+   "name": "VOLCAN DE TAIDIA",
+   "t": "2026-11-27T14:11:51Z",
+   "type_code": 40
+  },
+  "311001096": {
+   "name": "SANTORINI",
+   "t": "2026-11-27T14:11:51Z",
+   "type_code": 90
+  },
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-27T14:11:51Z",
    "type_code": 40
   },
   "563239400": {
    "name": "ULTRA LYNX",
    "t": "2026-11-27T14:07:55Z"
   },
-  "224781000": {
-   "name": "VOLCAN DE TAGORO",
-   "type_code": 40,
-   "t": "2026-11-27T14:02:19Z"
-  },
-  "224984000": {
-   "name": "VOLCAN DE TAIDIA",
-   "t": "2026-11-27T11:21:38Z",
-   "type_code": 40
-  },
   "224131000": {
    "name": "BAJAMAR EXPRESS",
    "t": "2026-11-27T10:46:17Z",
    "type_code": 40
-  },
-  "311001096": {
-   "name": "SANTORINI",
-   "t": "2026-11-27T10:46:17Z",
-   "type_code": 90
   },
   "224787000": {
    "name": "BAHIA CARGO",
@@ -116,11 +173,6 @@
   "636015790": {
    "name": "TRITON",
    "t": "2026-11-27T07:36:19Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-27T06:26:18Z",
-   "type_code": 40
   },
   "657281600": {
    "name": "SHERLOCK",
