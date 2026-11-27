@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-27T21:52:26Z",
+ "generated_utc": "2026-11-27T22:25:01Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -8,17 +8,17 @@
  "radius_nm": 30.0,
  "ships": [
   {
-   "mmsi": "219412000",
-   "name": "TORM AGNES",
+   "mmsi": "212641000",
+   "name": "WEC VAN GOGH",
    "type": null,
    "type_code": null,
-   "lat": 28.15581,
-   "lon": -15.37873,
-   "cog": 250.9,
-   "sog": 4.1,
-   "heading": 245,
-   "t": "2026-11-27T20:10:00Z",
-   "nm": 2.7
+   "lat": 28.22266,
+   "lon": -15.50172,
+   "cog": 99.1,
+   "sog": 14.1,
+   "heading": 97,
+   "t": "2026-11-27T22:23:55Z",
+   "nm": 6.0
   },
   {
    "mmsi": "224388000",
@@ -32,56 +32,17 @@
    "heading": 142,
    "t": "2026-11-27T21:50:00Z",
    "nm": 15.3
-  },
-  {
-   "mmsi": "224131000",
-   "name": "BAJAMAR EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.10794,
-   "lon": -15.73286,
-   "cog": 307.1,
-   "sog": null,
-   "heading": 308,
-   "t": "2026-11-27T20:10:35Z",
-   "nm": 16.3
-  },
-  {
-   "mmsi": "212641000",
-   "name": "WEC VAN GOGH",
-   "type": null,
-   "type_code": null,
-   "lat": 28.27156,
-   "lon": -15.91696,
-   "cog": 103.4,
-   "sog": 13.8,
-   "heading": 100,
-   "t": "2026-11-27T20:45:08Z",
-   "nm": 27.0
-  },
-  {
-   "mmsi": "212859000",
-   "name": "MERCEDES PINTO",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.36051,
-   "lon": -15.89911,
-   "cog": 108.9,
-   "sog": null,
-   "heading": 107,
-   "t": "2026-11-27T20:10:29Z",
-   "nm": 28.1
   }
  ],
  "known": {
+  "212641000": {
+   "name": "WEC VAN GOGH",
+   "t": "2026-11-27T22:25:01Z"
+  },
   "224388000": {
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-27T21:52:26Z",
    "type_code": 40
-  },
-  "212641000": {
-   "name": "WEC VAN GOGH",
-   "t": "2026-11-27T20:46:10Z"
   },
   "224131000": {
    "name": "BAJAMAR EXPRESS",
