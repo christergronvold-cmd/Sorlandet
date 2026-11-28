@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T00:44:39Z",
+ "generated_utc": "2026-11-28T00:48:55Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "224271630",
+   "name": "VB DORAMAS",
+   "type": "tug",
+   "type_code": 52,
+   "lat": 28.13257,
+   "lon": -15.42097,
+   "cog": 224.5,
+   "sog": 0.9,
+   "heading": 207,
+   "t": "2026-11-28T00:47:52Z",
+   "nm": 0.9
+  },
   {
    "mmsi": "636019992",
    "name": "SOLAR LAI FONG",
@@ -61,6 +74,11 @@
   }
  ],
  "known": {
+  "224271630": {
+   "name": "VB DORAMAS",
+   "t": "2026-11-28T00:48:55Z",
+   "type_code": 52
+  },
   "311002097": {
    "name": "JOTUN",
    "t": "2026-11-28T00:44:39Z"
@@ -123,11 +141,6 @@
   "563270700": {
    "name": "ONE STRENGTH",
    "t": "2026-11-27T19:10:09Z"
-  },
-  "224271630": {
-   "name": "VB DORAMAS",
-   "t": "2026-11-27T19:10:09Z",
-   "type_code": 52
   },
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
