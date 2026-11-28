@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T00:40:18Z",
+ "generated_utc": "2026-11-28T00:44:39Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -21,6 +21,19 @@
    "nm": 2.0
   },
   {
+   "mmsi": "563094500",
+   "name": "ULTRA INFINITY",
+   "type": null,
+   "type_code": null,
+   "lat": 28.11919,
+   "lon": -15.37736,
+   "cog": 249.8,
+   "sog": 0.5,
+   "heading": 300,
+   "t": "2026-11-28T00:44:36Z",
+   "nm": 3.1
+  },
+  {
    "mmsi": "224823000",
    "name": "BRENAS CARGO",
    "type": "cargo",
@@ -32,15 +45,37 @@
    "heading": 290,
    "t": "2026-11-28T00:33:31Z",
    "nm": 10.8
+  },
+  {
+   "mmsi": "224388000",
+   "name": "BANADEROS EXPRESS",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.09919,
+   "lon": -15.71192,
+   "cog": 152.8,
+   "sog": 0.0,
+   "heading": 142,
+   "t": "2026-11-28T00:43:21Z",
+   "nm": 15.3
   }
  ],
  "known": {
-  "636019992": {
-   "name": "SOLAR LAI FONG",
-   "t": "2026-11-28T00:40:18Z"
-  },
   "311002097": {
    "name": "JOTUN",
+   "t": "2026-11-28T00:44:39Z"
+  },
+  "224388000": {
+   "name": "BANADEROS EXPRESS",
+   "t": "2026-11-28T00:44:39Z",
+   "type_code": 40
+  },
+  "563094500": {
+   "name": "ULTRA INFINITY",
+   "t": "2026-11-28T00:44:39Z"
+  },
+  "636019992": {
+   "name": "SOLAR LAI FONG",
    "t": "2026-11-28T00:40:18Z"
   },
   "224823000": {
@@ -60,11 +95,6 @@
   "212641000": {
    "name": "WEC VAN GOGH",
    "t": "2026-11-27T22:25:01Z"
-  },
-  "224388000": {
-   "name": "BANADEROS EXPRESS",
-   "t": "2026-11-27T21:52:26Z",
-   "type_code": 40
   },
   "224131000": {
    "name": "BAJAMAR EXPRESS",
@@ -2885,10 +2915,6 @@
   },
   "261002472": {
    "name": "ANTOJOS",
-   "t": "2026-11-22T11:05:32Z"
-  },
-  "563160600": {
-   "name": "FABIA SCHULTE",
    "t": "2026-11-22T11:05:32Z"
   }
  }
