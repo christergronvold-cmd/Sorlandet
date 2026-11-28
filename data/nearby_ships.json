@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T10:51:52Z",
+ "generated_utc": "2026-11-28T11:56:42Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,19 +7,6 @@
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "636026541",
-   "name": "HORIZON LEDA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.1471,
-   "lon": -15.37887,
-   "cog": 40.4,
-   "sog": 8.8,
-   "heading": 41,
-   "t": "2026-11-28T09:18:27Z",
-   "nm": 2.6
-  },
   {
    "mmsi": "255806280",
    "name": "WEC JAN STEEN",
@@ -48,6 +35,11 @@
   }
  ],
  "known": {
+  "636013564": {
+   "name": "LOXANDRA",
+   "type_code": 70,
+   "t": "2026-11-28T11:56:42Z"
+  },
   "255806280": {
    "name": "WEC JAN STEEN",
    "t": "2026-11-28T10:51:52Z",
@@ -2893,11 +2885,6 @@
   "268251802": {
    "name": "RAPIDO",
    "t": "2026-11-22T12:44:31Z"
-  },
-  "339000388": {
-   "name": "DINORA",
-   "t": "2026-11-22T12:12:02Z",
-   "type_code": 36
   }
  }
 }
