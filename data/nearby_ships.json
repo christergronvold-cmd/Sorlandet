@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T08:14:57Z",
+ "generated_utc": "2026-11-28T08:47:23Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -34,6 +34,19 @@
    "nm": 1.9
   },
   {
+   "mmsi": "224781000",
+   "name": "VOLCAN DE TAGORO",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.20846,
+   "lon": -15.40703,
+   "cog": 120.2,
+   "sog": null,
+   "heading": 117,
+   "t": "2026-11-28T08:46:57Z",
+   "nm": 3.9
+  },
+  {
    "mmsi": "224984000",
    "name": "VOLCAN DE TAIDIA",
    "type": "high-speed craft",
@@ -45,45 +58,24 @@
    "heading": 293,
    "t": "2026-11-28T07:39:35Z",
    "nm": 3.9
-  },
-  {
-   "mmsi": "311378000",
-   "name": "MARELLA DISCOVERY 2",
-   "type": null,
-   "type_code": null,
-   "lat": 28.13375,
-   "lon": -15.30986,
-   "cog": 251.2,
-   "sog": 10.3,
-   "heading": 248,
-   "t": "2026-11-28T06:29:27Z",
-   "nm": 6.3
-  },
-  {
-   "mmsi": "247282500",
-   "name": "AIDABLU",
-   "type": "passenger",
-   "type_code": 69,
-   "lat": 28.35961,
-   "lon": -15.93215,
-   "cog": 310.0,
-   "sog": 15.5,
-   "heading": 311,
-   "t": "2026-11-28T06:28:28Z",
-   "nm": 29.6
   }
  ],
  "known": {
+  "253291000": {
+   "name": "IBN BATTUTA",
+   "t": "2026-11-28T08:47:23Z"
+  },
+  "224781000": {
+   "name": "VOLCAN DE TAGORO",
+   "type_code": 40,
+   "t": "2026-11-28T08:47:23Z"
+  },
   "255806143": {
    "name": "AVILA",
    "t": "2026-11-28T08:14:57Z"
   },
   "636026541": {
    "name": "HORIZON LEDA",
-   "t": "2026-11-28T08:14:57Z"
-  },
-  "253291000": {
-   "name": "IBN BATTUTA",
    "t": "2026-11-28T08:14:57Z"
   },
   "224984000": {
@@ -214,11 +206,6 @@
    "name": "VOLCAN DE TIRAJANA",
    "t": "2026-11-27T14:11:51Z",
    "type_code": 40
-  },
-  "224781000": {
-   "name": "VOLCAN DE TAGORO",
-   "type_code": 40,
-   "t": "2026-11-27T14:11:51Z"
   },
   "311001096": {
    "name": "SANTORINI",
