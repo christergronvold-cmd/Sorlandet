@@ -2,29 +2,31 @@
  "ship": "Sørlandet",
  "mmsi": "257165000",
  "imo": "5334561",
- "updated_utc": "2026-11-28T03:43:52Z",
+ "updated_utc": "2026-11-28T04:16:23Z",
  "fresh_fix": true,
  "demo": false,
  "position": {
-  "lat": 28.14599,
-  "lon": -15.42766,
+  "ais_src": "TER",
+  "lat": 28.14597,
+  "lon": -15.42765,
   "sog_kn": 0.0,
-  "cog_deg": 90,
-  "heading_deg": null,
-  "seen_utc": "2026-11-27T21:47:10Z",
-  "source": "foundation",
-  "sog_derived": true,
+  "cog_deg": 89.0,
+  "heading_deg": 0,
   "nav_status": 5,
-  "nav_status_utc": "2026-11-27T21:47:10Z"
+  "destination": "ES LPA",
+  "draught_m": 4.1,
+  "seen_utc": "2026-11-28T04:11:45Z",
+  "source": "vesselfinder",
+  "nav_status_utc": "2026-11-28T04:11:45Z"
  },
  "voyage": {
   "destination": "ES LPA",
   "eta_text": "18.11 10:00",
   "draught_m": 4.1,
-  "heard_utc": "2026-11-27T21:47:10Z"
+  "heard_utc": "2026-11-28T04:11:45Z"
  },
  "weather": {
-  "fetched_utc": "2026-11-28T03:40:51Z",
+  "fetched_utc": "2026-11-28T04:13:22Z",
   "sea": {
    "wave_height_m": 1.14,
    "wave_direction_deg": 6,
@@ -33,21 +35,21 @@
    "swell_period_s": 6.6,
    "wind_wave_height_m": 0.0,
    "sea_temp_c": 23.1,
-   "time_utc": "2026-11-28T03:30"
+   "time_utc": "2026-11-28T04:00"
   },
   "air": {
    "temp_c": 16.7,
-   "feels_c": 16.3,
+   "feels_c": 16.2,
    "wind_ms": 2.6,
    "gust_ms": 4.6,
    "wind_direction_deg": 254,
    "pressure_hpa": 1018.1,
-   "cloud_pct": 23,
+   "cloud_pct": 11,
    "precip_mm": 0.0,
    "weather_code": 1,
-   "time_utc": "2026-11-28T03:30",
+   "time_utc": "2026-11-28T04:00",
    "source": "open-meteo",
-   "fetched_utc": "2026-11-28T03:40:51Z"
+   "fetched_utc": "2026-11-28T04:13:22Z"
   }
  },
  "approach": {
@@ -55,7 +57,7 @@
  },
  "sun": {
   "moon": {
-   "age_days": 18.2,
+   "age_days": 18.3,
    "illumination": 0.87,
    "phase": "waning gibbous"
   },
@@ -67,7 +69,7 @@
   "daylight_hours": 10.5
  },
  "stats": {
-  "points": 1084,
+  "points": 1083,
   "distance_nm": 4335.1,
   "first_point_utc": "2026-08-24T22:38:16Z"
  }
