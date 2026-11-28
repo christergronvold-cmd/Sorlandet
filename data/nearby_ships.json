@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T07:39:55Z",
+ "generated_utc": "2026-11-28T08:14:57Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,6 +7,32 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "255806143",
+   "name": "AVILA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.14877,
+   "lon": -15.4143,
+   "cog": 41.4,
+   "sog": 0.0,
+   "heading": 221,
+   "t": "2026-11-28T08:14:45Z",
+   "nm": 0.7
+  },
+  {
+   "mmsi": "636026541",
+   "name": "HORIZON LEDA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.12909,
+   "lon": -15.39719,
+   "cog": 45.9,
+   "sog": 0.0,
+   "heading": 71,
+   "t": "2026-11-28T08:11:52Z",
+   "nm": 1.9
+  },
   {
    "mmsi": "224984000",
    "name": "VOLCAN DE TAIDIA",
@@ -48,6 +74,18 @@
   }
  ],
  "known": {
+  "255806143": {
+   "name": "AVILA",
+   "t": "2026-11-28T08:14:57Z"
+  },
+  "636026541": {
+   "name": "HORIZON LEDA",
+   "t": "2026-11-28T08:14:57Z"
+  },
+  "253291000": {
+   "name": "IBN BATTUTA",
+   "t": "2026-11-28T08:14:57Z"
+  },
   "224984000": {
    "name": "VOLCAN DE TAIDIA",
    "t": "2026-11-28T07:39:55Z",
@@ -87,10 +125,6 @@
    "name": "BANADEROS EXPRESS",
    "t": "2026-11-28T04:50:12Z",
    "type_code": 40
-  },
-  "255806143": {
-   "name": "AVILA",
-   "t": "2026-11-28T04:50:12Z"
   },
   "224823000": {
    "name": "BRENAS CARGO",
@@ -2890,16 +2924,6 @@
   "227992440": {
    "type_code": 36,
    "t": "2026-11-22T12:12:02Z"
-  },
-  "636021994": {
-   "name": "MSC MICHIGAN VII",
-   "t": "2026-11-22T11:39:26Z",
-   "type_code": 70
-  },
-  "477021900": {
-   "name": "HUA XING HAI",
-   "t": "2026-11-22T11:39:26Z",
-   "type_code": 70
   }
  }
 }
