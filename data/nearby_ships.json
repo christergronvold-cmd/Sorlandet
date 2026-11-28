@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T00:34:54Z",
+ "generated_utc": "2026-11-28T00:40:18Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "636019992",
+   "name": "SOLAR LAI FONG",
+   "type": null,
+   "type_code": null,
+   "lat": 28.1353,
+   "lon": -15.39107,
+   "cog": 144.5,
+   "sog": 0.1,
+   "heading": 51,
+   "t": "2026-11-28T00:40:04Z",
+   "nm": 2.0
+  },
   {
    "mmsi": "224823000",
    "name": "BRENAS CARGO",
@@ -22,6 +35,14 @@
   }
  ],
  "known": {
+  "636019992": {
+   "name": "SOLAR LAI FONG",
+   "t": "2026-11-28T00:40:18Z"
+  },
+  "311002097": {
+   "name": "JOTUN",
+   "t": "2026-11-28T00:40:18Z"
+  },
   "224823000": {
    "name": "BRENAS CARGO",
    "t": "2026-11-28T00:34:54Z",
@@ -190,10 +211,6 @@
    "name": "MSC CORDELIA III",
    "t": "2026-11-27T03:36:15Z",
    "type_code": 70
-  },
-  "636019992": {
-   "name": "SOLAR LAI FONG",
-   "t": "2026-11-27T03:36:15Z"
   },
   "224098930": {
    "name": "BERRIZ SAN FRANCISCO",
@@ -2872,10 +2889,6 @@
   },
   "563160600": {
    "name": "FABIA SCHULTE",
-   "t": "2026-11-22T11:05:32Z"
-  },
-  "230196170": {
-   "type_code": 36,
    "t": "2026-11-22T11:05:32Z"
   }
  }
