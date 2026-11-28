@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T06:36:26Z",
+ "generated_utc": "2026-11-28T07:39:55Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,6 +7,19 @@
  ],
  "radius_nm": 30.0,
  "ships": [
+  {
+   "mmsi": "224984000",
+   "name": "VOLCAN DE TAIDIA",
+   "type": "high-speed craft",
+   "type_code": 40,
+   "lat": 28.20922,
+   "lon": -15.44162,
+   "cog": 294.9,
+   "sog": null,
+   "heading": 293,
+   "t": "2026-11-28T07:39:35Z",
+   "nm": 3.9
+  },
   {
    "mmsi": "311378000",
    "name": "MARELLA DISCOVERY 2",
@@ -19,58 +32,6 @@
    "heading": 248,
    "t": "2026-11-28T06:29:27Z",
    "nm": 6.3
-  },
-  {
-   "mmsi": "210334000",
-   "name": "YUDIN",
-   "type": null,
-   "type_code": null,
-   "lat": 28.19803,
-   "lon": -15.31302,
-   "cog": 35.2,
-   "sog": 6.7,
-   "heading": 39,
-   "t": "2026-11-28T05:21:46Z",
-   "nm": 6.8
-  },
-  {
-   "mmsi": "255806143",
-   "name": "AVILA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.25031,
-   "lon": -15.66334,
-   "cog": 101.9,
-   "sog": 10.4,
-   "heading": 102,
-   "t": "2026-11-28T04:48:13Z",
-   "nm": 14.0
-  },
-  {
-   "mmsi": "224388000",
-   "name": "BANADEROS EXPRESS",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.09919,
-   "lon": -15.71192,
-   "cog": 209.5,
-   "sog": 0.0,
-   "heading": 141,
-   "t": "2026-11-28T04:48:39Z",
-   "nm": 15.3
-  },
-  {
-   "mmsi": "563240300",
-   "name": "NISA NAREE",
-   "type": null,
-   "type_code": null,
-   "lat": 28.47078,
-   "lon": -15.79439,
-   "cog": 40.0,
-   "sog": 12.3,
-   "heading": 41,
-   "t": "2026-11-28T05:20:17Z",
-   "nm": 27.5
   },
   {
    "mmsi": "247282500",
@@ -87,6 +48,11 @@
   }
  ],
  "known": {
+  "224984000": {
+   "name": "VOLCAN DE TAIDIA",
+   "t": "2026-11-28T07:39:55Z",
+   "type_code": 40
+  },
   "247282500": {
    "name": "AIDABLU",
    "t": "2026-11-28T06:36:26Z",
@@ -219,11 +185,6 @@
    "name": "VOLCAN DE TAGORO",
    "type_code": 40,
    "t": "2026-11-27T14:11:51Z"
-  },
-  "224984000": {
-   "name": "VOLCAN DE TAIDIA",
-   "t": "2026-11-27T14:11:51Z",
-   "type_code": 40
   },
   "311001096": {
    "name": "SANTORINI",
