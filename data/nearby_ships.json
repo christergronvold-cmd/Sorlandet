@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T09:19:51Z",
+ "generated_utc": "2026-11-28T10:51:52Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -7,19 +7,6 @@
  ],
  "radius_nm": 30.0,
  "ships": [
-  {
-   "mmsi": "255806143",
-   "name": "AVILA",
-   "type": null,
-   "type_code": null,
-   "lat": 28.14877,
-   "lon": -15.4143,
-   "cog": 41.4,
-   "sog": 0.0,
-   "heading": 221,
-   "t": "2026-11-28T08:14:45Z",
-   "nm": 0.7
-  },
   {
    "mmsi": "636026541",
    "name": "HORIZON LEDA",
@@ -34,33 +21,46 @@
    "nm": 2.6
   },
   {
-   "mmsi": "224781000",
-   "name": "VOLCAN DE TAGORO",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.20846,
-   "lon": -15.40703,
-   "cog": 120.2,
-   "sog": null,
-   "heading": 117,
-   "t": "2026-11-28T08:46:57Z",
-   "nm": 3.9
+   "mmsi": "255806280",
+   "name": "WEC JAN STEEN",
+   "type": "cargo",
+   "type_code": 71,
+   "lat": 28.22783,
+   "lon": -15.65867,
+   "cog": 94.0,
+   "sog": 16.7,
+   "heading": 95,
+   "t": "2026-11-28T10:49:11Z",
+   "nm": 13.2
   },
   {
-   "mmsi": "224984000",
-   "name": "VOLCAN DE TAIDIA",
-   "type": "high-speed craft",
-   "type_code": 40,
-   "lat": 28.20922,
-   "lon": -15.44162,
-   "cog": 294.9,
-   "sog": null,
-   "heading": 293,
-   "t": "2026-11-28T07:39:35Z",
-   "nm": 3.9
+   "mmsi": "538010616",
+   "name": "SSI DISCOVERY",
+   "type": null,
+   "type_code": null,
+   "lat": 28.28318,
+   "lon": -15.73644,
+   "cog": 282.3,
+   "sog": 13.6,
+   "heading": 283,
+   "t": "2026-11-28T10:51:07Z",
+   "nm": 18.3
   }
  ],
  "known": {
+  "255806280": {
+   "name": "WEC JAN STEEN",
+   "t": "2026-11-28T10:51:52Z",
+   "type_code": 71
+  },
+  "255806457": {
+   "name": "UHL FABLE",
+   "t": "2026-11-28T10:51:52Z"
+  },
+  "538010616": {
+   "name": "SSI DISCOVERY",
+   "t": "2026-11-28T10:51:52Z"
+  },
   "253291000": {
    "name": "IBN BATTUTA",
    "t": "2026-11-28T09:19:51Z"
@@ -278,11 +278,6 @@
   "224098930": {
    "name": "BERRIZ SAN FRANCISCO",
    "t": "2026-11-27T03:01:58Z"
-  },
-  "255806280": {
-   "name": "WEC JAN STEEN",
-   "t": "2026-11-27T03:01:58Z",
-   "type_code": 71
   },
   "538071196": {
    "name": "HOME",
@@ -2903,14 +2898,6 @@
    "name": "DINORA",
    "t": "2026-11-22T12:12:02Z",
    "type_code": 36
-  },
-  "203255100": {
-   "name": "SY-ADRIENNE",
-   "t": "2026-11-22T12:12:02Z"
-  },
-  "227992440": {
-   "type_code": 36,
-   "t": "2026-11-22T12:12:02Z"
   }
  }
 }
