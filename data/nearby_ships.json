@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T01:00:18Z",
+ "generated_utc": "2026-11-28T01:05:30Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -47,19 +47,6 @@
    "nm": 3.1
   },
   {
-   "mmsi": "224823000",
-   "name": "BRENAS CARGO",
-   "type": "cargo",
-   "type_code": 70,
-   "lat": 28.25793,
-   "lon": -15.5883,
-   "cog": 290.0,
-   "sog": 19.1,
-   "heading": 290,
-   "t": "2026-11-28T00:33:31Z",
-   "nm": 10.8
-  },
-  {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
@@ -71,9 +58,27 @@
    "heading": 142,
    "t": "2026-11-28T00:43:21Z",
    "nm": 15.3
+  },
+  {
+   "mmsi": "224823000",
+   "name": "BRENAS CARGO",
+   "type": "cargo",
+   "type_code": 70,
+   "lat": 28.31806,
+   "lon": -15.77131,
+   "cog": 290.5,
+   "sog": 19.5,
+   "heading": 291,
+   "t": "2026-11-28T01:05:11Z",
+   "nm": 20.9
   }
  ],
  "known": {
+  "224823000": {
+   "name": "BRENAS CARGO",
+   "t": "2026-11-28T01:05:30Z",
+   "type_code": 70
+  },
   "224271630": {
    "name": "VB DORAMAS",
    "t": "2026-11-28T00:48:55Z",
@@ -95,11 +100,6 @@
   "636019992": {
    "name": "SOLAR LAI FONG",
    "t": "2026-11-28T00:40:18Z"
-  },
-  "224823000": {
-   "name": "BRENAS CARGO",
-   "t": "2026-11-28T00:34:54Z",
-   "type_code": 70
   },
   "617104000": {
    "name": "PONTA DO SOL",
