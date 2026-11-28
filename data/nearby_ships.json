@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-28T04:16:23Z",
+ "generated_utc": "2026-11-28T04:50:12Z",
  "source": "aisstream.io",
  "centre": [
   28.146,
@@ -8,16 +8,29 @@
  "radius_nm": 30.0,
  "ships": [
   {
+   "mmsi": "255806143",
+   "name": "AVILA",
+   "type": null,
+   "type_code": null,
+   "lat": 28.25031,
+   "lon": -15.66334,
+   "cog": 101.9,
+   "sog": 10.4,
+   "heading": 102,
+   "t": "2026-11-28T04:48:13Z",
+   "nm": 14.0
+  },
+  {
    "mmsi": "224388000",
    "name": "BANADEROS EXPRESS",
    "type": "high-speed craft",
    "type_code": 40,
    "lat": 28.09919,
    "lon": -15.71192,
-   "cog": 38.6,
+   "cog": 209.5,
    "sog": 0.0,
    "heading": 141,
-   "t": "2026-11-28T04:15:59Z",
+   "t": "2026-11-28T04:48:39Z",
    "nm": 15.3
   },
   {
@@ -34,33 +47,37 @@
    "nm": 18.9
   },
   {
-   "mmsi": "255806143",
-   "name": "AVILA",
+   "mmsi": "563240300",
+   "name": "NISA NAREE",
    "type": null,
    "type_code": null,
-   "lat": 28.28809,
-   "lon": -15.87156,
-   "cog": 102.5,
-   "sog": 10.5,
-   "heading": 102,
-   "t": "2026-11-28T03:43:41Z",
-   "nm": 25.0
+   "lat": 28.38538,
+   "lon": -15.86928,
+   "cog": 36.4,
+   "sog": 12.5,
+   "heading": 41,
+   "t": "2026-11-28T04:49:09Z",
+   "nm": 27.4
   }
  ],
  "known": {
   "224388000": {
    "name": "BANADEROS EXPRESS",
-   "t": "2026-11-28T04:16:23Z",
+   "t": "2026-11-28T04:50:12Z",
    "type_code": 40
+  },
+  "255806143": {
+   "name": "AVILA",
+   "t": "2026-11-28T04:50:12Z"
+  },
+  "563240300": {
+   "name": "NISA NAREE",
+   "t": "2026-11-28T04:50:12Z"
   },
   "209011000": {
    "name": "AL ANDALUS EXPRESS",
    "t": "2026-11-28T04:16:23Z",
    "type_code": 60
-  },
-  "255806143": {
-   "name": "AVILA",
-   "t": "2026-11-28T03:43:52Z"
   },
   "311378000": {
    "name": "MARELLA DISCOVERY 2",
@@ -2897,11 +2914,6 @@
   },
   "270101400": {
    "type_code": 37,
-   "t": "2026-11-22T11:39:26Z"
-  },
-  "261003429": {
-   "name": "LA SANTANA",
-   "type_code": 36,
    "t": "2026-11-22T11:39:26Z"
   }
  }
